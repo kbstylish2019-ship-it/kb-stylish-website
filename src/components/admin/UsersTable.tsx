@@ -80,11 +80,14 @@ export default function UsersTable({
       <div className="flex flex-wrap gap-3">
         {onSearchChange && (
           <div className="flex-1 min-w-[200px]">
+            <label htmlFor="users-search-input" className="sr-only">Search users</label>
             <input
+              id="users-search-input"
               type="text"
               value={searchQuery || ""}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search users by name, email, role, or status..."
+              aria-label="Search users"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
               data-testid="users-search-input"
             />
@@ -234,6 +237,8 @@ export default function UsersTable({
                   <button
                     key={pageNum}
                     onClick={() => onPageChange(pageNum)}
+                    aria-current={pageNum === currentPage ? "page" : undefined}
+                    aria-label={`Go to page ${pageNum}`}
                     className={cn(
                       "rounded-lg px-3 py-1 text-sm ring-1",
                       pageNum === currentPage

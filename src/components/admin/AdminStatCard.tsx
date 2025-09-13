@@ -12,7 +12,14 @@ export interface AdminStatCardProps {
   className?: string;
 }
 
-export default function AdminStatCard({ title, value, subtitle, trend, icon, className }: AdminStatCardProps) {
+/**
+ * AdminStatCard component displays statistical information in admin dashboard.
+ * Memoized to prevent unnecessary re-renders when dashboard data updates.
+ * 
+ * @param props - AdminStatCard properties
+ * @returns Memoized admin stat card component
+ */
+const AdminStatCard = React.memo(function AdminStatCard({ title, value, subtitle, trend, icon, className }: AdminStatCardProps) {
   const trendClasses = trend?.direction === "up"
     ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
     : trend?.direction === "down"
@@ -44,4 +51,6 @@ export default function AdminStatCard({ title, value, subtitle, trend, icon, cla
       </div>
     </div>
   );
-}
+});
+
+export default AdminStatCard;

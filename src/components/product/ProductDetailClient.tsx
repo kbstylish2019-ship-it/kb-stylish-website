@@ -1,23 +1,46 @@
 "use client";
 import React from "react";
 import type { ProductDetail, ProductVariant } from "@/lib/types";
-import Breadcrumbs from "@/components/product/Breadcrumbs";
-import ProductMeta from "@/components/product/ProductMeta";
-import ProductPrice from "@/components/product/ProductPrice";
-import ProductImageGallery from "@/components/product/ProductImageGallery";
-import ProductOptions, { type Selection } from "@/components/product/ProductOptions";
-import ProductActions from "@/components/product/ProductActions";
+import dynamic from "next/dynamic";
+
+// Lazy load non-critical product components
+const Breadcrumbs = dynamic(() => import("./Breadcrumbs"), {
+  loading: () => <div className="animate-pulse bg-white/5 rounded-xl" />,
+});
+
+const ProductImageGallery = dynamic(() => import("./ProductImageGallery"), {
+  loading: () => <div className="aspect-square animate-pulse bg-white/5 rounded-xl" />,
+});
+
+const ProductMeta = dynamic(() => import("./ProductMeta"), {
+  loading: () => <div className="h-24 animate-pulse bg-white/5 rounded-xl" />,
+});
+
+const ProductPrice = dynamic(() => import("./ProductPrice"), {
+  loading: () => <div className="h-12 animate-pulse bg-white/5 rounded-xl" />,
+});
+
+const ProductOptions = dynamic(() => import("./ProductOptions"), {
+  loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-xl" />,
+});
+
+const ProductActions = dynamic(() => import("./ProductActions"), {
+  loading: () => <div className="h-20 animate-pulse bg-white/5 rounded-xl" />,
+});
+
 import PDPTrustBar from "@/components/product/PDPTrustBar";
 
-function findVariant(variants: ProductVariant[], selection: Selection) {
+type ProductSelection = { [key: string]: string | undefined };
+
+function findVariant(variants: ProductVariant[], selection: ProductSelection) {
   return variants.find((v) =>
     Object.entries(selection).every(([k, val]) => val && v.options[k] === val)
   );
 }
 
 export default function ProductDetailClient({ product }: { product: ProductDetail }) {
-  const initial: Selection = Object.fromEntries(product.options.map((o) => [o.name, undefined]));
-  const [selection, setSelection] = React.useState<Selection>(initial);
+  const initial: ProductSelection = Object.fromEntries(product.options.map((o) => [o.name, undefined]));
+  const [selection, setSelection] = React.useState<ProductSelection>(initial);
 
   const selectedVariant = React.useMemo(
     () => findVariant(product.variants, selection),
@@ -34,7 +57,7 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
         <ProductImageGallery images={product.images} />
         <div>
           <ProductMeta product={product} />
-          <ProductPrice price={product.price} compareAt={product.compareAtPrice} className="mt-3" />
+          <ProductPrice price={selectedVariant?.price ?? product.price} compareAt={product.compareAtPrice} className="mt-3" />
           <p className="mt-3 text-foreground/80">{product.description}</p>
 
           <div className="mt-6">

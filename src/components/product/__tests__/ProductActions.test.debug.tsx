@@ -36,7 +36,7 @@ describe("ProductActions Debug", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Mock the useCartStore to always return mockAddProduct when called with any selector
-    (useCartStore as jest.Mock).mockImplementation((selector: any) => {
+    (useCartStore as unknown as jest.Mock).mockImplementation((selector: (state: { addProduct: typeof mockAddProduct }) => unknown) => {
       // If no selector, return the whole state
       if (!selector) {
         return { addProduct: mockAddProduct };

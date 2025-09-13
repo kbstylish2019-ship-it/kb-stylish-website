@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import type { Address, Booking, CartProductItem, CartBookingItem, OrderCosts, PaymentMethod } from "@/lib/types";
+import Link from "next/link";
+import type { Address, CartProductItem, CartBookingItem, OrderCosts, PaymentMethod } from "@/lib/types";
 import BookingDetails from "@/components/checkout/BookingDetails";
 import ProductList from "@/components/checkout/ProductList";
 import ShippingForm from "@/components/checkout/ShippingForm";
@@ -10,7 +11,6 @@ import {
   getEmptyAddress,
   validateAddress,
   calculateCosts,
-  normalizePaymentMethod,
 } from "@/lib/mock/checkout";
 
 export default function CheckoutClient() {
@@ -18,9 +18,6 @@ export default function CheckoutClient() {
   const updateProductQuantity = useCartStore((state) => state.updateProductQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
-  const getProductSubtotal = useCartStore((state) => state.getProductSubtotal);
-  const getServiceSubtotal = useCartStore((state) => state.getServiceSubtotal);
-  const getTotal = useCartStore((state) => state.getTotal);
   
   const [address, setAddress] = React.useState<Address>(getEmptyAddress());
   const [discountCode, setDiscountCode] = React.useState<string>("");
@@ -39,7 +36,7 @@ export default function CheckoutClient() {
   
   const firstBooking = bookings[0]?.booking;
 
-  const discountValue = React.useMemo(() => {
+  const discountAmount = React.useMemo(() => {
     return discountCode.trim().toUpperCase() === "WELCOME100" ? 100 : 0;
   }, [discountCode]);
 
@@ -47,9 +44,9 @@ export default function CheckoutClient() {
     () => calculateCosts(
       products, 
       bookings.reduce((total, item) => total + item.booking.price, 0),
-      discountValue
+      discountAmount
     ),
-    [products, bookings, discountValue]
+    [products, bookings, discountAmount]
   );
 
   const onQtyChange = (id: string, qty: number, variant?: string) => {
@@ -86,9 +83,9 @@ export default function CheckoutClient() {
           {items.length === 0 && (
             <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
               <p className="text-foreground/60">Your cart is empty</p>
-              <a href="/" className="mt-4 inline-block text-[var(--kb-primary-brand)] hover:underline">
+              <Link href="/" className="mt-4 inline-block text-[var(--kb-primary-brand)] hover:underline">
                 Continue Shopping
-              </a>
+              </Link>
             </div>
           )}
           <ShippingForm address={address} onChange={setAddress} />

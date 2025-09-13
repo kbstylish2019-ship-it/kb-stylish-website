@@ -1,14 +1,26 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import dynamic from "next/dynamic";
+
+// Defer Header to reduce initial JS; render a lightweight skeleton during loading
+const Header = dynamic(() => import("@/components/layout/Header"), {
+  loading: () => (
+    <div className="sticky top-0 z-50 border-b border-white/10 bg-background/80 h-16" aria-label="Loading header" />
+  ),
+});
+
+// Lazy load Footer as it's below the fold
+const Footer = dynamic(() => import("@/components/layout/Footer"), {
+  loading: () => <div className="h-64 mt-10 animate-pulse bg-white/5" />,
+});
 import type { UserCapability } from "@/lib/types";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  preload: false, // Reduce initial load
 });
 
 export const metadata: Metadata = {

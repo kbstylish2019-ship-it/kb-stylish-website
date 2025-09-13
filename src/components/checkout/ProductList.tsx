@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
+import Image from "next/image";
+import { Trash2 } from "lucide-react";
 import type { CartProductItem } from "@/lib/types";
 import { formatNPR, cn } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
 
 export default function ProductList({
   items,
@@ -32,9 +33,15 @@ export default function ProductList({
       <ul className="divide-y divide-white/10">
         {items.map((it) => (
           <li key={`${it.id}-${it.variant || ''}`} className="flex gap-3 py-3">
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/10">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/10">
               {it.imageUrl ? (
-                <img src={it.imageUrl} alt={it.name} className="size-full object-cover" />
+                <Image 
+                  src={it.imageUrl} 
+                  alt={it.name} 
+                  fill
+                  className="object-cover" 
+                  sizes="80px"
+                />
               ) : (
                 <div className="flex size-full items-center justify-center text-xs text-foreground/60">No image</div>
               )}

@@ -10,7 +10,7 @@ export default function OnboardingHero({ onCtaClick }: { onCtaClick?: () => void
           Trusted by leading boutiques and salons
         </p>
         <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">
-          Partner with Nepal's Premier Style Platform
+          Partner with Nepal&apos;s Premier Style Platform
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-sm text-foreground/70">
           Join KB Stylish to reach high-intent customers, showcase your brand, and grow with seamless payouts and powerful tools.

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CheckoutClient from "@/components/checkout/CheckoutClient";
 import { useCartStore } from "@/lib/store/cartStore";
 import { useRouter } from "next/navigation";
-import type { CartItem, CartProductItem, CartBookingItem } from "@/lib/types";
+import type { CartItem } from "@/lib/types";
 
 // Mock the cart store
 jest.mock("@/lib/store/cartStore");

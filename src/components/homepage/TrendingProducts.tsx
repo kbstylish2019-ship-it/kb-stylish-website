@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ProductCard from "./ProductCard";
 import type { Product } from "@/lib/types";
 
@@ -39,7 +40,7 @@ export default function TrendingProducts() {
     <section className="mx-auto max-w-7xl px-4 py-10">
       <div className="flex items-end justify-between">
         <h2 className="text-2xl font-semibold">Trending Products</h2>
-        <a href="/shop" className="text-sm text-foreground/70 hover:text-foreground">View all</a>
+        <Link href="/shop" className="text-sm text-foreground/70 hover:text-foreground">View all</Link>
       </div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {products.map((p) => (

@@ -1,174 +1,163 @@
-"use client";
-import { useEffect, useMemo, useState } from "react";
-import FilterSidebar from "@/components/shop/FilterSidebar";
+import { Suspense } from "react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { fetchProducts, getProductCategories } from "@/lib/apiClient";
+import type { ProductFilters, ProductSort } from "@/lib/apiClient";
 import ProductGrid from "@/components/shared/ProductGrid";
-import type { Product } from "@/lib/types";
 
-const allProducts: Product[] = [
-  {
-    id: "p1",
-    name: "Classic Denim Jacket",
-    price: 3499,
-    badge: "Trending",
-    category: "streetwear",
-    imageUrl:
-      "https://images.unsplash.com/photo-1516822003754-cca485356ecb?q=80&w=1200&auto=format&fit=crop",
-  },
-  {
-    id: "p2",
-    name: "Silk Saree - Royal Plum",
-    price: 7999,
-    badge: "New",
-    category: "ethnic",
-    imageUrl:
-      "https://unsplash.com/photos/wcgCFUi_Zws/download?force=true&w=1200&q=80",
-  },
-  {
-    id: "p3",
-    name: "Minimalist Leather Watch",
-    price: 5999,
-    category: "formal",
-    imageUrl:
-      "https://images.unsplash.com/photo-1511385348-a52b4a160dc2?q=80&w=1200&auto=format&fit=crop",
-  },
-  {
-    id: "p4",
-    name: "K-Beauty Skincare Set",
-    price: 2599,
-    category: "casual",
-    imageUrl:
-      "https://unsplash.com/photos/ayBCtRueEtI/download?force=true&w=1200&q=80",
-  },
-  {
-    id: "p5",
-    name: "Athleisure Joggers",
-    price: 1999,
-    category: "casual",
-    imageUrl:
-      "https://unsplash.com/photos/YiYv0FBNqjI/download?force=true&w=1200&q=80",
-  },
-  {
-    id: "p6",
-    name: "Himalayan Wool Scarf",
-    price: 1499,
-    category: "casual",
-    imageUrl:
-      "https://unsplash.com/photos/x4qSJ-nMmvk/download?force=true&w=1200&q=80",
-  },
-  {
-    id: "p7",
-    name: "Premium Formal Shirt",
-    price: 2799,
-    category: "formal",
-    imageUrl:
-      "https://unsplash.com/photos/Xo4YvBp6IBM/download?force=true&w=1200&q=80",
-  },
-  {
-    id: "p8",
-    name: "Streetwear Hoodie - Onyx",
-    price: 3299,
-    category: "streetwear",
-    imageUrl:
-      "https://unsplash.com/photos/XEmkHQXAHFs/download?force=true&w=1200&q=80",
-  },
-];
+// Use virtualized grid for better performance with large product lists
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-type SortKey = "popularity" | "newest" | "price_low" | "price_high";
+const VirtualizedProductGrid = dynamic(
+  () => import("@/components/shared/VirtualizedProductGrid"),
+  { 
+    loading: () => <div className="h-96 animate-pulse bg-white/5 rounded-xl" />,
+  }
+);
 
-interface Filters {
-  search: string;
-  selectedCategories: string[];
-  minPrice: string; // keep inputs as strings to preserve UX
-  maxPrice: string;
-  sort: SortKey;
+// Dynamically import the filter sidebar to reduce initial bundle size
+const FilterSidebar = dynamic(() => import("@/components/shop/FilterSidebar"), {
+  loading: () => <div className="h-96 animate-pulse bg-white/5 rounded-xl" />,
+});
+
+interface ShopPageProps {
+  searchParams: Promise<{
+    search?: string;
+    categories?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    sort?: string;
+    cursor?: string;
+    limit?: string;
+  }>;
 }
 
-const initialFilters: Filters = {
-  search: "",
-  selectedCategories: [],
-  minPrice: "",
-  maxPrice: "",
-  sort: "popularity",
-};
+// Map URL sort parameters to API sort format
+function mapSortParam(sortParam?: string): ProductSort {
+  switch (sortParam) {
+    case "newest":
+      return { field: "created_at", order: "desc" };
+    case "name_asc":
+      return { field: "name", order: "asc" };
+    case "name_desc":
+      return { field: "name", order: "desc" };
+    case "price_low":
+      return { field: "price", order: "asc" };
+    case "price_high":
+      return { field: "price", order: "desc" };
+    default:
+      return { field: "name", order: "asc" };
+  }
+}
 
-export default function ShopPage() {
-  // Pending (UI) filters controlled in parent
-  const [filters, setFilters] = useState<Filters>(initialFilters);
-  // Applied filters drive the product list; updated only on Apply
-  const [applied, setApplied] = useState<Filters>(initialFilters);
-  const [visible, setVisible] = useState<Product[]>(allProducts);
+// Parse URL parameters into API filter format
+function parseFilters(searchParams: Record<string, string | undefined>): ProductFilters {
+  const filters: ProductFilters = {};
 
-  const totalCount = useMemo(() => allProducts.length, []);
+  if (searchParams.search) {
+    filters.search = searchParams.search;
+  }
 
-  useEffect(() => {
-    // Compute filtered + sorted when applied changes
-    const searchTerm = applied.search.trim().toLowerCase();
-    const min = applied.minPrice ? Number(applied.minPrice) : undefined;
-    const max = applied.maxPrice ? Number(applied.maxPrice) : undefined;
-    const categorySet = new Set(applied.selectedCategories);
+  if (searchParams.categories) {
+    filters.categories = searchParams.categories.split(",").filter(Boolean);
+  }
 
-    let next = allProducts.filter((p) => {
-      if (searchTerm && !p.name.toLowerCase().includes(searchTerm)) return false;
-      if (categorySet.size > 0 && (!p.category || !categorySet.has(p.category))) return false;
-      if (typeof min === "number" && p.price < min) return false;
-      if (typeof max === "number" && p.price > max) return false;
-      return true;
-    });
-
-    switch (applied.sort) {
-      case "price_low":
-        next = [...next].sort((a, b) => a.price - b.price);
-        break;
-      case "price_high":
-        next = [...next].sort((a, b) => b.price - a.price);
-        break;
-      case "newest":
-      case "popularity":
-      default:
-        // Keep insertion order for now (no-op).
-        break;
+  if (searchParams.minPrice) {
+    const minPrice = Number(searchParams.minPrice);
+    if (!isNaN(minPrice) && minPrice > 0) {
+      filters.minPrice = minPrice;
     }
-    setVisible(next);
-  }, [applied]);
+  }
 
-  // Handlers to control sidebar inputs
-  const onSearchChange = (v: string) => setFilters((f) => ({ ...f, search: v }));
-  const onToggleCategory = (id: string, checked: boolean) =>
-    setFilters((f) => ({
-      ...f,
-      selectedCategories: checked
-        ? [...new Set([...f.selectedCategories, id])]
-        : f.selectedCategories.filter((x) => x !== id),
-    }));
-  const onMinPriceChange = (v: string) => setFilters((f) => ({ ...f, minPrice: v }));
-  const onMaxPriceChange = (v: string) => setFilters((f) => ({ ...f, maxPrice: v }));
-  const onSortChange = (v: string) => setFilters((f) => ({ ...f, sort: v as SortKey }));
-  const onApplyFilters = () => setApplied(filters);
+  if (searchParams.maxPrice) {
+    const maxPrice = Number(searchParams.maxPrice);
+    if (!isNaN(maxPrice) && maxPrice > 0) {
+      filters.maxPrice = maxPrice;
+    }
+  }
+
+  return filters;
+}
+
+export default async function ShopPage({ searchParams }: ShopPageProps) {
+  const params = await searchParams;
+  
+  // Parse URL parameters
+  const filters = parseFilters(params);
+  const sort = mapSortParam(params.sort);
+  const cursor = params.cursor;
+  const limit = params.limit ? parseInt(params.limit) : 12;
+
+  // Fetch products server-side with filters applied
+  const { data: products, totalCount, hasMore, nextCursor } = await fetchProducts({
+    filters,
+    sort,
+    pagination: { cursor, limit },
+  });
+
+  // Get available categories for filter sidebar
+  const categories = await getProductCategories();
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10">
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <FilterSidebar
-          search={filters.search}
-          selectedCategories={filters.selectedCategories}
-          minPrice={filters.minPrice}
-          maxPrice={filters.maxPrice}
-          sort={filters.sort}
-          onSearchChange={onSearchChange}
-          onToggleCategory={onToggleCategory}
-          onMinPriceChange={onMinPriceChange}
-          onMaxPriceChange={onMaxPriceChange}
-          onSortChange={onSortChange}
-          onApplyFilters={onApplyFilters}
-        />
+        <ErrorBoundary
+          fallback={
+            <div className="h-96 rounded-xl border border-white/10 bg-white/5 p-6 ring-1 ring-white/10">
+              <p className="text-sm font-medium">Filters are temporarily unavailable.</p>
+              <p className="mt-1 text-xs text-foreground/70">You can still browse products on the right.</p>
+            </div>
+          }
+        >
+          <Suspense fallback={<div className="h-96 animate-pulse bg-white/5 rounded-xl" />}>
+            <FilterSidebar
+              availableCategories={categories}
+              currentFilters={{
+                search: params.search || "",
+                selectedCategories: filters.categories || [],
+                minPrice: params.minPrice || "",
+                maxPrice: params.maxPrice || "",
+                sort: params.sort || "popularity",
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
         <section>
           <div className="flex items-baseline justify-between">
             <h1 className="text-2xl font-semibold">Shop</h1>
-            <p className="text-sm text-foreground/70">{visible.length} of {totalCount} products</p>
+            <p className="text-xs text-foreground/80">
+              {products.length} of {totalCount} products
+            </p>
           </div>
           <div className="mt-6">
-            <ProductGrid products={visible} />
+            <ErrorBoundary
+              fallback={
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center ring-1 ring-white/10">
+                  <h3 className="text-base font-semibold">We couldn&apos;t load products</h3>
+                  <p className="mt-1 text-sm text-foreground/70">Please refresh the page to try again.</p>
+                </div>
+              }
+            >
+              {products.length <= 30 ? (
+                <ProductGrid products={products} />
+              ) : (
+                <VirtualizedProductGrid products={products} />
+              )}
+            </ErrorBoundary>
           </div>
+          {hasMore && (
+            <div className="mt-8 text-center">
+              <Link
+                href={`/shop?${new URLSearchParams({
+                  ...params,
+                  cursor: nextCursor || "",
+                }).toString()}`}
+                className="inline-flex items-center px-6 py-3 rounded-xl bg-[var(--kb-primary-brand)] text-white font-medium hover:bg-[var(--kb-primary-brand)]/90 transition-colors"
+              >
+                Load More Products
+              </Link>
+            </div>
+          )}
         </section>
       </div>
     </main>

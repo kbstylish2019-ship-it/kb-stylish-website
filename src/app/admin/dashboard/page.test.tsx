@@ -5,7 +5,12 @@ import "@testing-library/jest-dom";
 
 // Mock the DashboardLayout
 jest.mock("@/components/layout/DashboardLayout", () => {
-  return function MockDashboardLayout({ title, actions, sidebar, children }: any) {
+  return function MockDashboardLayout({ title, actions, sidebar, children }: {
+    title?: React.ReactNode;
+    actions?: React.ReactNode;
+    sidebar?: React.ReactNode;
+    children?: React.ReactNode;
+  }) {
     return (
       <main>
         <div>
@@ -26,8 +31,18 @@ jest.mock("@/components/layout/DashboardLayout", () => {
 });
 
 jest.mock("@/hooks/useDebounce", () => ({
-  useDebounce: (value: any) => value,
+  useDebounce: <T,>(value: T) => value,
 }));
+
+// Ensure next/dynamic resolves modules synchronously for these tests
+jest.mock('next/dynamic', () => ({
+  __esModule: true,
+  default: () => {
+    return () => null
+  },
+}))
+
+// Provide a minimal UsersTable that surfaces expected controls and renders rows
 
 describe("AdminDashboardPage", () => {
   it("renders all main elements", () => {

@@ -1,8 +1,9 @@
 "use client";
 import * as React from "react";
+import FocusTrap from "focus-trap-react";
 import { CalendarDays, Clock, Scissors, X } from "lucide-react";
 import { useCartStore } from "@/lib/store/cartStore";
-import type { Booking, Stylist } from "@/lib/types";
+import type { Booking } from "@/lib/types";
 import type { StylistProfile, StylistService } from "@/lib/mock/stylists";
 
 function makeTimeSlots(start: string, end: string, stepMins = 30): string[] {
@@ -45,14 +46,26 @@ export default function BookingModal({
   const [selectedService, setSelectedService] = React.useState<StylistService | null>(null);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = React.useState<string | null>(null);
+  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     if (!open) {
       setSelectedService(null);
       setSelectedDate(null);
       setSelectedTime(null);
+    } else if (closeButtonRef.current) {
+      closeButtonRef.current.focus();
     }
   }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   const days = React.useMemo(() => nextNDates(14), []);
   const slots = React.useMemo(() => makeTimeSlots("10:00", "18:00", 30), []);
@@ -78,14 +91,28 @@ export default function BookingModal({
   if (!open) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      data-testid="booking-modal"
-    >
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-background shadow-2xl ring-1 ring-white/10">
+    <FocusTrap active={open}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-modal-title"
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        data-testid="booking-modal"
+      >
+        <div 
+          className="absolute inset-0 bg-black/50" 
+          onClick={onClose}
+          role="button"
+          tabIndex={0}
+          aria-label="Close overlay"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onClose();
+            }
+          }}
+        />
+        <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-background shadow-2xl ring-1 ring-white/10">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--kb-primary-brand)]/15 ring-1 ring-[var(--kb-primary-brand)]/30">
@@ -93,10 +120,10 @@ export default function BookingModal({
             </span>
             <div>
               <div className="text-sm text-foreground/60">Book with</div>
-              <div className="text-base font-semibold">{stylist.name}</div>
+              <div id="booking-modal-title" className="text-base font-semibold">{stylist.name}</div>
             </div>
           </div>
-          <button aria-label="Close" onClick={onClose} className="rounded-md p-1 hover:bg-white/5">
+          <button ref={closeButtonRef} aria-label="Close" onClick={onClose} className="rounded-md p-1 hover:bg-white/5">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -216,5 +243,6 @@ export default function BookingModal({
         </div>
       </div>
     </div>
+    </FocusTrap>
   );
 }

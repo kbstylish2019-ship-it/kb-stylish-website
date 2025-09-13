@@ -56,7 +56,6 @@ export default function ApplicationForm({
     errors,
     submitted,
     submitting,
-    canGoNext,
     updateBusiness,
     updatePayoutMethod,
     updatePayout,
@@ -122,7 +121,7 @@ export default function ApplicationForm({
               <select
                 id="businessType"
                 value={business.businessType}
-                onChange={(e) => updateBusiness({ businessType: e.target.value as any })}
+                onChange={(e) => updateBusiness({ businessType: e.target.value as VendorBusinessInfo["businessType"] })}
                 className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
               >
                 {BUSINESS_TYPES.map((t) => (
@@ -203,7 +202,7 @@ export default function ApplicationForm({
                   <label className="text-sm" htmlFor="bankName">Bank Name</label>
                   <input
                     id="bankName"
-                    value={(payout as any).bankName ?? ""}
+                    value={("bankName" in payout ? payout.bankName : "") ?? ""}
                     onChange={(e) => updatePayout({ bankName: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
                   />
@@ -212,7 +211,7 @@ export default function ApplicationForm({
                   <label className="text-sm" htmlFor="accountName">Account Name</label>
                   <input
                     id="accountName"
-                    value={(payout as any).accountName ?? ""}
+                    value={("accountName" in payout ? payout.accountName : "") ?? ""}
                     onChange={(e) => updatePayout({ accountName: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
                   />
@@ -221,7 +220,7 @@ export default function ApplicationForm({
                   <label className="text-sm" htmlFor="accountNumber">Account Number</label>
                   <input
                     id="accountNumber"
-                    value={(payout as any).accountNumber ?? ""}
+                    value={("accountNumber" in payout ? payout.accountNumber : "") ?? ""}
                     onChange={(e) => updatePayout({ accountNumber: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
                   />
@@ -230,7 +229,7 @@ export default function ApplicationForm({
                   <label className="text-sm" htmlFor="branch">Branch (optional)</label>
                   <input
                     id="branch"
-                    value={(payout as any).branch ?? ""}
+                    value={("branch" in payout ? payout.branch : "") ?? ""}
                     onChange={(e) => updatePayout({ branch: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
                   />
@@ -243,7 +242,7 @@ export default function ApplicationForm({
                 <label className="text-sm" htmlFor="esewaId">eSewa ID</label>
                 <input
                   id="esewaId"
-                  value={(payout as any).esewaId ?? ""}
+                  value={("esewaId" in payout ? payout.esewaId : "") ?? ""}
                   onChange={(e) => updatePayout({ esewaId: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
                 />
@@ -255,7 +254,7 @@ export default function ApplicationForm({
                 <label className="text-sm" htmlFor="khaltiId">Khalti ID</label>
                 <input
                   id="khaltiId"
-                  value={(payout as any).khaltiId ?? ""}
+                  value={("khaltiId" in payout ? payout.khaltiId : "") ?? ""}
                   onChange={(e) => updatePayout({ khaltiId: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
                 />

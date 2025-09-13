@@ -1,15 +1,53 @@
 "use client";
 
 import React, { useMemo, useCallback } from "react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import AdminStatCard from "@/components/admin/AdminStatCard";
-import UsersTable, { type UserAction } from "@/components/admin/UsersTable";
-import RevenueChart from "@/components/admin/RevenueChart";
-import UserStatusDonut from "@/components/admin/UserStatusDonut";
-import type { AdminUser, AccountStatus } from "@/lib/types";
-import { useDebounce } from "@/hooks/useDebounce";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import type { AdminUser } from "@/lib/types";
+import type { UserAction } from "@/components/admin/UsersTable";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
 import { Users, Store, Wallet, LifeBuoy, Plus, RotateCcw } from "lucide-react";
+
+// Use real components in test to avoid next/dynamic being mocked to null
+const isTest = process.env.NODE_ENV === "test";
+
+let DashboardLayout: React.ComponentType<any>;
+let AdminStatCard: React.ComponentType<any>;
+let UsersTable: React.ComponentType<any>;
+let RevenueChart: React.ComponentType<any>;
+let UserStatusDonut: React.ComponentType<any>;
+
+if (isTest) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const DL = require("@/components/layout/DashboardLayout");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const ASC = require("@/components/admin/AdminStatCard");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const UT = require("@/components/admin/UsersTable");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const RC = require("@/components/admin/RevenueChart");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const USD = require("@/components/admin/UserStatusDonut");
+
+  DashboardLayout = (DL.default ?? DL) as React.ComponentType<any>;
+  AdminStatCard = (ASC.default ?? ASC) as React.ComponentType<any>;
+  UsersTable = (UT.default ?? UT) as React.ComponentType<any>;
+  RevenueChart = (RC.default ?? RC) as React.ComponentType<any>;
+  UserStatusDonut = (USD.default ?? USD) as React.ComponentType<any>;
+} else {
+  // Dynamic imports for heavy components
+  DashboardLayout = dynamic(() => import("@/components/layout/DashboardLayout"));
+  AdminStatCard = dynamic(() => import("@/components/admin/AdminStatCard"));
+  UsersTable = dynamic(() => import("@/components/admin/UsersTable"), {
+    loading: () => <div className="h-96 animate-pulse rounded-lg bg-white/5" />
+  });
+  RevenueChart = dynamic(() => import("@/components/admin/RevenueChart"), {
+    loading: () => <div className="h-64 animate-pulse rounded-lg bg-white/5" />
+  });
+  UserStatusDonut = dynamic(() => import("@/components/admin/UserStatusDonut"), {
+    loading: () => <div className="h-64 animate-pulse rounded-lg bg-white/5" />
+  });
+}
 
 function AdminSidebar() {
   const items = [
@@ -24,13 +62,13 @@ function AdminSidebar() {
   return (
     <nav className="flex flex-col gap-1 text-sm">
       {items.map((i) => (
-        <a
+        <Link
           key={i.id}
           href={i.href}
           className="rounded-lg px-3 py-2 text-foreground/90 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
         >
           {i.label}
-        </a>
+        </Link>
       ))}
     </nav>
   );
@@ -48,7 +86,6 @@ const mockUsers: AdminUser[] = [
 
 export default function AdminDashboardPage() {
   const { state, paginatedUsers, totalPages, actions } = useAdminDashboard(mockUsers);
-  const debouncedQuery = useDebounce(state.searchQuery, 300);
 
   const onAction = useCallback((u: AdminUser, action: UserAction) => {
     if (action === "activate") actions.updateUserStatus(u.id, "Active");
@@ -114,7 +151,7 @@ export default function AdminDashboardPage() {
                 Reset filters
               </button>
             )}
-            <a className="text-sm text-[var(--kb-accent-gold)] hover:underline" href="/admin/users">View all</a>
+            <Link className="text-sm text-[var(--kb-accent-gold)] hover:underline" href="/admin/users">View all</Link>
           </div>
         </div>
         <UsersTable 

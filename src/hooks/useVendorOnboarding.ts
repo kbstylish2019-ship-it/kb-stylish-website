@@ -4,6 +4,9 @@ import type {
   VendorBusinessInfo,
   VendorPayoutInfo,
   PayoutMethod,
+  VendorBankPayout,
+  VendorEsewaPayout,
+  VendorKhaltiPayout,
 } from "@/lib/types";
 
 interface VendorOnboardingState {
@@ -31,7 +34,7 @@ const INITIAL_BANK_PAYOUT: VendorPayoutInfo = {
   accountName: "",
   accountNumber: "",
   branch: "",
-} as any;
+};
 
 function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -88,7 +91,7 @@ export function useVendorOnboarding() {
     });
   }, []);
 
-  const updatePayout = React.useCallback((updates: Record<string, any>) => {
+  const updatePayout = React.useCallback((updates: Partial<VendorPayoutInfo>) => {
     setState((prev) => ({
       ...prev,
       payout: { ...prev.payout, ...updates } as VendorPayoutInfo,
@@ -124,18 +127,17 @@ export function useVendorOnboarding() {
 
   const validateStep2 = React.useCallback((): string[] => {
     const errors: string[] = [];
-    const { payout } = state;
     
-    if (payout.method === "bank") {
-      const p = payout as any;
+    if (state.payout.method === "bank") {
+      const p = state.payout as VendorBankPayout;
       if (!p.bankName?.trim()) errors.push("Bank name is required.");
       if (!p.accountName?.trim()) errors.push("Account name is required.");
       if (!p.accountNumber?.trim()) errors.push("Account number is required.");
-    } else if (payout.method === "esewa") {
-      const p = payout as any;
+    } else if (state.payout.method === "esewa") {
+      const p = state.payout as VendorEsewaPayout;
       if (!p.esewaId?.trim()) errors.push("eSewa ID is required.");
-    } else if (payout.method === "khalti") {
-      const p = payout as any;
+    } else if (state.payout.method === "khalti") {
+      const p = state.payout as VendorKhaltiPayout;
       if (!p.khaltiId?.trim()) errors.push("Khalti ID is required.");
     }
     

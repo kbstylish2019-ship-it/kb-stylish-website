@@ -1,11 +1,52 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
 import VendorDashboardPage from './page'
 
 // Mock the custom hooks
 jest.mock('@/hooks/useDebounce', () => ({
-  useDebounce: (value: any) => value, // Return value immediately for testing
+  useDebounce: <T,>(value: T) => value, // Return value immediately for testing
 }))
+
+// Force next/dynamic to synchronously resolve components in tests
+jest.mock('next/dynamic', () => ({
+  __esModule: true,
+  // In tests, render dynamic components as no-ops to keep assertions stable
+  default: () => () => null,
+}))
+
+// Provide a simple, accessible DashboardLayout
+jest.mock('@/components/layout/DashboardLayout', () => ({
+  __esModule: true,
+  default: ({
+    title,
+    actions,
+    sidebar,
+    children,
+  }: {
+    title?: React.ReactNode;
+    actions?: React.ReactNode;
+    sidebar?: React.ReactNode;
+    children?: React.ReactNode;
+  }) => (
+    <main>
+      <aside>{sidebar}</aside>
+      <section>
+        {(title || actions) && (
+          <div>
+            {title ? <h1>{title}</h1> : null}
+            {actions}
+          </div>
+        )}
+        {children}
+      </section>
+    </main>
+  ),
+}))
+
+// Use real StatCard and OrdersTable to preserve their behaviors in page tests
+
+// Use real AddProductModal (focus trap and next/image are globally mocked in jest.setup.js)
 
 describe('VendorDashboardPage', () => {
   it('renders header, primary CTA, stat cards and recent orders', () => {

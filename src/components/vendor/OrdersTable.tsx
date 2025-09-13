@@ -59,11 +59,14 @@ export default function OrdersTable({ orders, searchQuery, onSearchChange, isLoa
       <div className="flex flex-wrap gap-3">
         {onSearchChange && (
           <div className="flex-1 min-w-[200px]">
+            <label htmlFor="orders-search-input" className="sr-only">Search orders</label>
             <input
+              id="orders-search-input"
               type="text"
               value={searchQuery || ""}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search orders by ID, customer, items, or status..."
+              aria-label="Search orders"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
               data-testid="orders-search-input"
             />
@@ -165,6 +168,8 @@ export default function OrdersTable({ orders, searchQuery, onSearchChange, isLoa
                   <button
                     key={pageNum}
                     onClick={() => onPageChange(pageNum)}
+                    aria-current={pageNum === currentPage ? "page" : undefined}
+                    aria-label={`Go to page ${pageNum}`}
                     className={cn(
                       "rounded-lg px-3 py-1 text-sm ring-1",
                       pageNum === currentPage

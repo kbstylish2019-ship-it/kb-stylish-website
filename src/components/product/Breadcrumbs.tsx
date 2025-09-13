@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import type { ProductDetail } from "@/lib/types";
 
 export default function Breadcrumbs({ product }: { product: ProductDetail }) {
@@ -6,17 +7,17 @@ export default function Breadcrumbs({ product }: { product: ProductDetail }) {
     <nav aria-label="Breadcrumb" className="mb-4 text-sm text-foreground/70">
       <ol className="flex items-center gap-2">
         <li>
-          <a href="/" className="hover:text-foreground">Home</a>
+          <Link href="/" className="hover:text-foreground">Home</Link>
         </li>
         <li aria-hidden>›</li>
         <li>
-          <a href="/shop" className="hover:text-foreground">Shop</a>
+          <Link href="/shop" className="hover:text-foreground">Shop</Link>
         </li>
         <li aria-hidden>›</li>
         <li>
-          <a href={`/vendor/${product.vendor.id}`} className="hover:text-foreground">
+          <Link href={`/vendor/${product.vendor.id}`} className="hover:text-foreground">
             {product.vendor.name}
-          </a>
+          </Link>
         </li>
         <li aria-hidden>›</li>
         <li className="text-foreground/90" aria-current="page">

@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import FocusTrap from "focus-trap-react";
+import { X, Package, Info, Check, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { X, Package, DollarSign, ImageIcon, Check } from "lucide-react";
 
 interface AddProductModalProps {
   open: boolean;
@@ -11,13 +14,14 @@ type Step = "basic" | "pricing" | "media" | "review";
 
 const steps: { id: Step; label: string; icon: React.ReactNode }[] = [
   { id: "basic", label: "Basic Info", icon: <Package className="h-4 w-4" /> },
-  { id: "pricing", label: "Pricing", icon: <DollarSign className="h-4 w-4" /> },
+  { id: "pricing", label: "Pricing", icon: <Info className="h-4 w-4" /> },
   { id: "media", label: "Media", icon: <ImageIcon className="h-4 w-4" /> },
   { id: "review", label: "Review", icon: <Check className="h-4 w-4" /> },
 ];
 
 export default function AddProductModal({ open, onClose }: AddProductModalProps) {
-  const [currentStep, setCurrentStep] = useState<Step>("basic");
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -27,30 +31,45 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
     inventory: "",
   });
 
-  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
+  const currentStep = steps[currentStepIndex].id;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === steps.length - 1;
+  const canSubmit = isLastStep;
+
+  // Set initial focus when modal opens
+  useEffect(() => {
+    if (open && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [open]);
+
+  // Handle Escape key
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   const handleNext = () => {
-    if (!isLastStep) {
-      const nextStep = steps[currentStepIndex + 1];
-      setCurrentStep(nextStep.id);
+    if (!canSubmit) {
+      setCurrentStepIndex(currentStepIndex + 1);
     }
   };
 
   const handlePrev = () => {
     if (!isFirstStep) {
-      const prevStep = steps[currentStepIndex - 1];
-      setCurrentStep(prevStep.id);
+      setCurrentStepIndex(currentStepIndex - 1);
     }
   };
 
   const handleSubmit = () => {
-    // TODO: Handle form submission
-    console.log("Form submitted:", formData);
+    console.log("Submitting:", formData);
     onClose();
     // Reset form
-    setCurrentStep("basic");
+    setCurrentStepIndex(0);
     setFormData({
       name: "",
       description: "",
@@ -68,20 +87,35 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <FocusTrap active={open}>
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
-        onClick={onClose}
-        aria-hidden="true"
-      />
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-product-title"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          onClick={onClose}
+          role="button"
+          tabIndex={0}
+          aria-label="Close overlay"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onClose();
+            }
+          }}
+        />
       
       {/* Modal */}
       <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-background p-6 shadow-xl ring-1 ring-white/10">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Add Product/Service</h2>
+          <h2 id="add-product-title" className="text-xl font-semibold">Add Product/Service</h2>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="rounded-full p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
             aria-label="Close modal"
@@ -276,5 +310,6 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
         </div>
       </div>
     </div>
+    </FocusTrap>
   );
 }

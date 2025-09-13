@@ -1,8 +1,21 @@
+import dynamic from "next/dynamic";
 import AboutHero from "@/components/about/AboutHero";
-import AboutMission from "@/components/about/AboutMission";
-import AboutStats from "@/components/about/AboutStats";
-import AboutValues from "@/components/about/AboutValues";
-import TopStylistsShowcase from "@/components/about/TopStylistsShowcase";
+
+const AboutMission = dynamic(() => import("@/components/about/AboutMission"), {
+  loading: () => <div className="h-48 animate-pulse bg-white/5 rounded-xl mx-auto max-w-7xl px-4 my-8" />,
+});
+
+const AboutValues = dynamic(() => import("@/components/about/AboutValues"), {
+  loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-xl mx-auto max-w-7xl px-4 my-8" />,
+});
+
+const AboutStats = dynamic(() => import("@/components/about/AboutStats"), {
+  loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-xl mx-auto max-w-7xl px-4 my-8" />,
+});
+
+const TopStylistsShowcase = dynamic(() => import("@/components/about/TopStylistsShowcase"), {
+  loading: () => <div className="h-96 animate-pulse bg-white/5 rounded-xl mx-auto max-w-7xl px-4 my-8" />,
+});
 
 export const metadata = {
   title: "About • KB Stylish",

@@ -1,11 +1,6 @@
 "use client";
-
-const categories = [
-  { id: "ethnic", label: "Ethnic" },
-  { id: "streetwear", label: "Streetwear" },
-  { id: "formal", label: "Formal" },
-  { id: "casual", label: "Casual" },
-];
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 const sortOptions = [
   { id: "popularity", label: "Popularity" },
@@ -14,33 +9,76 @@ const sortOptions = [
   { id: "price_high", label: "Price: High to Low" },
 ];
 
-interface FilterSidebarProps {
+interface CurrentFilters {
   search: string;
   selectedCategories: string[];
   minPrice: string;
   maxPrice: string;
   sort: string;
-  onSearchChange: (v: string) => void;
-  onToggleCategory: (id: string, checked: boolean) => void;
-  onMinPriceChange: (v: string) => void;
-  onMaxPriceChange: (v: string) => void;
-  onSortChange: (v: string) => void;
-  onApplyFilters: () => void;
+}
+
+interface FilterSidebarProps {
+  availableCategories: string[];
+  currentFilters: CurrentFilters;
 }
 
 export default function FilterSidebar({
-  search,
-  selectedCategories,
-  minPrice,
-  maxPrice,
-  sort,
-  onSearchChange,
-  onToggleCategory,
-  onMinPriceChange,
-  onMaxPriceChange,
-  onSortChange,
-  onApplyFilters,
+  availableCategories,
+  currentFilters,
 }: FilterSidebarProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  
+  // Local state for form inputs
+  const [filters, setFilters] = useState<CurrentFilters>(currentFilters);
+
+  const categories = availableCategories.map(cat => ({
+    id: cat,
+    label: cat.charAt(0).toUpperCase() + cat.slice(1)
+  }));
+
+  const handleApplyFilters = () => {
+    const params = new URLSearchParams();
+    
+    if (filters.search.trim()) {
+      params.set('search', filters.search.trim());
+    }
+    
+    if (filters.selectedCategories.length > 0) {
+      params.set('categories', filters.selectedCategories.join(','));
+    }
+    
+    if (filters.minPrice.trim()) {
+      params.set('minPrice', filters.minPrice.trim());
+    }
+    
+    if (filters.maxPrice.trim()) {
+      params.set('maxPrice', filters.maxPrice.trim());
+    }
+    
+    if (filters.sort && filters.sort !== 'popularity') {
+      params.set('sort', filters.sort);
+    }
+
+    // Reset cursor when applying new filters
+    params.delete('cursor');
+    
+    startTransition(() => {
+      router.push(`/shop?${params.toString()}`);
+    });
+  };
+
+  const onSearchChange = (v: string) => setFilters(f => ({ ...f, search: v }));
+  const onToggleCategory = (id: string, checked: boolean) =>
+    setFilters(f => ({
+      ...f,
+      selectedCategories: checked
+        ? [...new Set([...f.selectedCategories, id])]
+        : f.selectedCategories.filter(x => x !== id),
+    }));
+  const onMinPriceChange = (v: string) => setFilters(f => ({ ...f, minPrice: v }));
+  const onMaxPriceChange = (v: string) => setFilters(f => ({ ...f, maxPrice: v }));
+  const onSortChange = (v: string) => setFilters(f => ({ ...f, sort: v }));
   
   return (
     <aside className="space-y-6">
@@ -49,7 +87,7 @@ export default function FilterSidebar({
         <label className="text-sm font-semibold">Search</label>
         <input
           type="text"
-          value={search}
+          value={filters.search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search products"
           className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
@@ -61,7 +99,7 @@ export default function FilterSidebar({
         <p className="text-sm font-semibold">Category</p>
         <div className="mt-2 space-y-2">
           {categories.map((c) => {
-            const isChecked = selectedCategories.includes(c.id);
+            const isChecked = filters.selectedCategories.includes(c.id);
             return (
               <label key={c.id} className="flex items-center gap-2 text-sm">
                 <input
@@ -84,7 +122,7 @@ export default function FilterSidebar({
           <input
             type="number"
             inputMode="numeric"
-            value={minPrice}
+            value={filters.minPrice}
             onChange={(e) => onMinPriceChange(e.target.value)}
             placeholder="Min"
             className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
@@ -92,7 +130,7 @@ export default function FilterSidebar({
           <input
             type="number"
             inputMode="numeric"
-            value={maxPrice}
+            value={filters.maxPrice}
             onChange={(e) => onMaxPriceChange(e.target.value)}
             placeholder="Max"
             className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
@@ -104,7 +142,7 @@ export default function FilterSidebar({
       <div>
         <p className="text-sm font-semibold">Sort by</p>
         <select
-          value={sort}
+          value={filters.sort}
           onChange={(e) => onSortChange(e.target.value)}
           className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
         >
@@ -118,10 +156,11 @@ export default function FilterSidebar({
 
       {/* Apply */}
       <button
-        onClick={onApplyFilters}
-        className="w-full rounded-full bg-gradient-to-r from-[color-mix(in_oklab,var(--kb-primary-brand)_75%,black)] to-[var(--kb-primary-brand)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kb-accent-gold)]"
+        onClick={handleApplyFilters}
+        disabled={isPending}
+        className="w-full rounded-full bg-gradient-to-r from-[color-mix(in_oklab,var(--kb-primary-brand)_75%,black)] to-[var(--kb-primary-brand)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kb-accent-gold)] disabled:opacity-50"
       >
-        Apply
+        {isPending ? "Applying..." : "Apply"}
       </button>
     </aside>
   );

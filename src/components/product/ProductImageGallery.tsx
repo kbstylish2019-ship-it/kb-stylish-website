@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Image from "next/image";
 import type { Media } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -31,14 +32,15 @@ export default function ProductImageGallery({ images }: { images: Media[] }) {
 
   return (
     <div>
-      <div className="aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-black/20">
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-black/20">
         {current && (
-          // Using img instead of next/image to avoid remote domain config for demo
-          <img
+          <Image
             src={current.url}
             alt={current.alt}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 50vw"
             onError={handleImgError}
-            className="size-full object-cover"
           />
         )}
       </div>
@@ -54,7 +56,16 @@ export default function ProductImageGallery({ images }: { images: Media[] }) {
               i === index ? "ring-2 ring-[var(--kb-accent-gold)]" : "border-white/10"
             )}
           >
-            <img src={img.url} alt={img.alt} onError={handleImgError} className="size-full object-cover" />
+            <div className="relative h-full w-full">
+              <Image 
+                src={img.url} 
+                alt={img.alt} 
+                fill
+                className="object-cover" 
+                sizes="20vw"
+                onError={handleImgError}
+              />
+            </div>
           </button>
         ))}
       </div>

@@ -1,13 +1,20 @@
+import Image from "next/image";
+
 export default function AboutHero() {
   return (
     <section className="relative overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0 -z-10">
-        <img
-          src="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1600&auto=format&fit=crop"
-          alt="Elegant South Asian fashion editorial with premium textures"
-          className="h-full w-full object-cover opacity-70"
-        />
+        <div className="relative h-full w-full">
+          <Image
+            src="https://images.unsplash.com/photo-1520975916090-3105956dac38"
+            alt="Elegant South Asian fashion editorial with premium textures"
+            fill
+            priority
+            className="object-cover opacity-70"
+            sizes="100vw"
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-background" />
       </div>
 
@@ -19,7 +26,7 @@ export default function AboutHero() {
           </span>
           <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
             <span className="bg-gradient-to-b from-white to-white/80 bg-clip-text text-transparent">
-              Crafting Nepal's premier destination for style
+              Crafting Nepal&apos;s premier destination for style
             </span>
           </h1>
           <p className="mt-4 text-base text-white/85 sm:text-lg">

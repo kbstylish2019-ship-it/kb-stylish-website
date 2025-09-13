@@ -23,6 +23,14 @@ export type AdminDashboardAction =
   | { type: "UPDATE_USER_STATUS"; payload: { userId: string; status: AccountStatus } }
   | { type: "RESET_FILTERS" };
 
+/**
+ * Reducer for admin dashboard state management.
+ * Handles user filtering, pagination, sorting, and status updates.
+ * 
+ * @param state - Current dashboard state
+ * @param action - Action to perform on state
+ * @returns Updated dashboard state
+ */
 function adminDashboardReducer(state: AdminDashboardState, action: AdminDashboardAction): AdminDashboardState {
   switch (action.type) {
     case "SET_USERS":
@@ -59,6 +67,13 @@ function adminDashboardReducer(state: AdminDashboardState, action: AdminDashboar
   }
 }
 
+/**
+ * Custom hook for admin dashboard functionality.
+ * Provides filtered/paginated users and actions for state management.
+ * 
+ * @param initialUsers - Initial list of admin users
+ * @returns Dashboard state, filtered users, pagination info, and actions
+ */
 export function useAdminDashboard(initialUsers: AdminUser[]) {
   const [state, dispatch] = useReducer(adminDashboardReducer, {
     users: initialUsers,

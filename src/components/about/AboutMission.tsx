@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function AboutMission() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:py-20">
@@ -5,7 +7,7 @@ export default function AboutMission() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Our Mission</h2>
           <p className="mt-4 text-foreground/80">
-            We are building Nepal's most trusted marketplace for style — where discerning
+            We are building Nepal&apos;s most trusted marketplace for style — where discerning
             shoppers discover premium products and connect with vetted stylists. We fuse
             world-class UX with a deep respect for local culture and craftsmanship.
           </p>
@@ -24,11 +26,13 @@ export default function AboutMission() {
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-3xl ring-1 ring-white/10">
-          <img
-            src="https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1400&auto=format&fit=crop"
+        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl ring-1 ring-white/10">
+          <Image
+            src="https://images.unsplash.com/photo-1519741497674-611481863552"
             alt="Artful fashion editorial scene with warm tones"
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
+            sizes="(max-width: 1024px) 100vw, 50vw"
           />
         </div>
       </div>

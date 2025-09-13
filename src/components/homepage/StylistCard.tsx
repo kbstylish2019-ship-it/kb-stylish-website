@@ -1,7 +1,18 @@
+import React from "react";
+import Image from "next/image";
 import { Star } from "lucide-react";
 import type { Stylist } from "@/lib/types";
 
-export default function StylistCard({
+/**
+ * StylistCard component displays stylist information with booking capability.
+ * Memoized to prevent unnecessary re-renders in stylist lists.
+ * 
+ * @param stylist - Stylist data to display
+ * @param onBook - Optional callback for booking action
+ * @param bookLabel - Custom label for book button
+ * @returns Memoized stylist card component
+ */
+const StylistCard = React.memo(function StylistCard({
   stylist,
   onBook,
   bookLabel = "Book",
@@ -10,12 +21,17 @@ export default function StylistCard({
   onBook?: () => void;
   bookLabel?: string;
 }) {
-  const fullStars = Math.round(stylist.rating);
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10">
       <div className="relative aspect-[4/3] w-full overflow-hidden">
         {stylist.imageUrl ? (
-          <img src={stylist.imageUrl} alt={stylist.name} className="size-full object-cover" />
+          <Image 
+            src={stylist.imageUrl} 
+            alt={stylist.name} 
+            fill
+            className="object-cover" 
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
         ) : (
           <div className="size-full bg-gradient-to-br from-[var(--kb-primary-brand)]/20 to-[var(--kb-accent-gold)]/20" />
         )}
@@ -46,4 +62,6 @@ export default function StylistCard({
       </div>
     </div>
   );
-}
+});
+
+export default StylistCard;

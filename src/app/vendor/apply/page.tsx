@@ -1,8 +1,13 @@
 "use client";
-import OnboardingHero from "@/components/vendor/onboarding/OnboardingHero";
-import ValueProps from "@/components/vendor/onboarding/ValueProps";
-import HowItWorks from "@/components/vendor/onboarding/HowItWorks";
-import ApplicationForm from "@/components/vendor/onboarding/ApplicationForm";
+import dynamic from "next/dynamic";
+
+// Dynamic imports to reduce initial bundle size
+const OnboardingHero = dynamic(() => import("@/components/vendor/onboarding/OnboardingHero"));
+const ValueProps = dynamic(() => import("@/components/vendor/onboarding/ValueProps"));
+const HowItWorks = dynamic(() => import("@/components/vendor/onboarding/HowItWorks"));
+const ApplicationForm = dynamic(() => import("@/components/vendor/onboarding/ApplicationForm"), {
+  loading: () => <div className="h-96 animate-pulse rounded-lg bg-white/5" />
+});
 
 export default function VendorApplyPage() {
   return (

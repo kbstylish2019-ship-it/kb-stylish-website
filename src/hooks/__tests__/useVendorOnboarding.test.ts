@@ -69,7 +69,7 @@ describe("useVendorOnboarding", () => {
     });
     
     expect(result.current.payout.method).toBe("esewa");
-    expect((result.current.payout as any).esewaId).toBe("");
+    expect("esewaId" in result.current.payout && result.current.payout.esewaId).toBe("");
   });
 
   it("submits application with console log", async () => {

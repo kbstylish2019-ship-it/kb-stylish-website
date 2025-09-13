@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import FocusTrap from "focus-trap-react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,10 +14,18 @@ export interface AuthModalProps {
 export default function AuthModal({ open, onClose }: AuthModalProps) {
   const [tab, setTab] = React.useState<"login" | "register">("login");
   const [mounted, setMounted] = React.useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Set initial focus when modal opens
+  useEffect(() => {
+    if (open && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [open]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -30,7 +39,8 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   if (!mounted) return null;
 
   return createPortal(
-    <div
+    <FocusTrap active={open}>
+      <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="kb-auth-title"
@@ -65,6 +75,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
               </p>
             </div>
             <button
+              ref={closeButtonRef}
               onClick={onClose}
               aria-label="Close"
               className="rounded-md p-2 text-foreground/80 hover:bg-white/10"
@@ -103,12 +114,13 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           </div>
         </div>
       </div>
-    </div>,
+    </div>
+    </FocusTrap>,
     document.body
   );
 }
 
-function Field({ id, label, type = "text", placeholder }: { id: string; label: string; type?: string; placeholder?: string }) {
+const Field = ({ id, label, type = "text", placeholder }: { id: string; label: string; type?: string; placeholder?: string }) => {
   return (
     <label htmlFor={id} className="block">
       <span className="text-sm text-foreground/80">{label}</span>
@@ -122,9 +134,9 @@ function Field({ id, label, type = "text", placeholder }: { id: string; label: s
       />
     </label>
   );
-}
+};
 
-function LoginForm({ onClose }: { onClose: () => void }) {
+const LoginForm = ({ onClose }: { onClose: () => void }) => {
   return (
     <form
       className="grid gap-3"
@@ -143,9 +155,9 @@ function LoginForm({ onClose }: { onClose: () => void }) {
       </button>
     </form>
   );
-}
+};
 
-function RegisterForm({ onClose }: { onClose: () => void }) {
+const RegisterForm = ({ onClose }: { onClose: () => void }) => {
   return (
     <form
       className="grid gap-3"
@@ -165,4 +177,4 @@ function RegisterForm({ onClose }: { onClose: () => void }) {
       </button>
     </form>
   );
-}
+};

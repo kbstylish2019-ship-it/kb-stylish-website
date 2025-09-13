@@ -1,14 +1,26 @@
+"use client";
+import React from "react";
+import Image from "next/image";
 import type { Product } from "@/lib/types";
 
-export default function ProductCard({ product }: { product: Product }) {
+/**
+ * ProductCard component displays product information in a card layout.
+ * Memoized to prevent unnecessary re-renders in product lists.
+ * 
+ * @param product - Product data to display
+ * @returns Memoized product card component
+ */
+const ProductCard = React.memo(function ProductCard({ product }: { product: Product }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10">
       <div className="relative aspect-square w-full bg-gradient-to-br from-white/10 to-white/0">
         {product.imageUrl ? (
-          <img
+          <Image
             src={product.imageUrl}
             alt={product.name}
-            className="absolute inset-0 size-full object-cover"
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
           />
         ) : null}
         <div className="absolute right-3 top-3">
@@ -25,4 +37,6 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
     </div>
   );
-}
+});
+
+export default ProductCard;

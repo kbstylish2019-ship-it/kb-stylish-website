@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HeroSection() {
   return (
@@ -14,7 +15,7 @@ export default function HeroSection() {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs font-medium ring-1 ring-white/10">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--kb-accent-gold)]" />
-              Nepal's premier style marketplace
+              Nepal&apos;s premier style marketplace
             </span>
             <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
               <span className="bg-gradient-to-b from-[var(--kb-text-primary)] to-white/70 bg-clip-text text-transparent">
@@ -46,10 +47,13 @@ export default function HeroSection() {
 
           {/* Hero visual */}
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl ring-1 ring-white/10">
-            <img
-              src="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1600&auto=format&fit=crop"
+            <Image
+              src="https://images.unsplash.com/photo-1520975916090-3105956dac38"
               alt="Editorial fashion portrait with elegant South Asian aesthetics"
-              className="h-full w-full object-cover"
+              fill
+              priority
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
             />
             <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-black/20" />
           </div>

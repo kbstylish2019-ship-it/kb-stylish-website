@@ -93,8 +93,8 @@ export function useVendorDashboard(initialOrders: Order[]) {
 
     // Sorting
     filtered.sort((a, b) => {
-      const aVal = a[state.sortBy] as any;
-      const bVal = b[state.sortBy] as any;
+      const aVal = a[state.sortBy] as string | number | undefined;
+      const bVal = b[state.sortBy] as string | number | undefined;
 
       if (aVal === undefined && bVal === undefined) return 0;
       if (aVal === undefined) return 1;
