@@ -85,3 +85,80 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 - Prefer dynamic imports for heavy components (charts, large tables) in non-test environments.
 - Use `next/image` for all remote images (domains configured in `next.config.ts`).
+
+## Database Seeding
+
+KB Stylish includes a comprehensive database seeding script to populate your marketplace with realistic product data.
+
+### Prerequisites
+
+The seeding script requires admin access to your Supabase database. You'll need:
+
+1. **SUPABASE_URL** - Your Supabase project URL
+2. **SUPABASE_SERVICE_ROLE_KEY** - Your Supabase service role key (admin access)
+
+### Environment Setup
+
+Add these variables to your `.env.local` file:
+
+```bash
+# Database Seeding (Admin Access Required)
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+```
+
+⚠️ **Security Warning**: The service role key has admin access to your database. Never commit this to version control or expose it in client-side code.
+
+### Running the Seed Script
+
+Execute the seeding script from your project root:
+
+```bash
+# Run the database seed script
+npx ts-node supabase/seed.ts
+```
+
+### What Gets Created
+
+The seed script creates a complete marketplace foundation:
+
+- **5 Fashion Brands** (Urban Threads, Elegant Essence, Boho Chic, Athletic Edge, Vintage Revival)
+- **5 Product Categories** (Casual, Formal, Ethnic, Streetwear, Activewear)  
+- **Product Attributes** (Size, Color, Material)
+- **8 Complete Products** with multiple variants each:
+  - Premium Cotton T-Shirt
+  - Slim Fit Jeans  
+  - Business Blazer
+  - Floral Maxi Dress
+  - Athletic Joggers
+  - Vintage Leather Jacket
+  - Silk Blouse
+  - Cargo Shorts
+- **Product Variants** (Size × Color combinations)
+- **Inventory Records** with realistic stock levels
+- **Product Images** from Unsplash
+- **Test Vendor Account** (KB Stylish Store)
+
+### Seed Script Features
+
+- **Smart Duplicate Prevention**: Won't re-seed if products already exist
+- **Realistic Data**: Uses @faker-js/faker for authentic product information
+- **Complete Relationships**: Creates all necessary foreign key relationships
+- **Proper Constraints**: Respects database schema and validation rules
+- **Rich Product Data**: Includes descriptions, pricing, inventory, and images
+- **Error Handling**: Comprehensive logging and error recovery
+
+### Re-seeding
+
+To re-run the seed script, you'll need to clear existing product data first:
+
+```sql
+-- ⚠️ WARNING: This will delete all product data
+TRUNCATE TABLE products CASCADE;
+```
+
+Then run the seed script again:
+
+```bash
+npx ts-node supabase/seed.ts
+```

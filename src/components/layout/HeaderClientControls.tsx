@@ -4,13 +4,15 @@ import React from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
-import { useCartStore } from "@/lib/store/cartStore";
+import useDecoupledCartStore from '@/lib/store/decoupledCartStore';
+import { signOut } from "@/app/actions/auth";
 
 // In tests, resolve icons/AuthModal synchronously to avoid next/dynamic mocks returning null
 const isTest = process.env.NODE_ENV === "test";
 let MenuIcon: React.ComponentType<any>;
 let XIcon: React.ComponentType<any>;
 let LogInIcon: React.ComponentType<any>;
+let LogOutIcon: React.ComponentType<any>;
 let UserIcon: React.ComponentType<any>;
 let ChevronDownIcon: React.ComponentType<any>;
 let ShoppingCartIcon: React.ComponentType<any>;
@@ -22,6 +24,7 @@ if (isTest) {
   MenuIcon = icons.Menu;
   XIcon = icons.X;
   LogInIcon = icons.LogIn;
+  LogOutIcon = icons.LogOut;
   UserIcon = icons.User;
   ChevronDownIcon = icons.ChevronDown;
   ShoppingCartIcon = icons.ShoppingCart;
@@ -33,6 +36,7 @@ if (isTest) {
   MenuIcon = dynamic(() => import("lucide-react").then((m) => m.Menu), { ssr: false }) as any;
   XIcon = dynamic(() => import("lucide-react").then((m) => m.X), { ssr: false }) as any;
   LogInIcon = dynamic(() => import("lucide-react").then((m) => m.LogIn), { ssr: false }) as any;
+  LogOutIcon = dynamic(() => import("lucide-react").then((m) => m.LogOut), { ssr: false }) as any;
   UserIcon = dynamic(() => import("lucide-react").then((m) => m.User), { ssr: false }) as any;
   ChevronDownIcon = dynamic(() => import("lucide-react").then((m) => m.ChevronDown), { ssr: false }) as any;
   ShoppingCartIcon = dynamic(() => import("lucide-react").then((m) => m.ShoppingCart), { ssr: false }) as any;
@@ -65,7 +69,8 @@ export default function HeaderClientControls({
   React.useEffect(() => {
     setHasHydrated(true);
   }, []);
-  const cartCount = useCartStore((s) => s.getItemCount());
+  // Use the new decoupled store - get total items (products + bookings)
+  const cartCount = useDecoupledCartStore((state) => state.totalItems);
 
   return (
     <>
@@ -126,6 +131,22 @@ export default function HeaderClientControls({
                     {item.label}
                   </Link>
                 ))}
+                <div className="border-t border-white/10 mt-2 pt-2">
+                  <form action={async () => {
+                    // Don't clear the cart - preserve guest items
+                    // The server will handle user-specific cleanup
+                    await signOut();
+                  }}>
+                    <button
+                      type="submit"
+                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground/90 hover:bg-white/5 text-left"
+                      data-testid="logout-button"
+                    >
+                      <LogOutIcon className="h-4 w-4" />
+                      Log Out
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>

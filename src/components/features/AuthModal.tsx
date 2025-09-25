@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import FocusTrap from "focus-trap-react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { signIn, signUp } from "@/app/actions/auth";
 
 export interface AuthModalProps {
   open: boolean;
@@ -137,43 +138,118 @@ const Field = ({ id, label, type = "text", placeholder }: { id: string; label: s
 };
 
 const LoginForm = ({ onClose }: { onClose: () => void }) => {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string>("");
+
+  const handleSubmit = async (formData: FormData) => {
+    setError("");
+    
+    // Read guest token from cookies before login
+    const guestToken = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('guest_token='))
+      ?.split('=')[1];
+    
+    if (guestToken) {
+      formData.append('guestToken', guestToken);
+    }
+    
+    startTransition(async () => {
+      try {
+        const result = await signIn(formData);
+        if (result?.error) {
+          setError(result.error);
+        } else {
+          onClose();
+        }
+      } catch (error) {
+        // NEXT_REDIRECT is expected behavior, not an error
+        if (error && typeof error === 'object' && 'digest' in error && 
+            typeof error.digest === 'string' && error.digest.includes('NEXT_REDIRECT')) {
+          // After successful login with merge (via redirect), clear guest token and fetch cart
+          if (guestToken) {
+            document.cookie = 'guest_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            
+            const { useCartStore } = await import('@/lib/store/cartStore');
+            const { fetchCart } = useCartStore.getState();
+            fetchCart();
+          }
+          onClose(); // Close modal on successful redirect
+          return;
+        }
+        setError("An unexpected error occurred");
+      }
+    });
+  };
+
   return (
-    <form
-      className="grid gap-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-    >
+    <form action={handleSubmit} className="grid gap-3">
+      {error && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
+          {error}
+        </div>
+      )}
       <Field id="email" label="Email" type="email" placeholder="you@example.com" />
       <Field id="password" label="Password" type="password" placeholder="••••••••" />
       <button
         type="submit"
-        className="mt-2 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)]"
+        disabled={isPending}
+        className="mt-2 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Sign in
+        {isPending ? "Signing in..." : "Sign in"}
       </button>
     </form>
   );
 };
 
 const RegisterForm = ({ onClose }: { onClose: () => void }) => {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+
+  const handleSubmit = async (formData: FormData) => {
+    setError("");
+    setMessage("");
+    startTransition(async () => {
+      try {
+        const result = await signUp(formData);
+        if (result?.error) {
+          setError(result.error);
+        } else if (result?.message) {
+          setMessage(result.message);
+          if (!result.requiresConfirmation) {
+            onClose();
+          }
+        } else {
+          onClose();
+        }
+      } catch (error) {
+        setError("An unexpected error occurred");
+      }
+    });
+  };
+
   return (
-    <form
-      className="grid gap-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-    >
+    <form action={handleSubmit} className="grid gap-3">
+      {error && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2 text-sm text-green-400">
+          {message}
+        </div>
+      )}
       <Field id="fullName" label="Full Name" placeholder="Your name" />
-      <Field id="emailReg" label="Email" type="email" placeholder="you@example.com" />
-      <Field id="passwordReg" label="Password" type="password" placeholder="Create a password" />
+      <Field id="email" label="Email" type="email" placeholder="you@example.com" />
+      <Field id="password" label="Password" type="password" placeholder="Create a password" />
       <button
         type="submit"
-        className="mt-2 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)]"
+        disabled={isPending}
+        className="mt-2 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Create account
+        {isPending ? "Creating account..." : "Create account"}
       </button>
     </form>
   );

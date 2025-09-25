@@ -26,15 +26,41 @@ const baseProduct: ProductDetail = {
   returns: { days: 7, summary: "7-day returns" },
 };
 
-const mockAddProduct = jest.fn();
+// Updated mocks for async cart store
+const mockAddItem = jest.fn().mockResolvedValue(true);
 
 describe("ProductActions", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Mock the useCartStore to return the function directly when called with a selector
+    // Mock the useCartStore with new async architecture
     (useCartStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
-        addProduct: mockAddProduct,
+        // New async actions
+        addItem: mockAddItem,
+        updateItem: jest.fn().mockResolvedValue(true),
+        removeItem: jest.fn().mockResolvedValue(true),
+        
+        // Loading states
+        isAddingItem: false,
+        isUpdatingItem: {},
+        isRemovingItem: {},
+        
+        // State
+        items: [],
+        totalItems: 0,
+        totalAmount: 0,
+        
+        // Legacy compatibility (if needed)
+        addProduct: async (product: any) => {
+          // Convert old addProduct call to new addItem
+          return mockAddItem(product.variantId || product.id, product.quantity || 1, {
+            name: product.name,
+            slug: product.slug || product.name.toLowerCase().replace(/\s+/g, '-'),
+            price: product.price,
+            sku: product.sku,
+            image: product.imageUrl,
+          });
+        },
       };
       // If selector is provided, call it with state, otherwise return the whole state
       return typeof selector === 'function' ? selector(state) : state;
@@ -66,7 +92,7 @@ describe("ProductActions", () => {
     expect(screen.getByText(/out of stock/i)).toBeInTheDocument();
   });
 
-  it("calls addProduct when Add to Cart is clicked", () => {
+  it("calls addProduct when Add to Cart is clicked", async () => {
     const variant = { id: "v1", options: { Size: "M" }, price: 1200, stock: 5 };
     render(
       <ProductActions
@@ -78,14 +104,15 @@ describe("ProductActions", () => {
     const addBtn = screen.getByRole("button", { name: /add to cart/i });
     fireEvent.click(addBtn);
 
-    expect(mockAddProduct).toHaveBeenCalledWith({
-      id: "p",
+    // Check that the mock was called (through the legacy adapter)
+    expect(mockAddItem).toHaveBeenCalledWith("v1", 1, expect.objectContaining({
       name: "Test Product",
-      variant: "v1",
-      imageUrl: "test.jpg",
       price: 1200,
-      quantity: 1,
-    });
+      image: "test.jpg",
+    }));
+
+    // Check for success state
+    expect(addBtn).toHaveTextContent(/adding/i);
   });
 
   it("allows quantity change before adding to cart", () => {
@@ -103,11 +130,11 @@ describe("ProductActions", () => {
     const addBtn = screen.getByRole("button", { name: /add to cart/i });
     fireEvent.click(addBtn);
 
-    expect(mockAddProduct).toHaveBeenCalledWith(
-      expect.objectContaining({
-        quantity: 3,
-      })
-    );
+    // Verify the addItem was called with quantity 3
+    expect(mockAddItem).toHaveBeenCalledWith("v1", 3, expect.objectContaining({
+      name: "Test Product",
+      price: 1000,
+    }));
   });
 
   it("resets quantity to 1 after adding to cart", () => {

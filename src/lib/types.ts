@@ -28,6 +28,7 @@ export interface NavigationItem {
 export interface Product {
   id: string;
   name: string;
+  slug?: string; // URL-friendly identifier
   price: number; // in NPR
   imageUrl?: string; // optional until CDN configured
   badge?: string; // e.g., "New", "Trending"
@@ -120,9 +121,12 @@ export interface CartProductItem {
   id: string;
   name: string;
   variant?: string; // e.g., "M / Royal Purple"
+  variantId?: string; // The actual variant ID from database
+  variantData?: any; // Full variant object from database
   imageUrl?: string;
   price: number; // per unit
   quantity: number;
+  sku?: string;
 }
 
 export interface CartBookingItem {

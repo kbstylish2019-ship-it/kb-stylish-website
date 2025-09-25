@@ -32,7 +32,7 @@ export default function ProductList({
       </h2>
       <ul className="divide-y divide-white/10">
         {items.map((it) => (
-          <li key={`${it.id}-${it.variant || ''}`} className="flex gap-3 py-3">
+          <li key={it.id} className="flex gap-3 py-3"> {/* Use only it.id as key - MUST be unique cart_items.id */}
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/10">
               {it.imageUrl ? (
                 <Image 

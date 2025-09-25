@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { Product } from "@/lib/types";
 
 /**
@@ -11,30 +12,35 @@ import type { Product } from "@/lib/types";
  * @returns Memoized product card component
  */
 const ProductCard = React.memo(function ProductCard({ product }: { product: Product }) {
+  // Use slug if available, otherwise generate from name
+  const productSlug = product.slug || product.name.toLowerCase().replace(/\s+/g, '-');
+  
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10">
-      <div className="relative aspect-square w-full bg-gradient-to-br from-white/10 to-white/0">
-        {product.imageUrl ? (
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-          />
-        ) : null}
-        <div className="absolute right-3 top-3">
-          {product.badge ? (
-            <span className="rounded-full bg-[var(--kb-accent-gold)] px-2 py-1 text-xs font-semibold text-[#111827] shadow">
-              {product.badge}
-            </span>
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 transition-all hover:ring-2 hover:ring-white/20">
+      <Link href={`/product/${productSlug}`} className="block">
+        <div className="relative aspect-square w-full bg-gradient-to-br from-white/10 to-white/0">
+          {product.imageUrl ? (
+            <Image
+              src={product.imageUrl}
+              alt={product.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+            />
           ) : null}
+          <div className="absolute right-3 top-3">
+            {product.badge ? (
+              <span className="rounded-full bg-[var(--kb-accent-gold)] px-2 py-1 text-xs font-semibold text-[#111827] shadow">
+                {product.badge}
+              </span>
+            ) : null}
+          </div>
         </div>
-      </div>
-      <div className="p-4">
-        <p className="text-sm text-foreground/70">{product.name}</p>
-        <p className="mt-1 text-lg font-semibold">Rs. {product.price.toLocaleString()}</p>
-      </div>
+        <div className="p-4">
+          <p className="text-sm text-foreground/70 hover:text-foreground transition-colors">{product.name}</p>
+          <p className="mt-1 text-lg font-semibold">Rs. {product.price.toLocaleString()}</p>
+        </div>
+      </Link>
     </div>
   );
 });

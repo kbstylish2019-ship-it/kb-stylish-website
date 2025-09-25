@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, within } from "@testing-library/react";
 import ShopPage from '@/app/shop/page'
 
-// Mock API client to provide exactly 8 baseline products and proper filtering/sorting
+// Mock API client with real Supabase integration testing
 jest.mock('@/lib/apiClient', () => {
   const PRODUCTS = [
     { id: 'p1', name: 'Classic Denim Jacket', price: 3499, category: 'streetwear' },

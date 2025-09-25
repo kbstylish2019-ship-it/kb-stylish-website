@@ -1,0 +1,21 @@
+# Supabase Edge Functions Configuration
+
+# Disable JWT verification for the webhook endpoint
+# Webhooks come from external payment providers (Stripe, PayPal, etc)
+# They don't have user JWTs, so we disable authentication
+[functions.fulfill-order]
+verify_jwt = false
+
+# Keep JWT verification enabled for authenticated endpoints
+[functions.cart-manager]
+verify_jwt = true
+
+[functions.create-order-intent]
+verify_jwt = true
+
+[functions.order-worker]
+verify_jwt = true
+
+# Cache invalidator runs on database events
+[functions.cache-invalidator]
+verify_jwt = true

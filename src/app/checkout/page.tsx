@@ -1,6 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { CartInitializer } from "@/components/CartInitializer";
 
 // Dynamic import for heavy checkout component
 const CheckoutClient = dynamic(() => import("@/components/checkout/CheckoutClient"), {
@@ -14,6 +15,9 @@ const CheckoutClient = dynamic(() => import("@/components/checkout/CheckoutClien
 export default function CheckoutPage() {
   return (
     <main>
+      {/* CRITICAL: Initialize cart on checkout page to ensure products are loaded */}
+      <CartInitializer />
+      
       <ErrorBoundary
         fallback={
           <div className="mx-auto max-w-3xl px-4 py-8">

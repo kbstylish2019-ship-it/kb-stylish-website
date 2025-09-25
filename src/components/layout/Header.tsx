@@ -1,9 +1,10 @@
 import React from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import type { UserCapability } from "@/lib/types";
-import { filterNav } from "@/lib/nav";
-import dynamic from "next/dynamic";
+import { getCurrentUser } from '@/lib/auth';
+import { filterNav } from '@/lib/nav';
 
 // In tests, resolve HeaderClientControls synchronously to avoid next/dynamic mocks returning null
 const isTest = process.env.NODE_ENV === "test";
@@ -18,18 +19,38 @@ if (isTest) {
   }) as unknown as React.ComponentType<any>;
 }
 
+// Convert capabilities object to legacy capability array format
+function capabilitiesToArray(capabilities: any): UserCapability[] {
+  const caps: UserCapability[] = [];
+  if (capabilities.canAccessAdmin) caps.push("admin_access");
+  if (capabilities.canAccessVendorDashboard) caps.push("vendor_access");
+  if (capabilities.canViewProfile) caps.push("view_profile");
+  if (capabilities.canBookServices) caps.push("view_bookings");
+  // Add other mappings as needed based on existing UserCapability types
+  caps.push("view_shop", "view_about", "view_cart");
+  return caps;
+}
+
 export interface HeaderProps {
-  capabilities: UserCapability[];
   // optional compatibility prop (store value is used internally)
   cartItemCount?: number;
 }
 
-export default function Header({ capabilities }: HeaderProps) {
+export default async function Header({ }: HeaderProps) {
+  // Get current user and capabilities from server-side auth
+  const user = await getCurrentUser();
+  const capabilities = user ? capabilitiesToArray(user.capabilities) : ["view_shop", "view_about", "apply_vendor", "view_cart"] as UserCapability[];
+  
+  // Add authenticated capability if user exists
+  if (user) {
+    capabilities.push("authenticated");
+  }
+  
   const isAuthed = capabilities.includes("authenticated");
   const primaryNav = filterNav(capabilities, "primary");
   const profileNav = filterNav(capabilities, "profile");
   const utilityNav = filterNav(capabilities, "utility");
-  const cartNavItem = utilityNav.find((i) => i.id === "cart");
+  const cartNavItem = utilityNav.find((item) => item.id === "cart");
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">

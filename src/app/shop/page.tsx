@@ -89,14 +89,34 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   const limit = params.limit ? parseInt(params.limit) : 12;
 
   // Fetch products server-side with filters applied
-  const { data: products, totalCount, hasMore, nextCursor } = await fetchProducts({
-    filters,
-    sort,
-    pagination: { cursor, limit },
-  });
+  let products: any[] = [];
+  let totalCount = 0;
+  let hasMore = false;
+  let nextCursor: string | undefined;
+  let categories: any[] = [];
+  let fetchError: string | null = null;
 
-  // Get available categories for filter sidebar
-  const categories = await getProductCategories();
+  try {
+    const productResult = await fetchProducts({
+      filters,
+      sort,
+      pagination: { cursor, limit },
+    });
+    
+    products = productResult.data;
+    totalCount = productResult.totalCount;
+    hasMore = productResult.hasMore;
+    nextCursor = productResult.nextCursor;
+
+    // Get available categories for filter sidebar
+    categories = await getProductCategories();
+  } catch (error) {
+    console.error('Error loading shop data:', error);
+    fetchError = 'Failed to load products. Please try again later.';
+    // Use empty arrays as fallback
+    products = [];
+    categories = [];
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10">
@@ -126,26 +146,49 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
           <div className="flex items-baseline justify-between">
             <h1 className="text-2xl font-semibold">Shop</h1>
             <p className="text-xs text-foreground/80">
-              {products.length} of {totalCount} products
+              {fetchError ? 'Error loading products' : `${products.length} of ${totalCount} products`}
             </p>
           </div>
           <div className="mt-6">
-            <ErrorBoundary
-              fallback={
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center ring-1 ring-white/10">
-                  <h3 className="text-base font-semibold">We couldn&apos;t load products</h3>
-                  <p className="mt-1 text-sm text-foreground/70">Please refresh the page to try again.</p>
-                </div>
-              }
-            >
-              {products.length <= 30 ? (
-                <ProductGrid products={products} />
-              ) : (
-                <VirtualizedProductGrid products={products} />
-              )}
-            </ErrorBoundary>
+            {fetchError ? (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center ring-1 ring-red-500/20">
+                <h3 className="text-base font-semibold text-red-400">Connection Error</h3>
+                <p className="mt-1 text-sm text-red-300/70">{fetchError}</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-red-500/20 text-red-300 text-sm font-medium hover:bg-red-500/30 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center ring-1 ring-white/10">
+                <h3 className="text-base font-semibold">No products found</h3>
+                <p className="mt-1 text-sm text-foreground/70">
+                  {filters.search || filters.categories?.length ? 
+                    'Try adjusting your filters or search terms.' : 
+                    'Products will appear here once they are added to the store.'
+                  }
+                </p>
+              </div>
+            ) : (
+              <ErrorBoundary
+                fallback={
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center ring-1 ring-white/10">
+                    <h3 className="text-base font-semibold">We couldn&apos;t load products</h3>
+                    <p className="mt-1 text-sm text-foreground/70">Please refresh the page to try again.</p>
+                  </div>
+                }
+              >
+                {products.length <= 30 ? (
+                  <ProductGrid products={products} />
+                ) : (
+                  <VirtualizedProductGrid products={products} />
+                )}
+              </ErrorBoundary>
+            )}
           </div>
-          {hasMore && (
+          {hasMore && !fetchError && (
             <div className="mt-8 text-center">
               <Link
                 href={`/shop?${new URLSearchParams({

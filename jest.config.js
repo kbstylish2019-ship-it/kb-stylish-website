@@ -14,7 +14,12 @@ const config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/lib/api/cartClient$': '<rootDir>/src/lib/api/__mocks__/cartClient.ts',
   },
+  // Handle ESM modules for @upstash/redis
+  transformIgnorePatterns: [
+    'node_modules/(?!(@upstash/redis)/)'
+  ],
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

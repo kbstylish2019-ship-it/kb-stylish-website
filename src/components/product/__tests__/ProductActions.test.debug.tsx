@@ -65,10 +65,13 @@ describe("ProductActions Debug", () => {
     expect(mockAddProduct).toHaveBeenCalledWith({
       id: "p",
       name: "Test Product",
-      variant: "v1",
+      variant: "M",
+      variantId: "v1",
+      variantData: variant,
       imageUrl: "test.jpg",
       price: 1200,
       quantity: 1,
+      sku: undefined,
     });
   });
 });

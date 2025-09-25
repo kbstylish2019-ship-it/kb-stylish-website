@@ -1,5 +1,142 @@
+// ==========================================
+// ENTERPRISE TEST FOUNDATION - PHASE 1
+// Environment Configuration (MUST BE FIRST)
+// ==========================================
+
+// CRITICAL: Set environment variables BEFORE any imports
+// This ensures CartAPIClient reads correct values at module load time
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://mock.supabase.co';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'mock-anon-key-12345';
+
+// Import testing utilities AFTER environment is configured
 import '@testing-library/jest-dom'
 import React from 'react'
+
+// Polyfill TextEncoder/TextDecoder for Node.js test environment
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util')
+  global.TextEncoder = TextEncoder
+  global.TextDecoder = TextDecoder
+}
+
+// Polyfill Request for Node.js test environment
+if (typeof global.Request === 'undefined') {
+  global.Request = class Request {
+    constructor(url, options = {}) {
+      this.url = url;
+      this.method = options.method || 'GET';
+      this.headers = options.headers || {};
+      this.body = options.body;
+    }
+  }
+}
+
+// Polyfill Response for Node.js test environment
+if (typeof global.Response === 'undefined') {
+  global.Response = class Response {
+    constructor(body, options = {}) {
+      this.body = body;
+      this.status = options.status || 200;
+      this.statusText = options.statusText || 'OK';
+      this.headers = options.headers || {};
+    }
+    
+    async json() {
+      return typeof this.body === 'string' ? JSON.parse(this.body) : this.body;
+    }
+    
+    async text() {
+      return typeof this.body === 'string' ? this.body : JSON.stringify(this.body);
+    }
+  }
+}
+
+// ==========================================
+// ENTERPRISE TEST FOUNDATION - PHASE 2
+// Bulletproof Global Fetch Mock
+// ==========================================
+
+// Default successful response for all CartAPI operations
+const createDefaultCartResponse = () => ({
+  success: true,
+  cart: {
+    id: 'mock_cart_123',
+    user_id: null,
+    session_id: 'mock_guest_123',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    cart_items: [],
+    item_count: 0,
+    subtotal: 0
+  }
+});
+
+// Global fetch mock with realistic Response objects
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: new Headers(),
+    json: () => Promise.resolve(createDefaultCartResponse()),
+    text: () => Promise.resolve(JSON.stringify(createDefaultCartResponse())),
+    blob: () => Promise.resolve(new Blob()),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    formData: () => Promise.resolve(new FormData()),
+    clone: () => ({ json: () => Promise.resolve(createDefaultCartResponse()) }),
+    body: null,
+    bodyUsed: false,
+    redirected: false,
+    type: 'basic',
+    url: 'https://mock.supabase.co/functions/v1/cart-manager'
+  })
+);
+
+// Global mock cleanup - prevents test interference
+beforeEach(() => {
+  // Clear all mock call history but preserve mock implementation
+  global.fetch.mockClear();
+  
+  // Reset to default successful response
+  global.fetch.mockImplementation(() =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      json: () => Promise.resolve(createDefaultCartResponse()),
+      text: () => Promise.resolve(JSON.stringify(createDefaultCartResponse())),
+      blob: () => Promise.resolve(new Blob()),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      formData: () => Promise.resolve(new FormData()),
+      clone: () => ({ json: () => Promise.resolve(createDefaultCartResponse()) }),
+      body: null,
+      bodyUsed: false,
+      redirected: false,
+      type: 'basic',
+      url: 'https://mock.supabase.co/functions/v1/cart-manager'
+    })
+  );
+});
+
+// Don't mock cartAPI globally - let individual tests decide
+// jest.mock('@/lib/api/cartClient');
+
+// Mock window.alert to prevent JSDOM warnings
+Object.defineProperty(window, 'alert', {
+  writable: true,
+  value: jest.fn(),
+});
+
+// Note: apiClient mock moved to individual test files to avoid global conflicts
+
+// Mock auth functions for testing
+jest.mock('@/lib/auth', () => ({
+  getCurrentUser: jest.fn(() => Promise.resolve(null)), // Default to guest user
+  signIn: jest.fn(),
+  signUp: jest.fn(),
+  signOut: jest.fn(),
+}))
 
 // 1) focus-trap-react: passthrough to avoid tabbable-node errors in JSDOM
 jest.mock('focus-trap-react', () => ({
