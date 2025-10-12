@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create Supabase client
+    // Create Supabase client with SERVICE_ROLE_KEY to bypass RLS
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role for admin operations
+      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role to bypass RLS
       {
         cookies: {
           getAll() {
@@ -41,13 +41,10 @@ export async function POST(request: NextRequest) {
       }
     );
     
-    // Get the current user (optional for guest cancellations)
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Cancel the reservation (mark as cancelled instead of deleting)
-    // For guest users, we can't verify ownership by user ID, 
-    // so we rely on the reservation ID being secret/unique
-    let query = supabase
+    // CRITICAL FIX: With SERVICE_ROLE_KEY, we bypass RLS and can cancel any reservation
+    // The reservation ID itself is the authentication (secret/unique)
+    // No need to check user ownership - reservation ID is sufficient
+    const query = supabase
       .from('booking_reservations')
       .update({
         status: 'cancelled',
@@ -55,12 +52,8 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', reservationId);
     
-    // Only add user check if authenticated
-    if (user) {
-      query = query.eq('customer_user_id', user.id);
-    }
-    
-    const { data, error } = await query.select().single();
+    // Use select() without single() to avoid error on 0 rows
+    const { data, error } = await query.select();
     
     if (error) {
       console.error('[cancel-reservation] Database error:', error);
@@ -70,23 +63,29 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (!data) {
+    // Check if any rows were updated
+    if (!data || data.length === 0) {
+      console.warn('[cancel-reservation] No reservation found:', {
+        reservationId
+      });
       return NextResponse.json(
-        { success: false, error: 'Reservation not found or unauthorized' },
+        { success: false, error: 'Reservation not found or already cancelled' },
         { status: 404 }
       );
     }
     
+    const reservation = data[0];
+    
     console.log('[cancel-reservation] Successfully cancelled reservation:', {
       reservationId,
-      userId: user?.id || 'guest',
-      slotTime: data.start_time
+      customerId: reservation.customer_user_id,
+      slotTime: reservation.start_time
     });
     
     return NextResponse.json({
       success: true,
       message: 'Reservation cancelled successfully',
-      reservation: data
+      reservation: reservation
     });
     
   } catch (error) {

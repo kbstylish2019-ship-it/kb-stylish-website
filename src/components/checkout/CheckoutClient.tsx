@@ -184,15 +184,13 @@ export default function CheckoutClient() {
     updateProductQuantity(id, qty);
   };
 
-  const onRemove = (id: string, variant?: string) => {
-    // Check if it's a product or booking and remove accordingly
-    const isBooking = bookingItems.some(b => b.id === id);
-    if (isBooking) {
-      const booking = bookingItems.find(b => b.id === id);
-      if (booking) {
-        removeBookingItem(booking.reservation_id);
-      }
+  const onRemove = (id: string, variant?: string, itemType?: 'product' | 'booking') => {
+    // FIXED: Use explicit type parameter to avoid ID collision
+    if (itemType === 'booking') {
+      // For bookings, id is the reservation_id
+      removeBookingItem(id);
     } else {
+      // For products, use the product removal
       removeProductItem(id);
     }
   };
@@ -200,54 +198,67 @@ export default function CheckoutClient() {
   const canPlaceOrder = validateAddress(address) && Boolean(payment);
 
   /**
-   * Mock payment simulation for MVP
-   * In production, this would integrate with Stripe/eSewa SDK
-   */
-  const simulatePaymentProcessing = async (): Promise<void> => {
-    // Simulate payment gateway processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // In production, this would:
-    // 1. Initialize Stripe/eSewa SDK
-    // 2. Confirm payment with client_secret
-    // 3. Handle 3D Secure if required
-    // 4. Return success/failure
-  };
-
-  /**
-   * Production-ready order placement with complete error handling
+   * Production-ready order placement with real payment gateway integration
    */
   const onPlaceOrder = async () => {
-    if (!canPlaceOrder || isProcessingOrder) return;
+    if (!canPlaceOrder || isProcessingOrder || !payment) return;
+    
+    // Check if payment method is supported by gateway
+    if (payment === 'cod') {
+      setOrderError('Cash on Delivery is not yet supported. Please select eSewa or Khalti.');
+      return;
+    }
     
     setIsProcessingOrder(true);
     setOrderError(null);
     
     try {
-      // Step 1: Create order intent with backend
-      console.log('[CheckoutClient] Creating order intent with address:', address);
+      // Step 1: Create order intent with backend (includes payment gateway integration)
+      console.log('[CheckoutClient] Creating order intent with payment method:', payment);
       const response = await cartAPI.createOrderIntent({
-        name: address.fullName,
-        phone: address.phone,
-        address_line1: address.area,
-        address_line2: address.line2 || undefined,
-        city: address.city,
-        state: address.region,
-        postal_code: '44600', // Default postal code for MVP
-        country: 'NP'
+        payment_method: payment as 'esewa' | 'khalti',
+        shipping_address: {
+          name: address.fullName,
+          phone: address.phone,
+          address_line1: address.area,
+          address_line2: address.line2 || undefined,
+          city: address.city,
+          state: address.region,
+          postal_code: '44600', // Default postal code for Nepal
+          country: 'Nepal'
+        },
+        metadata: {
+          discount_code: discountCode || undefined,
+        }
       });
       
       console.log('[CheckoutClient] Order intent response:', response);
       
       if (!response.success) {
         // Handle specific error cases
-        if (response.details?.some((d: string) => d.includes('Insufficient'))) {
+        // Safely check response.details regardless of type (string or array)
+        const details = response.details;
+        const hasInsufficientStock = details && (
+          Array.isArray(details) 
+            ? details.some((d: string) => d.includes('Insufficient'))
+            : String(details).includes('Insufficient')
+        );
+        
+        const hasAuthError = response.error?.includes('Authentication required') 
+          || response.error?.includes('Invalid authentication token')
+          || response.error?.includes('401')
+          || (details && (
+            typeof details === 'string' 
+              ? (details.includes('authentication') || details.includes('401'))
+              : (Array.isArray(details) && details.some((d: string) => d.includes('authentication')))
+          ));
+        
+        if (hasInsufficientStock) {
           setOrderError('Some items in your cart are no longer available. Please review your cart.');
         } else if (response.error?.includes('Cart is empty')) {
           setOrderError('Your cart is empty. Please add items to continue.');
-        } else if (response.error?.includes('Authentication required') || response.error?.includes('Invalid authentication token')) {
-          setOrderError('Please sign in to place an order.');
-          setAuthOpen(true); // Open login modal for guests
+        } else if (hasAuthError) {
+          setOrderError('Payment gateway authentication failed. Please try again or contact support.');
         } else {
           setOrderError(response.error || 'Failed to process order. Please try again.');
         }
@@ -255,43 +266,37 @@ export default function CheckoutClient() {
         return;
       }
       
-      // Step 2: Store payment intent for confirmation
-      setPaymentIntentId(response.payment_intent_id!);
-      console.log('[CheckoutClient] Payment intent created:', response.payment_intent_id);
-      
-      // Step 3: Store the current total BEFORE clearing cart
-      setOrderTotal(costs.total);
-      
-      // Step 4: Mock payment confirmation (in production, integrate Stripe/eSewa SDK)
-      await simulatePaymentProcessing();
-      
-      // Step 5: Show success modal FIRST, then clear cart
-      setOrderSuccess(true);
-      
-      // Step 6: Clear cart after a short delay to allow modal to show with correct total
-      setTimeout(async () => {
-        await clearCart();
-      }, 500);
-      
-      // Step 7: Redirect to order confirmation page after delay
-      setTimeout(() => {
-        // Close the modal and reset state
-        setOrderSuccess(false);
-        setPaymentIntentId(null);
-        setOrderTotal(0);
+      // Step 2: Handle payment gateway redirect based on method
+      if (response.payment_method === 'esewa') {
+        // eSewa: Auto-submit form to redirect to gateway
+        console.log('[CheckoutClient] Redirecting to eSewa with form fields');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = response.payment_url!;
         
-        // In production, redirect to confirmation page
-        console.log('[CheckoutClient] Order complete! Would redirect to:', `/order-confirmation/${response.payment_intent_id}`);
-        // window.location.href = `/order-confirmation/${response.payment_intent_id}`;
+        // Add all form fields from response
+        Object.entries(response.form_fields || {}).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        });
         
-        // For now, redirect to home page
-        window.location.href = '/';
-      }, 5000); // Give user 5 seconds to see the success message
+        document.body.appendChild(form);
+        form.submit();
+        // User will be redirected, no need to continue
+        
+      } else if (response.payment_method === 'khalti') {
+        // Khalti: Direct redirect to payment URL
+        console.log('[CheckoutClient] Redirecting to Khalti:', response.payment_url);
+        window.location.href = response.payment_url!;
+        // User will be redirected, no need to continue
+      }
       
     } catch (error) {
       console.error('[CheckoutClient] Order processing error:', error);
       setOrderError('An unexpected error occurred. Please try again.');
-    } finally {
       setIsProcessingOrder(false);
     }
   };
@@ -367,7 +372,24 @@ export default function CheckoutClient() {
                             Change
                           </button>
                           <button
-                            onClick={() => onRemove(booking.id)}
+                            onClick={() => {
+                              console.log('[CheckoutClient] DEBUG - Full booking object:', booking);
+                              console.log('[CheckoutClient] DEBUG - Full bookingItems:', bookingItems);
+                              
+                              // CRITICAL FIX: booking.id is undefined!
+                              // bookingItems have the actual data, find by matching other fields
+                              const matchingItem = bookingItems.find(item => 
+                                item.service_name === booking.service &&
+                                item.stylist_name === booking.stylist
+                              );
+                              
+                              if (matchingItem) {
+                                console.log('[CheckoutClient] Found matching item, removing:', matchingItem.reservation_id);
+                                onRemove(matchingItem.reservation_id, undefined, 'booking');
+                              } else {
+                                console.error('[CheckoutClient] Could not find matching booking item!');
+                              }
+                            }}
                             className="text-xs text-red-400 hover:text-red-300"
                           >
                             Remove

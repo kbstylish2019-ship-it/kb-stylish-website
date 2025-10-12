@@ -26,6 +26,22 @@ export interface CartResponse {
     updated_at: string;
     items?: CartItem[];
     cart_items?: CartItem[];  // Edge Function uses this field name
+    bookings?: Array<{
+      id: string;
+      service_id: string;
+      service_name: string;
+      stylist_user_id: string;
+      stylist_name: string;
+      start_time: string;
+      end_time: string;
+      price_cents: number;
+      customer_name: string;
+      customer_phone: string | null;
+      customer_email: string;
+      customer_notes: string | null;
+      expires_at: string;
+      status: string;
+    }>;
     total_items?: number;
     item_count?: number;  // Edge Function might use this
     total_amount?: number;
@@ -53,7 +69,9 @@ export interface CartItem {
 export interface PaymentIntentResponse {
   success: boolean;
   payment_intent_id?: string;
-  client_secret?: string;
+  payment_method?: 'esewa' | 'khalti';
+  payment_url?: string;
+  form_fields?: Record<string, string>; // eSewa only
   amount_cents?: number;
   expires_at?: string;
   error?: string;
@@ -69,6 +87,27 @@ export interface ShippingAddress {
   state: string;
   postal_code: string;
   country: string;
+}
+
+export interface CreateOrderIntentRequest {
+  payment_method: 'esewa' | 'khalti';
+  shipping_address: ShippingAddress;
+  metadata?: Record<string, any>;
+}
+
+export interface VerifyPaymentRequest {
+  provider: 'esewa' | 'khalti';
+  transaction_uuid?: string; // eSewa
+  pidx?: string; // Khalti
+}
+
+export interface VerifyPaymentResponse {
+  success: boolean;
+  payment_intent_id?: string;
+  amount_cents?: number;
+  already_verified?: boolean;
+  details?: any;
+  error?: string;
 }
 
 /**
@@ -297,6 +336,9 @@ export class CartAPIClient {
 
       const data = await response.json();
       
+      // ALWAYS log response for debugging
+      console.log('[CartAPI] addToCart response:', { ok: response.ok, status: response.status, data });
+      
       // Log error responses for debugging
       if (!response.ok) {
         console.error('[CartAPI] addToCart error response:', data);
@@ -309,10 +351,15 @@ export class CartAPIClient {
 
       return data;
     } catch (error) {
-      console.error('[CartAPI] Failed to add item to cart:', error);
+      console.error('[CartAPI] Failed to add item to cart (network/parse error):', error);
+      console.error('[CartAPI] Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        type: error?.constructor?.name
+      });
       return {
         success: false,
-        error: 'Failed to add item to cart',
+        error: `Failed to add item to cart: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }
@@ -431,9 +478,9 @@ export class CartAPIClient {
   }
 
   /**
-   * Create payment intent for checkout
+   * Create payment intent for checkout with payment gateway integration
    */
-  async createOrderIntent(shippingAddress: ShippingAddress): Promise<PaymentIntentResponse> {
+  async createOrderIntent(request: CreateOrderIntentRequest): Promise<PaymentIntentResponse> {
     try {
       const headers = await this.getAuthHeaders();
       
@@ -442,10 +489,12 @@ export class CartAPIClient {
           method: 'POST',
           headers,
           body: JSON.stringify({
-            shipping_address: shippingAddress,
+            payment_method: request.payment_method,
+            shipping_address: request.shipping_address,
             metadata: {
               source: 'web_checkout',
               timestamp: new Date().toISOString(),
+              ...request.metadata,
             },
           }),
         });
@@ -466,6 +515,40 @@ export class CartAPIClient {
       return {
         success: false,
         error: 'Failed to initiate checkout',
+      };
+    }
+  }
+
+  /**
+   * Verify payment with gateway after user returns from payment page
+   */
+  async verifyPayment(request: VerifyPaymentRequest): Promise<VerifyPaymentResponse> {
+    try {
+      const response = await this.executeWithRetry(async () => {
+        return await fetch(`${this.baseUrl}/functions/v1/verify-payment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': this.anonKey,
+          },
+          body: JSON.stringify(request),
+        });
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return {
+          success: false,
+          error: error.error || 'Failed to verify payment',
+        };
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[CartAPI] Failed to verify payment:', error);
+      return {
+        success: false,
+        error: 'Failed to verify payment',
       };
     }
   }

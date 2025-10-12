@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import type { ProductDetail, ProductVariant, ProductOption, Review, Media } from "@/lib/types";
-import { fetchProductBySlug, type ProductWithVariants } from "@/lib/apiClient";
+import { fetchProductBySlug, fetchProductReviews, type ProductWithVariants } from "@/lib/apiClient";
 import { getRelatedProducts } from "@/lib/mock/product";
 import CustomerReviews from "@/components/product/CustomerReviews";
 import RelatedProducts from "@/components/product/RelatedProducts";
@@ -103,8 +103,8 @@ function transformToProductDetail(data: ProductWithVariants): ProductDetail {
     options,
     variants: transformedVariants,
     badges: raw.is_featured ? ['Featured'] : [],
-    avgRating: 4.5,
-    reviewCount: reviews.length,
+    avgRating: 4.0, // Will be updated from real data
+    reviewCount: 2, // Will be updated from real data
     reviews,
     stockStatus,
     shipping: {
@@ -134,12 +134,34 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   // Transform to ProductDetail type
   const product: ProductDetail = transformToProductDetail(productData);
   const related = getRelatedProducts();
+  
+  // TEMP FIX: Skip server-side review fetching to avoid duplicates
+  // The client-side Edge Function (review-manager v7) handles review fetching
+  const initialReviews: any[] = [];
+  const reviewStats = {
+    average: product.avgRating,
+    total: product.reviewCount,
+    distribution: {}
+  };
+
+  // Get user's order for this product (if authenticated)
+  // Note: This should be fetched based on the actual authenticated user
+  // For now, only allow reviews from users who have purchased this product
+  const userOrderId = undefined; // Will be determined client-side based on auth user
 
   return (
     <main>
       <ProductDetailClient product={product} />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <CustomerReviews avgRating={product.avgRating} reviewCount={product.reviewCount} reviews={product.reviews} />
+        <CustomerReviews 
+          productId={product.id}
+          avgRating={reviewStats.average} 
+          reviewCount={reviewStats.total} 
+          initialReviews={initialReviews}
+          stats={reviewStats}
+          canReview={!!userOrderId} // Can review if user has purchased  
+          orderId={userOrderId}
+        />
         <RelatedProducts products={related} />
       </div>
     </main>

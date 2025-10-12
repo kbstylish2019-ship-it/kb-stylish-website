@@ -1107,3 +1107,272 @@ export async function createBooking(params: BookingParams): Promise<BookingRespo
     };
   }
 }
+
+/**
+ * Fetch product reviews for server-side rendering
+ * Direct database query for initial page load performance
+ * Part of Trust Engine Integration Phase 1
+ */
+export async function fetchProductReviews(
+  productId: string,
+  options?: {
+    limit?: number;
+    cursor?: string;
+    includeStats?: boolean;
+  }
+): Promise<{
+  reviews: any[];
+  stats?: any;
+  nextCursor?: string;
+  error?: string;
+}> {
+  noStore(); // Disable caching for fresh reviews
+  
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          }
+        }
+      }
+    );
+    
+    // Build query with proper joins for user profiles and vendor replies
+    let query = supabase
+      .from('reviews')
+      .select(`
+        *,
+        user:user_profiles!reviews_user_id_fkey(display_name, avatar_url),
+        vendor_reply:review_replies(id, comment, created_at)
+      `)
+      .eq('product_id', productId)
+      .eq('is_approved', true)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+    
+    // Apply pagination
+    if (options?.cursor) {
+      query = query.lt('created_at', options.cursor);
+    }
+    
+    const limit = options?.limit || 20;
+    query = query.limit(limit);
+    
+    const { data: reviews, error: reviewError } = await query;
+    
+    if (reviewError) {
+      console.error('[fetchProductReviews] Query error:', reviewError);
+      return {
+        reviews: [],
+        error: 'Failed to fetch reviews'
+      };
+    }
+    
+    // Fetch product stats if requested
+    let stats = null;
+    if (options?.includeStats && productId) {
+      const { data: product, error: statsError } = await supabase
+        .from('products')
+        .select('average_rating, review_count, rating_distribution')
+        .eq('id', productId)
+        .single();
+      
+      if (!statsError && product) {
+        stats = {
+          average: product.average_rating || 0,
+          total: product.review_count || 0,
+          distribution: product.rating_distribution || {}
+        };
+      }
+    }
+    
+    // Transform reviews to match expected format
+    const transformedReviews = (reviews || []).map(review => ({
+      id: review.id,
+      product_id: review.product_id,
+      user_id: review.user_id,
+      order_id: review.order_id,
+      rating: review.rating,
+      title: review.title,
+      comment: review.comment,
+      helpful_votes: review.helpful_votes || 0,
+      unhelpful_votes: review.unhelpful_votes || 0,
+      is_verified: review.is_verified || false,
+      is_edited: review.is_edited || false,
+      created_at: review.created_at,
+      updated_at: review.updated_at,
+      user: review.user || { display_name: 'Anonymous', avatar_url: null },
+      vendor_reply: review.vendor_reply?.[0] || null
+    }));
+    
+    // Determine next cursor for pagination
+    const nextCursor = transformedReviews.length === limit 
+      ? transformedReviews[transformedReviews.length - 1].created_at 
+      : undefined;
+    
+    console.log(`[fetchProductReviews] Fetched ${transformedReviews.length} reviews for product ${productId}`);
+    
+    return {
+      reviews: transformedReviews,
+      stats,
+      nextCursor
+    };
+  } catch (error) {
+    console.error('[fetchProductReviews] Unexpected error:', error);
+    return {
+      reviews: [],
+      error: 'Unexpected error fetching reviews'
+    };
+  }
+}
+
+// =====================================================================
+// GOVERNANCE ENGINE API FUNCTIONS
+// =====================================================================
+
+export interface VendorDashboardStats {
+  vendor_id: string;
+  today: {
+    orders: number;
+    gmv_cents: number;
+    platform_fees_cents: number;
+    refunds_cents: number;
+  };
+  last_30_days: {
+    orders: number;
+    gmv_cents: number;
+    platform_fees_cents: number;
+    pending_payout_cents: number;
+    refunds_cents: number;
+    payouts_cents: number;
+  };
+  generated_at: string;
+}
+
+export interface AdminDashboardStats {
+  platform_overview: {
+    total_users: number;
+    total_vendors: number;
+  };
+  today: {
+    orders: number;
+    gmv_cents: number;
+    platform_fees_cents: number;
+  };
+  last_30_days: {
+    orders: number;
+    gmv_cents: number;
+    platform_fees_cents: number;
+    pending_payouts_cents: number;
+    refunds_cents: number;
+  };
+  generated_at: string;
+  generated_by: string;
+}
+
+/**
+ * Fetch vendor dashboard stats from Edge Function
+ * Requires authenticated vendor user
+ * 
+ * @param accessToken - User's JWT access token
+ * @param vendorId - Optional: Admin override for specific vendor
+ * @returns Vendor dashboard metrics
+ */
+export async function fetchVendorDashboardStats(
+  accessToken: string,
+  vendorId?: string
+): Promise<VendorDashboardStats | null> {
+  noStore(); // Disable Next.js cache for real-time data
+  const startTime = Date.now();
+  
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!baseUrl) {
+      console.error('[fetchVendorDashboardStats] NEXT_PUBLIC_SUPABASE_URL not configured');
+      return null;
+    }
+    
+    const url = vendorId 
+      ? `${baseUrl}/functions/v1/vendor-dashboard?vendor_id=${vendorId}`
+      : `${baseUrl}/functions/v1/vendor-dashboard`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Always fetch fresh data
+    });
+    
+    const latency = Date.now() - startTime;
+    console.log(`[DASHBOARD API] Vendor stats fetched - Latency: ${latency}ms, Status: ${response.status}`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('[fetchVendorDashboardStats] Error response:', error);
+      return null;
+    }
+    
+    const result = await response.json();
+    return result.data || null;
+    
+  } catch (error) {
+    console.error('[fetchVendorDashboardStats] Exception:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch admin dashboard stats from Edge Function
+ * Requires authenticated admin user
+ * 
+ * @param accessToken - User's JWT access token (must have admin role)
+ * @returns Admin dashboard metrics
+ */
+export async function fetchAdminDashboardStats(
+  accessToken: string
+): Promise<AdminDashboardStats | null> {
+  noStore(); // Disable Next.js cache for real-time data
+  const startTime = Date.now();
+  
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!baseUrl) {
+      console.error('[fetchAdminDashboardStats] NEXT_PUBLIC_SUPABASE_URL not configured');
+      return null;
+    }
+    
+    const url = `${baseUrl}/functions/v1/admin-dashboard`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Always fetch fresh data
+    });
+    
+    const latency = Date.now() - startTime;
+    console.log(`[DASHBOARD API] Admin stats fetched - Latency: ${latency}ms, Status: ${response.status}`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('[fetchAdminDashboardStats] Error response:', error);
+      return null;
+    }
+    
+    const result = await response.json();
+    return result.data || null;
+    
+  } catch (error) {
+    console.error('[fetchAdminDashboardStats] Exception:', error);
+    return null;
+  }
+}

@@ -204,10 +204,13 @@ async function finalizeOrder(
     }
 
     // First, update the payment intent status to succeeded
-    // This would normally be done by verifying with the payment provider
+    // Note: This is usually already done by verify-payment, but we ensure it here for idempotency
     const { error: updateError } = await supabase
       .from('payment_intents')
-      .update({ status: 'succeeded', updated_at: new Date().toISOString() })
+      .update({ 
+        status: 'succeeded',
+        updated_at: new Date().toISOString()
+      })
       .eq('payment_intent_id', payment_intent_id);
 
     if (updateError) {
@@ -244,6 +247,19 @@ async function finalizeOrder(
       };
     }
 
+    // Update real-time analytics metrics
+    const { data: metricsData, error: metricsError } = await supabase.rpc(
+      'update_metrics_on_order_completion',
+      { p_order_id: data.order_id }
+    );
+
+    if (metricsError) {
+      console.error('Failed to update metrics:', metricsError);
+      // Don't fail the job - metrics can be reconciled later via backfill
+    } else {
+      console.log('Metrics updated:', metricsData);
+    }
+
     // Send order confirmation email (in production)
     // await sendOrderConfirmationEmail(customer_id, data.order_id);
 
@@ -256,7 +272,8 @@ async function finalizeOrder(
       data: {
         order_id: data.order_id,
         items_processed: data.items_processed,
-        total_amount: data.total_amount
+        total_amount: data.total_amount,
+        metrics_updated: metricsData?.success || false
       }
     };
 
@@ -422,44 +439,59 @@ async function processRefund(
 }
 
 // Update job status
+// CRITICAL: Aligned with actual job_queue schema (attempts, locked_until, last_error, completed_at, failed_at)
 async function updateJobStatus(
   supabase: any,
   jobId: string,
   success: boolean,
   message: string,
   shouldRetry?: boolean,
-  attempts?: number
+  currentAttempts?: number
 ): Promise<void> {
   try {
     const maxRetries = 3;
-    const currentAttempts = attempts || 0;
-    const canRetry = shouldRetry && currentAttempts < maxRetries;
+    const attemptCount = currentAttempts || 0;
+    const canRetry = shouldRetry && attemptCount < maxRetries;
     
     const status = success ? 'completed' : (canRetry ? 'pending' : 'failed');
     
+    // SCHEMA ALIGNMENT: Use actual column names from live database
     const updateData: any = {
       status,
-      updated_at: new Date().toISOString(),
       locked_by: null,
-      locked_at: null
+      locked_until: null  // NOT locked_at
     };
 
     if (success) {
+      // Job completed successfully
       updateData.completed_at = new Date().toISOString();
+      // Clear any previous error
+      updateData.last_error = null;
     } else {
-      updateData.error_message = message;
+      // Job failed
+      updateData.last_error = message;  // NOT error_message
+      
       if (canRetry) {
-        updateData.retry_count = currentAttempts + 1;
-        // Exponential backoff for retries
-        const delayMinutes = Math.pow(2, currentAttempts + 1);
-        updateData.scheduled_for = new Date(Date.now() + delayMinutes * 60000).toISOString();
+        // Will be retried - increment attempts
+        updateData.attempts = attemptCount + 1;  // NOT retry_count
+        // Note: We don't set scheduled_for (column doesn't exist)
+        // Worker will pick it up on next run based on priority and created_at
+      } else {
+        // Final failure - mark as failed
+        updateData.failed_at = new Date().toISOString();
       }
     }
 
-    await supabase
+    const { error } = await supabase
       .from('job_queue')
       .update(updateData)
       .eq('id', jobId);
+
+    if (error) {
+      console.error('Failed to update job status:', error);
+    } else {
+      console.log(`Job ${jobId} updated to status: ${status}`);
+    }
 
   } catch (error) {
     console.error('Failed to update job status:', error);
@@ -467,6 +499,7 @@ async function updateJobStatus(
 }
 
 // Update webhook event status
+// CRITICAL: Aligned with actual webhook_events schema (processed boolean, processed_at)
 async function updateWebhookEventStatus(
   supabase: any,
   eventId: string,
@@ -474,21 +507,44 @@ async function updateWebhookEventStatus(
   message?: string
 ): Promise<void> {
   try {
+    // SCHEMA ALIGNMENT: webhook_events has 'processed' (boolean) and 'processed_at', NOT 'status' or 'error_message'
     const updateData: any = {
-      status,
-      updated_at: new Date().toISOString()
+      processed: status === 'completed',  // Convert to boolean
     };
 
     if (status === 'completed') {
       updateData.processed_at = new Date().toISOString();
-    } else if (message) {
-      updateData.error_message = message;
+    }
+    
+    // Note: error_message column doesn't exist
+    // If we need to store errors, we could update the payload JSON
+    if (message && status !== 'completed') {
+      // Store error in payload for debugging
+      const { data: existingEvent } = await supabase
+        .from('webhook_events')
+        .select('payload')
+        .eq('id', eventId)
+        .single();
+      
+      if (existingEvent) {
+        updateData.payload = {
+          ...existingEvent.payload,
+          _processing_error: message,
+          _error_timestamp: new Date().toISOString()
+        };
+      }
     }
 
-    await supabase
+    const { error } = await supabase
       .from('webhook_events')
       .update(updateData)
       .eq('id', eventId);
+
+    if (error) {
+      console.error('Failed to update webhook event status:', error);
+    } else {
+      console.log(`Webhook event ${eventId} marked as processed: ${status === 'completed'}`);
+    }
 
   } catch (error) {
     console.error('Failed to update webhook event status:', error);

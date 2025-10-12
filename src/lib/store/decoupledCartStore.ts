@@ -146,6 +146,8 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
           // RESTORATION: Single API call returns full cart with contract alignment
           const response = await cartAPI.addToCart(variantId, quantity);
           
+          console.log('[DecoupledStore] Received response from cartAPI:', response);
+          
           if (response.success && response.cart) {
             // Accept both cart_items and items for compatibility
             const apiItems = response.cart.cart_items || response.cart.items || [];
@@ -329,22 +331,26 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
         }));
         
         try {
-          // CRITICAL: Cancel the reservation in backend to free up the slot
-          try {
-            const response = await fetch('/api/bookings/cancel-reservation', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ reservationId })
-            });
+          // CRITICAL: Cancel the reservation in backend FIRST
+          const response = await fetch('/api/bookings/cancel-reservation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reservationId })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
             
-            if (!response.ok) {
-              console.warn('[DecoupledStore] Failed to cancel reservation in backend:', response.status);
+            // 404 is acceptable - means already cancelled/removed
+            if (response.status === 404) {
+              console.warn('[DecoupledStore] Reservation already cancelled:', reservationId);
+              // Continue to remove from UI
             } else {
-              console.log('[DecoupledStore] Successfully cancelled reservation in backend');
+              // Other errors should stop the removal
+              throw new Error(errorData.error || `Server returned ${response.status}`);
             }
-          } catch (apiError) {
-            console.error('[DecoupledStore] Error cancelling reservation:', apiError);
-            // Continue with local removal even if API fails
+          } else {
+            console.log('[DecoupledStore] Successfully cancelled reservation in backend');
           }
           
           // Remove booking locally
@@ -381,21 +387,66 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
       // ============ Cart Management ============
       initializeCart: async (initialData) => {
         console.log('[DecoupledStore] Initializing cart with data:', initialData);
-        
         set({ isLoading: true, error: null });
         
         try {
-          // ALWAYS load persisted bookings first
-          const persistedBookings = useBookingPersistStore.getState().loadBookings();
-          if (persistedBookings.length > 0) {
-            console.log('[DecoupledStore] Loaded persisted bookings:', persistedBookings.length);
-            const bookingTotal = persistedBookings.reduce((sum, b) => sum + b.price, 0);
-            set({
-              bookingItems: persistedBookings,
-              bookingTotal,
-              bookingCount: persistedBookings.length
-            });
+          // CRITICAL FIX: Always trust server as source of truth for bookings
+          // Server filters expired/confirmed bookings correctly
+          let bookingItems: CartBookingItem[] = [];
+          
+          // CRITICAL: If we have server data, ALWAYS trust it over localStorage
+          if (initialData) {
+            if (initialData.bookings && Array.isArray(initialData.bookings) && initialData.bookings.length > 0) {
+              bookingItems = initialData.bookings.map((b: any) => ({
+                id: b.reservation_id,
+                reservation_id: b.reservation_id,
+                service_id: b.service_id,
+                service_name: b.service_name,
+                stylist_id: b.stylist_id,
+                stylist_name: b.stylist_name,
+                start_time: b.start_time,
+                end_time: b.end_time,
+                price: b.price_cents / 100,
+                status: b.status,
+                customer_name: b.customer_name,
+                customer_phone: b.customer_phone,
+                customer_email: b.customer_email,
+                customer_notes: b.customer_notes,
+                expires_at: b.expires_at
+              }));
+              console.log('[DecoupledStore] Loaded bookings from server:', bookingItems.length);
+            } else {
+              // Server explicitly says no bookings - clear localStorage
+              console.log('[DecoupledStore] Server returned no bookings, clearing localStorage...');
+              bookingItems = [];
+              useBookingPersistStore.getState().saveBookings([]);
+            }
+          } else {
+            // CRITICAL FIX: Only use localStorage if we haven't fetched from server yet
+            // This handles the initial load case, not post-checkout case
+            const persistedBookings = useBookingPersistStore.getState().loadBookings();
+            
+            // But still verify they're not expired
+            const now = new Date();
+            bookingItems = persistedBookings.filter(b => new Date(b.expires_at) >= now);
+            
+            console.log('[DecoupledStore] Loaded persisted bookings from localStorage:', persistedBookings.length);
+            console.log('[DecoupledStore] After expiry filter:', bookingItems.length);
+            
+            // If we filtered any out, update localStorage
+            if (bookingItems.length !== persistedBookings.length) {
+              console.log('[DecoupledStore] Updating localStorage with filtered bookings...');
+              useBookingPersistStore.getState().saveBookings(bookingItems);
+            }
           }
+          
+          // Set bookings (will be cleaned up by cleanup function if expired)
+          const bookingTotal = bookingItems.reduce((sum, b) => sum + b.price, 0);
+          set({
+            bookingItems,
+            bookingTotal,
+            bookingCount: bookingItems.length
+          });
           
           // Then handle products from server
           if (initialData) {
@@ -493,11 +544,37 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
           if (response.success && response.cart) {
             const productItems = transformApiItemsToProducts(response.cart.cart_items || response.cart.items || []);
             
+            // CRITICAL: Also sync bookings from server
+            const bookingItems: CartBookingItem[] = (response.cart.bookings || []).map((b: any) => ({
+              id: b.id,
+              reservation_id: b.id,
+              service_id: b.service_id,
+              service_name: b.service_name,
+              stylist_id: b.stylist_user_id,
+              stylist_name: b.stylist_name,
+              start_time: b.start_time,
+              end_time: b.end_time,
+              price: b.price_cents / 100,
+              customer_name: b.customer_name,
+              customer_phone: b.customer_phone,
+              customer_email: b.customer_email,
+              customer_notes: b.customer_notes,
+              expires_at: b.expires_at
+            }));
+            
+            console.log('[DecoupledStore] Synced bookings from server:', bookingItems.length);
+            
+            // Update persist store with server data
+            useBookingPersistStore.getState().saveBookings(bookingItems);
+            
             set({
               cartId: response.cart.id,
               productItems,
+              bookingItems,
               productTotal: calculateProductTotal(productItems),
+              bookingTotal: bookingItems.reduce((sum, b) => sum + b.price, 0),
               productCount: productItems.reduce((sum, item) => sum + item.quantity, 0),
+              bookingCount: bookingItems.length,
               isGuest: !response.cart.user_id,
               isLoading: false
             });
@@ -570,16 +647,23 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
       },
       
       cleanupExpiredBookings: () => {
-        console.log('[DecoupledStore] Checking for expired bookings...');
+        console.log('[DecoupledStore] Checking for expired/orphaned bookings...');
         const now = new Date();
-        const expiredBookings = get().bookingItems.filter(booking => {
+        const currentBookings = get().bookingItems;
+        
+        if (currentBookings.length === 0) {
+          console.log('[DecoupledStore] No bookings to clean up');
+          return;
+        }
+        
+        const expiredBookings = currentBookings.filter(booking => {
           const expiresAt = new Date(booking.expires_at);
           return expiresAt < now;
         });
         
         if (expiredBookings.length > 0) {
           console.log(`[DecoupledStore] Found ${expiredBookings.length} expired bookings, removing...`);
-          const validBookings = get().bookingItems.filter(booking => {
+          const validBookings = currentBookings.filter(booking => {
             const expiresAt = new Date(booking.expires_at);
             return expiresAt >= now;
           });
@@ -596,6 +680,10 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
           useBookingPersistStore.getState().saveBookings(validBookings);
           
           get().updateGrandTotals();
+          
+          console.log(`[DecoupledStore] Cleanup complete: ${validBookings.length} valid bookings remain`);
+        } else {
+          console.log('[DecoupledStore] All bookings are valid (not expired)');
         }
       },
       

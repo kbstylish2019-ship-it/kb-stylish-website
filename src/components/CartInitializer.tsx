@@ -30,8 +30,11 @@ interface CartInitializerProps {
     created_at: string;
     updated_at: string;
     items: any[];
-    total_items: number;
-    total_amount: number;
+    // Live backend returns item_count and subtotal; keep legacy fields optional for back-compat
+    item_count?: number;
+    subtotal?: number;
+    total_items?: number;
+    total_amount?: number;
   } | null;
   isAuthenticated?: boolean;
 }
@@ -77,7 +80,7 @@ export function CartInitializer({
       if (initialCart) {
         console.log('[CartInitializer] Hydrating store with server cart:', {
           cartId: initialCart.id,
-          itemCount: initialCart.total_items,
+          itemCount: (initialCart.item_count ?? initialCart.total_items ?? initialCart.items?.length ?? 0),
           isGuest: !initialCart.user_id,
         });
         

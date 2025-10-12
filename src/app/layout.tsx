@@ -114,7 +114,7 @@ export default async function RootLayout({
       initialCart = data.cart;
       console.log('[RootLayout] Server-fetched cart:', {
         cartId: data.cart.id,
-        itemCount: data.cart.total_items || 0,
+        itemCount: (data.cart.item_count ?? data.cart.items?.length ?? data.cart.cart_items?.length ?? 0),
         isGuest: !data.cart.user_id,
       });
       

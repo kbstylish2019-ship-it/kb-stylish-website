@@ -119,12 +119,16 @@ export const useCartStore = create<CartState>()(
        */
       initializeCart: async (serverCart) => {
         if (serverCart) {
-          // Initialize from provided server data
+          // Initialize from provided server data (handle legacy/new shapes)
+          const items = serverCart.items || serverCart.cart_items || [];
+          const totalItems = serverCart.item_count ?? serverCart.total_items ?? items.reduce((s: number, i: any) => s + (i.quantity ?? 0), 0);
+          const totalAmount = serverCart.subtotal ?? serverCart.total_amount ?? 0;
+
           set({
             cartId: serverCart.id,
-            items: serverCart.items || [],
-            totalItems: serverCart.total_items || 0,
-            totalAmount: serverCart.total_amount || 0,
+            items,
+            totalItems,
+            totalAmount,
             isGuest: !serverCart.user_id,
             isLoading: false,
             error: null,

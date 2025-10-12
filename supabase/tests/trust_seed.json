@@ -1,0 +1,37 @@
+{
+  "vendor": {
+    "id": "0b7682f9-1a7b-4a88-a961-604ffc8604f4",
+    "email": "vendor.trust@kbstylish.test"
+  },
+  "vendor2": {
+    "id": "536fd09f-4f5b-4780-9492-7701c15dbf08",
+    "email": "vendor2.trust@kbstylish.test"
+  },
+  "customer": {
+    "id": "c51be00f-f6c5-4497-a60b-4aa37724f7a7",
+    "email": "customer.trust@kbstylish.test"
+  },
+  "product": {
+    "id": "f68b37c6-853d-420b-8e86-6f1d4070fd62",
+    "slug": "trust-engine-product-rmu4r",
+    "name": "Trust Engine Test Product"
+  },
+  "variant": {
+    "id": "fad52c59-7e2b-49c4-affa-ca204b30a660"
+  },
+  "order": {
+    "id": "37b32ad8-a374-4683-a61d-fec40fa64fa1"
+  },
+  "seededReviews": [
+    {
+      "id": "dabc0793-b0de-47c5-bdd6-d628e728bd8f",
+      "author_id": "08062f79-ad1e-4760-8c0e-ce428b6791a2",
+      "title": "Seeded review 1"
+    },
+    {
+      "id": "7f697ddf-af3f-4f2a-af6d-4e7f4ccc9ba0",
+      "author_id": "1c1c1dd0-2017-4dcc-86b5-df1351a9f9de",
+      "title": "Seeded review 2"
+    }
+  ]
+}

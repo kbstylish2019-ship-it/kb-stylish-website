@@ -1,20 +1,28 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders, getCorsHeaders } from '../_shared/cors.ts';
+import { prepareEsewaPaymentForm, type EsewaConfig } from '../_shared/esewa.ts';
+import { initiateKhaltiPayment, type KhaltiPaymentRequest } from '../_shared/khalti.ts';
 
 /**
  * CREATE ORDER INTENT - Live Order Pipeline Entry Point
- * Principal Backend Engineer Implementation
+ * Principal Backend Engineer Implementation - Phase 3 Refactor
  * 
  * Security Model:
  * - Requires authenticated user (verified via dual-client pattern)
  * - Reads user's cart using secure RPC
  * - Performs soft inventory reservation
- * - Generates payment intent with mock provider
- * - Returns payment_intent_id for frontend processing
+ * - Integrates with real payment gateways (eSewa/Khalti)
+ * - Returns payment URL and form data for frontend redirect
+ * 
+ * CRITICAL SECURITY:
+ * - Stores external_transaction_id for verification lookup
+ * - Never trusts client-side payment confirmations
+ * - All verifications happen in verify-payment Edge Function
  */
 
 interface OrderIntentRequest {
+  payment_method: 'esewa' | 'khalti'; // REQUIRED: User's selected payment gateway
   shipping_address?: {
     name: string;
     phone: string;
@@ -31,37 +39,36 @@ interface OrderIntentRequest {
 interface OrderIntentResponse {
   success: boolean;
   payment_intent_id?: string;
-  client_secret?: string;
+  payment_method?: 'esewa' | 'khalti';
+  payment_url?: string;
+  form_fields?: Record<string, string>; // eSewa only
   amount_cents?: number;
   expires_at?: string;
   error?: string;
   details?: any;
 }
 
-// Mock payment provider SDK
-class MockPaymentProvider {
-  static async createPaymentIntent(
-    amount_cents: number,
-    currency: string,
-    metadata: Record<string, any>
-  ): Promise<{
-    id: string;
-    client_secret: string;
-    status: string;
-  }> {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Generate mock payment intent
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 9);
-    
-    return {
-      id: `pi_mock_${timestamp}_${random}`,
-      client_secret: `pi_mock_${timestamp}_${random}_secret_${Math.random().toString(36).substring(2, 15)}`,
-      status: 'requires_payment_method'
-    };
-  }
+// Environment configuration helpers
+function getBaseUrl(): string {
+  const baseUrl = Deno.env.get('BASE_URL');
+  if (baseUrl) return baseUrl;
+  
+  const vercelUrl = Deno.env.get('VERCEL_URL');
+  if (vercelUrl) return `https://${vercelUrl}`;
+  
+  return 'http://localhost:3000';
+}
+
+function getEsewaConfig(): EsewaConfig {
+  return {
+    merchantCode: Deno.env.get('ESEWA_MERCHANT_CODE') || 'EPAYTEST',
+    secretKey: Deno.env.get('ESEWA_SECRET_KEY') || '8gBm/:&EnhH.1/q',
+    testMode: Deno.env.get('ESEWA_TEST_MODE') !== 'false'
+  };
+}
+
+function getKhaltiSecretKey(): string {
+  return Deno.env.get('KHALTI_SECRET_KEY') || 'test_secret_key_xxxxx';
 }
 
 Deno.serve(async (req: Request) => {
@@ -131,6 +138,14 @@ Deno.serve(async (req: Request) => {
     // Parse request
     requestData = await req.json() as OrderIntentRequest;
 
+    // Validate payment method
+    if (!requestData.payment_method || !['esewa', 'khalti'].includes(requestData.payment_method)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid payment method. Must be "esewa" or "khalti"' }),
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // GET USER'S CART
     const { data: cartData, error: cartError } = await serviceClient.rpc('get_cart_details_secure', {
       p_user_id: authenticatedUser.id
@@ -146,36 +161,104 @@ Deno.serve(async (req: Request) => {
 
     const cart = cartData as any;
     
-    // Validate cart
-    if (!cart || !cart.items || cart.items.length === 0) {
+    // Validate cart - must have at least products OR bookings
+    const hasProducts = cart?.items && cart.items.length > 0;
+    const hasBookings = cart?.bookings && cart.bookings.length > 0;
+    
+    if (!hasProducts && !hasBookings) {
       return new Response(
         JSON.stringify({ success: false, error: 'Cart is empty' }),
         { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Calculate total
-    const subtotal_cents = cart.items.reduce((sum: number, item: any) => 
-      sum + (item.price_snapshot * item.quantity), 0
+    // Calculate total (all values in paisa/cents for precision)
+    // CRITICAL: price_snapshot is stored in NPR, must convert to paisa (multiply by 100)
+    const product_total = (cart.items || []).reduce((sum: number, item: any) => 
+      sum + (Math.round(item.price_snapshot * 100) * item.quantity), 0
+    );
+    
+    // Bookings already stored in paisa/cents
+    const booking_total = (cart.bookings || []).reduce((sum: number, booking: any) =>
+      sum + booking.price_cents, 0
     );
 
-    // TODO: Add tax and shipping calculation based on address
-    const tax_cents = Math.floor(subtotal_cents * 0.13); // 13% VAT for Nepal
-    const shipping_cents = 500; // Flat rate for MVP
+    const subtotal_cents = product_total + booking_total;
+
+    // TODO: Add tax calculation when frontend displays it
+    // For now, match frontend calculation (no tax, just shipping)
+    const tax_cents = 0; // Tax not displayed in frontend yet
+    const shipping_cents = 9900; // NPR 99 = 9900 paisa (flat rate for MVP)
     const total_cents = subtotal_cents + tax_cents + shipping_cents;
 
-    // CREATE PAYMENT INTENT WITH MOCK PROVIDER
-    const paymentIntent = await MockPaymentProvider.createPaymentIntent(
-      total_cents,
-      'NPR',
-      {
-        user_id: authenticatedUser.id,
-        cart_id: cart.id,
-        items: cart.items.length,
-        shipping_address: requestData.shipping_address,
-        ...requestData.metadata
+    // ========================================================================
+    // PAYMENT GATEWAY INTEGRATION
+    // ========================================================================
+    const baseUrl = getBaseUrl();
+    const paymentMethod = requestData.payment_method;
+    
+    let paymentIntentId: string;
+    let externalTransactionId: string;
+    let gatewayPaymentUrl: string;
+    let formFields: Record<string, string> | undefined;
+
+    if (paymentMethod === 'esewa') {
+      // eSewa Integration
+      const esewaConfig = getEsewaConfig();
+      const transactionUuid = crypto.randomUUID();
+      const amountNPR = total_cents / 100; // Convert paisa to NPR
+
+      const formData = prepareEsewaPaymentForm(esewaConfig, {
+        amount: amountNPR,
+        transactionUuid,
+        successUrl: `${baseUrl}/payment/callback?provider=esewa`,
+        failureUrl: `${baseUrl}/checkout`
+      });
+
+      paymentIntentId = `pi_esewa_${Date.now()}_${transactionUuid.substring(0, 8)}`;
+      externalTransactionId = transactionUuid;
+      gatewayPaymentUrl = formData.action;
+      formFields = formData.fields;
+
+    } else if (paymentMethod === 'khalti') {
+      // Khalti Integration
+      const khaltiSecretKey = getKhaltiSecretKey();
+      const amountNPR = total_cents / 100; // Convert paisa to NPR
+
+      const result = await initiateKhaltiPayment(khaltiSecretKey, {
+        amount: amountNPR,
+        purchase_order_id: `ORDER-${Date.now()}`,
+        purchase_order_name: `KB Stylish Order`,
+        return_url: `${baseUrl}/payment/callback?provider=khalti`,
+        website_url: baseUrl,
+        customer_info: requestData.shipping_address ? {
+          name: requestData.shipping_address.name,
+          email: authenticatedUser.email || '',
+          phone: requestData.shipping_address.phone
+        } : undefined
+      });
+
+      if (!result.success || !result.pidx) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Failed to initiate Khalti payment', 
+            details: result.error 
+          }),
+          { status: 500, headers: { ...dynCors, 'Content-Type': 'application/json' } }
+        );
       }
-    );
+
+      paymentIntentId = `pi_khalti_${Date.now()}_${result.pidx.substring(0, 8)}`;
+      externalTransactionId = result.pidx;
+      gatewayPaymentUrl = result.payment_url!;
+
+    } else {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unsupported payment method' }),
+        { status: 400, headers: { ...dynCors, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // STORE PAYMENT INTENT IN DATABASE
     const expires_at = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes expiry
@@ -185,17 +268,20 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: authenticatedUser.id,
         cart_id: cart.id,
-        payment_intent_id: paymentIntent.id,
+        payment_intent_id: paymentIntentId,
+        external_transaction_id: externalTransactionId, // CRITICAL for verification lookup
+        gateway_payment_url: gatewayPaymentUrl,
         amount_cents: total_cents,
         currency: 'NPR',
         status: 'pending',
-        provider: 'mock_provider',
+        provider: paymentMethod,
         metadata: {
           subtotal_cents,
           tax_cents,
           shipping_cents,
           shipping_address: requestData.shipping_address,
-          items_count: cart.items.length
+          items_count: (cart.items || []).length,
+          bookings_count: (cart.bookings || []).length
         },
         expires_at: expires_at.toISOString()
       });
@@ -213,7 +299,7 @@ Deno.serve(async (req: Request) => {
       'reserve_inventory_for_payment',
       {
         p_cart_id: cart.id,
-        p_payment_intent_id: paymentIntent.id
+        p_payment_intent_id: paymentIntentId
       }
     );
 
@@ -222,7 +308,7 @@ Deno.serve(async (req: Request) => {
       await serviceClient
         .from('payment_intents')
         .update({ status: 'failed' })
-        .eq('payment_intent_id', paymentIntent.id);
+        .eq('payment_intent_id', paymentIntentId);
 
       const errors = reservationResult?.errors || ['Failed to reserve inventory'];
       return new Response(
@@ -235,13 +321,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`Payment intent created: ${paymentIntent.id} for ${total_cents} NPR`);
+    console.log(`Payment intent created: ${paymentIntentId} for ${total_cents} paisa (${total_cents/100} NPR)`);
+    console.log(`External transaction ID: ${externalTransactionId}`);
+    console.log(`Payment URL: ${gatewayPaymentUrl}`);
 
     // Return success response
     const response: OrderIntentResponse = {
       success: true,
-      payment_intent_id: paymentIntent.id,
-      client_secret: paymentIntent.client_secret,
+      payment_intent_id: paymentIntentId,
+      payment_method: paymentMethod,
+      payment_url: gatewayPaymentUrl,
+      form_fields: formFields, // Only populated for eSewa
       amount_cents: total_cents,
       expires_at: expires_at.toISOString()
     };
