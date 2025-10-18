@@ -19,3 +19,9 @@ verify_jwt = true
 # Cache invalidator runs on database events
 [functions.cache-invalidator]
 verify_jwt = true
+
+# Vendor application submission (Growth Engine Phase 2)
+# CRITICAL: verify_jwt = false allows manual auth handling like cart-manager
+# When true, Supabase validates JWT before function runs and rejects before our code executes
+[functions.submit-vendor-application]
+verify_jwt = false

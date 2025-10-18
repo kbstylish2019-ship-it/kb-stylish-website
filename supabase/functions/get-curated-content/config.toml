@@ -1,0 +1,8 @@
+# Edge Function Configuration
+# https://supabase.com/docs/guides/functions/deploy#function-configuration
+
+# Disable JWT verification for public curation data
+verify_jwt = false
+
+# Import map not needed (using JSR imports)
+import_map = false

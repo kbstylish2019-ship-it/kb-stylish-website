@@ -1,5 +1,6 @@
 import React from "react";
 import dynamic from "next/dynamic";
+import OnboardingWizardWrapper from "@/components/vendor/OnboardingWizardWrapper";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BarChart3, Package, Wallet, TrendingUp } from "lucide-react";
@@ -7,7 +8,6 @@ import { fetchVendorDashboardStats } from "@/lib/apiClient";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import VendorCtaButton from "@/components/vendor/VendorCtaButton";
-import VendorOrdersSection from "@/components/vendor/VendorOrdersSection";
 
 // Use real components in tests to avoid next/dynamic being mocked to null
 const isTest = process.env.NODE_ENV === "test";
@@ -78,6 +78,9 @@ async function createClient() {
   );
 }
 
+// Force revalidation on every request to show live data
+export const revalidate = 0;
+
 // ✅ CONVERTED TO ASYNC SERVER COMPONENT
 export default async function VendorDashboardPage() {
   // 1. Get user session and verify authentication
@@ -88,15 +91,44 @@ export default async function VendorDashboardPage() {
     redirect('/auth/login?redirect=/vendor/dashboard');
   }
   
-  // 2. Fetch live dashboard stats from Edge Function
-  // Note: No role check here - RLS ensures users only see their own vendor data
+  // 2. Verify vendor role
+  const userRoles = user.user_metadata?.user_roles || user.app_metadata?.user_roles || [];
+  if (!userRoles.includes('vendor')) {
+    redirect('/'); // Non-vendors redirected to home
+  }
+  
+  // 3. Fetch live dashboard stats from Edge Function
   const { data: { session } } = await supabase.auth.getSession();
   const stats = session ? await fetchVendorDashboardStats(session.access_token) : null;
   
-  // 3. Handle error state if stats failed to load
+  // 3.5. Fetch accurate payout balance
+  const { getVendorPayouts } = await import('@/actions/vendor/payouts');
+  const payoutData = await getVendorPayouts();
+  
+  // 3.6. Fetch recent orders (last 10)
+  const { data: recentOrders } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      order_number,
+      created_at,
+      total_cents,
+      status,
+      shipping_name,
+      order_items!inner(
+        id,
+        fulfillment_status
+      )
+    `)
+    .eq('order_items.vendor_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  
+  // 4. Handle error state if stats failed to load
   if (!stats) {
     return (
       <DashboardLayout title="Vendor Dashboard" sidebar={<VendorSidebar />}>
+        <OnboardingWizardWrapper />
         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
           <h2 className="text-lg font-semibold text-red-500">Failed to Load Dashboard</h2>
           <p className="mt-2 text-sm text-red-400">
@@ -107,15 +139,30 @@ export default async function VendorDashboardPage() {
     );
   }
   
-  // 4. Transform stats for display (cents to NPR)
+  // 5. Transform stats for display (cents to NPR)
   const todayOrders = stats.today.orders;
   const todayRevenue = (stats.today.gmv_cents / 100).toLocaleString('en-IN');
+  const todayRefunds = (stats.today.refunds_cents / 100).toLocaleString('en-IN');
   const monthlyEarnings = (stats.last_30_days.gmv_cents / 100).toLocaleString('en-IN');
-  const pendingBalance = (stats.last_30_days.pending_payout_cents / 100).toLocaleString('en-IN');
-  const platformFees = (stats.last_30_days.platform_fees_cents / 100).toLocaleString('en-IN');
+  const monthlyRefunds = (stats.last_30_days.refunds_cents / 100).toLocaleString('en-IN');
+  
+  // ✅ Use accurate payout calculation (same as payouts page)
+  const availableBalance = payoutData 
+    ? (payoutData.available_balance.pending_payout_cents / 100).toLocaleString('en-IN')
+    : '0';
+  
+  // ✅ Real payout data from payoutData (not mock!)
+  const platformFees = payoutData
+    ? (payoutData.available_balance.platform_fees_cents / 100).toLocaleString('en-IN')
+    : (stats.last_30_days.platform_fees_cents / 100).toLocaleString('en-IN');
+    
+  const totalPayouts = payoutData
+    ? (payoutData.summary.total_paid_cents / 100).toLocaleString('en-IN')
+    : '0';
 
   return (
     <>
+      <OnboardingWizardWrapper />
       <DashboardLayout title="Vendor Dashboard" actions={<VendorCtaButton />} sidebar={<VendorSidebar />}> 
         {/* Live Stat Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -134,9 +181,9 @@ export default async function VendorDashboardPage() {
             icon={<Wallet className="h-5 w-5 text-[var(--kb-primary-brand)]" />} 
           />
           <StatCard 
-            title="Pending Balance" 
-            value={`NPR ${pendingBalance}`} 
-            subtitle="Awaiting payout"
+            title="Available Balance" 
+            value={`NPR ${availableBalance}`} 
+            subtitle="Ready to withdraw"
             icon={<Package className="h-5 w-5 text-[var(--kb-primary-brand)]" />} 
           />
           <StatCard 
@@ -146,6 +193,30 @@ export default async function VendorDashboardPage() {
             icon={<TrendingUp className="h-5 w-5 text-[var(--kb-primary-brand)]" />} 
           />
         </div>
+        
+        {/* Refunds Section - Only show if there are refunds */}
+        {(stats.today.refunds_cents > 0 || stats.last_30_days.refunds_cents > 0) && (
+          <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 ring-1 ring-amber-500/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-amber-300">Refunds & Cancellations</h3>
+                <div className="mt-1 flex items-baseline gap-4">
+                  <div>
+                    <span className="text-xs text-foreground/50">Today: </span>
+                    <span className="text-lg font-semibold text-amber-200">NPR {todayRefunds}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-foreground/50">Last 30 days: </span>
+                    <span className="text-lg font-semibold text-amber-200">NPR {monthlyRefunds}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-foreground/50">
+                From cancelled orders
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Payouts Snapshot */}
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -154,10 +225,10 @@ export default async function VendorDashboardPage() {
               <h2 className="text-lg font-semibold">Payouts Snapshot (30 Days)</h2>
               <Link className="text-sm text-[var(--kb-accent-gold)] hover:underline" href="/vendor/payouts">View all</Link>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-4">
               <StatCard 
-                title="Pending Payout" 
-                value={`NPR ${pendingBalance}`} 
+                title="Available Balance" 
+                value={`NPR ${availableBalance}`} 
                 subtitle="After fees" 
               />
               <StatCard 
@@ -166,8 +237,13 @@ export default async function VendorDashboardPage() {
                 subtitle="15% commission" 
               />
               <StatCard 
+                title="Refunds" 
+                value={`NPR ${monthlyRefunds}`} 
+                subtitle="Cancelled orders" 
+              />
+              <StatCard 
                 title="Total Payouts" 
-                value={`NPR ${(stats.last_30_days.payouts_cents / 100).toLocaleString('en-IN')}`} 
+                value={`NPR ${totalPayouts}`} 
                 subtitle="Completed" 
               />
             </div>
@@ -194,8 +270,71 @@ export default async function VendorDashboardPage() {
           </div>
         </div>
 
-        {/* Recent Orders (still using mock data for now) */}
-        <VendorOrdersSection />
+        {/* Recent Orders - Real Data */}
+        <div className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Recent Orders</h2>
+            <Link className="text-sm text-[var(--kb-accent-gold)] hover:underline" href="/vendor/orders">View all</Link>
+          </div>
+          
+          <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden ring-1 ring-white/10">
+            {recentOrders && recentOrders.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-white/5">
+                    <tr className="border-b border-white/10">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Order #</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Items</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Total</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {recentOrders.map((order: any) => {
+                      const itemsArray = Array.isArray(order.order_items) ? order.order_items : [order.order_items];
+                      const itemsCount = itemsArray.length;
+                      const firstItemStatus = itemsArray[0]?.fulfillment_status || 'pending';
+                      
+                      return (
+                        <tr key={order.id} className="hover:bg-white/[0.02]">
+                          <td className="px-4 py-3 font-mono text-xs">{order.order_number}</td>
+                          <td className="px-4 py-3 text-foreground/70">
+                            {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-3">{order.shipping_name}</td>
+                          <td className="px-4 py-3 text-foreground/70">{itemsCount} item{itemsCount > 1 ? 's' : ''}</td>
+                          <td className="px-4 py-3 font-semibold">NPR {(order.total_cents / 100).toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs capitalize ring-1 ${
+                              firstItemStatus === 'delivered'
+                                ? 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30'
+                                : firstItemStatus === 'shipped'
+                                ? 'bg-blue-500/15 text-blue-300 ring-blue-500/30'
+                                : firstItemStatus === 'processing'
+                                ? 'bg-amber-500/15 text-amber-300 ring-amber-500/30'
+                                : firstItemStatus === 'cancelled'
+                                ? 'bg-red-500/15 text-red-300 ring-red-500/30'
+                                : 'bg-gray-500/15 text-gray-300 ring-gray-500/30'
+                            }`}>
+                              {firstItemStatus}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-12 text-center">
+                <div className="text-foreground/40 mb-2">No recent orders</div>
+                <p className="text-sm text-foreground/60">Your orders will appear here</p>
+              </div>
+            )}
+          </div>
+        </div>
       </DashboardLayout>
     </>
   );

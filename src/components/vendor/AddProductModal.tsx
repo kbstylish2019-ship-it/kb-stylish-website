@@ -2,12 +2,22 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import FocusTrap from "focus-trap-react";
-import { X, Package, Info, Check, Image as ImageIcon } from "lucide-react";
+import { X, Package, Info, Check, Image as ImageIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createVendorProduct } from "@/app/actions/vendor";
+import { createClient } from "@/lib/supabase/client";
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
+  userId: string;
+  onSuccess?: (product: any) => void;
 }
 
 type Step = "basic" | "pricing" | "media" | "review";
@@ -19,7 +29,9 @@ const steps: { id: Step; label: string; icon: React.ReactNode }[] = [
   { id: "review", label: "Review", icon: <Check className="h-4 w-4" /> },
 ];
 
-export default function AddProductModal({ open, onClose }: AddProductModalProps) {
+// REMOVED: Hardcoded CATEGORY_MAP - now loading dynamically from database
+
+export default function AddProductModal({ open, onClose, userId, onSuccess }: AddProductModalProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [formData, setFormData] = useState({
@@ -29,7 +41,13 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
     price: "",
     comparePrice: "",
     inventory: "",
+    sku: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   const currentStep = steps[currentStepIndex].id;
   const isFirstStep = currentStepIndex === 0;
@@ -41,6 +59,36 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
     if (open && closeButtonRef.current) {
       closeButtonRef.current.focus();
     }
+  }, [open]);
+
+  // Fetch categories dynamically from database
+  useEffect(() => {
+    if (!open) return; // Don't fetch if modal closed
+    
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      setCategoryError(null);
+      
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('categories')
+          .select('id, name, slug')
+          .eq('is_active', true)
+          .order('name', { ascending: true });
+        
+        if (error) throw error;
+        
+        setCategories(data || []);
+      } catch (err: any) {
+        console.error('Error fetching categories:', err);
+        setCategoryError('Failed to load categories');
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    
+    fetchCategories();
   }, [open]);
 
   // Handle Escape key
@@ -65,19 +113,76 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
     }
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting:", formData);
-    onClose();
-    // Reset form
-    setCurrentStepIndex(0);
-    setFormData({
-      name: "",
-      description: "",
-      category: "",
-      price: "",
-      comparePrice: "",
-      inventory: "",
-    });
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    setError(null);
+    
+    try {
+      // Validate category selected (formData.category now contains UUID)
+      if (!formData.category) {
+        setError('Please select a category');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create product data matching backend schema
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        category_id: formData.category, // Already a UUID from select value
+        variants: [{
+          sku: formData.sku || `SKU-${Date.now()}`,
+          price: parseFloat(formData.price),
+          compare_at_price: formData.comparePrice ? parseFloat(formData.comparePrice) : null,
+          quantity: parseInt(formData.inventory) || 0,
+        }],
+        images: [], // TODO: Add image upload support
+      };
+      
+      console.log('Creating product with data:', productData);
+      const result = await createVendorProduct(productData);
+      console.log('Product creation result:', result);
+      
+      if (result?.success) {
+        console.log('Product created successfully', result);
+        
+        // ✅ FIX: Just trigger page refresh via router and close modal
+        // The parent component will refetch data automatically
+        
+        // Reset form state
+        setError(null);
+        setIsSubmitting(false);
+        setCurrentStepIndex(0);
+        setFormData({
+          name: "",
+          description: "",
+          category: "",
+          price: "",
+          comparePrice: "",
+          inventory: "",
+          sku: "",
+        });
+        
+        // Close modal immediately - parent will refetch via revalidatePath
+        onClose();
+        
+        // Show success message
+        alert(`Product "${formData.name}" created successfully!`);
+        
+        // Trigger page refresh to show new product
+        window.location.reload();
+      } else {
+        console.error('Product creation failed:', result?.message);
+        setError(result?.message || 'Failed to create product');
+        setIsSubmitting(false);
+      }
+    } catch (err: any) {
+      console.error('Product creation error:', err);
+      setError(err.message || 'An unexpected error occurred');
+      setIsSubmitting(false);
+    }
   };
 
   const updateField = (field: keyof typeof formData, value: string) => {
@@ -123,6 +228,13 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
             <X className="h-5 w-5" />
           </button>
         </div>
+        
+        {/* Error Display */}
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
 
         {/* Progress Steps */}
         <div className="mb-8">
@@ -178,17 +290,30 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Category *</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => updateField("category", e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
-                >
-                  <option value="">Select category</option>
-                  <option value="ethnic">Ethnic</option>
-                  <option value="streetwear">Streetwear</option>
-                  <option value="formal">Formal</option>
-                  <option value="casual">Casual</option>
-                </select>
+                {loadingCategories ? (
+                  <div className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-foreground/60">Loading categories...</span>
+                  </div>
+                ) : categoryError ? (
+                  <div className="w-full rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                    {categoryError}
+                  </div>
+                ) : (
+                  <select
+                    value={formData.category}
+                    onChange={(e) => updateField("category", e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+                    disabled={categories.length === 0}
+                  >
+                    <option value="">Select category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           )}
@@ -196,29 +321,52 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
           {currentStep === "pricing" && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Price (NPR) *</label>
+                <label className="block text-sm font-medium mb-2">SKU *</label>
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => updateField("sku", e.target.value)}
+                  placeholder="PROD-001"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+                />
+                <p className="mt-1 text-xs text-foreground/60">Unique product identifier</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Selling Price (NPR) *</label>
                 <input
                   type="number"
+                  step="0.01"
+                  min="0"
                   value={formData.price}
                   onChange={(e) => updateField("price", e.target.value)}
                   placeholder="2999"
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
                 />
+                <p className="text-xs text-[var(--kb-text-secondary)] mt-1">Current selling price for customers</p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Compare at Price (NPR)</label>
+                <label className="block text-sm font-medium mb-2">Original Price (NPR) - Optional</label>
                 <input
                   type="number"
+                  step="0.01"
+                  min="0"
                   value={formData.comparePrice}
                   onChange={(e) => updateField("comparePrice", e.target.value)}
                   placeholder="3999"
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
                 />
+                <p className="text-xs text-[var(--kb-text-secondary)] mt-1">
+                  Original/MSRP price before discount. Must be higher than selling price. Example: "Was NPR 3999, now NPR 2999"
+                </p>
+                {formData.comparePrice && formData.price && parseFloat(formData.comparePrice) < parseFloat(formData.price) && (
+                  <p className="text-xs text-red-400 mt-1">⚠️ Original price must be higher than selling price</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Inventory *</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.inventory}
                   onChange={(e) => updateField("inventory", e.target.value)}
                   placeholder="50"
@@ -254,7 +402,11 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-sm text-foreground/70">Category:</dt>
-                    <dd className="text-sm font-medium">{formData.category || "—"}</dd>
+                    <dd className="text-sm font-medium">
+                      {formData.category 
+                        ? categories.find(c => c.id === formData.category)?.name || "Unknown"
+                        : "—"}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-sm text-foreground/70">Price:</dt>
@@ -294,9 +446,11 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
             {isLastStep ? (
               <button
                 onClick={handleSubmit}
-                className="rounded-full bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_80%,black)] px-4 py-2 text-sm font-semibold text-white transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)]"
+                disabled={isSubmitting}
+                className="rounded-full bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_80%,black)] px-4 py-2 text-sm font-semibold text-white transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Create Product
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isSubmitting ? 'Creating...' : 'Create Product'}
               </button>
             ) : (
               <button

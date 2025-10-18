@@ -848,6 +848,8 @@ export interface StylistWithServices {
   isActive: boolean;
   ratingAverage: number | null;
   totalBookings: number;
+  isFeatured: boolean;
+  avatarUrl: string | null;
   services: BookingService[];
 }
 
@@ -907,7 +909,7 @@ export async function fetchActiveStylistsWithServices(): Promise<StylistWithServ
   try {
     const supabase = await createClient();
 
-    // Fetch stylists with their services
+    // Fetch stylists with their services and avatar from user_profiles
     const { data: stylists, error } = await supabase
       .from('stylist_profiles')
       .select(`
@@ -921,6 +923,10 @@ export async function fetchActiveStylistsWithServices(): Promise<StylistWithServ
         is_active,
         rating_average,
         total_bookings,
+        is_featured,
+        user_profiles!inner (
+          avatar_url
+        ),
         stylist_services!inner (
           service_id,
           custom_price_cents,
@@ -964,6 +970,8 @@ export async function fetchActiveStylistsWithServices(): Promise<StylistWithServ
       isActive: stylist.is_active,
       ratingAverage: stylist.rating_average,
       totalBookings: stylist.total_bookings,
+      isFeatured: stylist.is_featured || false,
+      avatarUrl: stylist.user_profiles?.avatar_url || null,
       services: (stylist.stylist_services || []).map((ss: any) => ({
         id: ss.services.id,
         name: ss.services.name,
@@ -1374,5 +1382,965 @@ export async function fetchAdminDashboardStats(
   } catch (error) {
     console.error('[fetchAdminDashboardStats] Exception:', error);
     return null;
+  }
+}
+
+// =====================================================================
+// VENDOR PRODUCTS MANAGEMENT API
+// =====================================================================
+
+export interface VendorProduct {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  short_description?: string;
+  is_active: boolean;
+  is_featured: boolean;
+  category_name: string;
+  category_slug: string;
+  brand_name?: string;
+  variants: ProductVariant[];
+  images: ProductImage[];
+  total_inventory: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  sku: string;
+  price: number;
+  compare_at_price?: number;
+  is_active: boolean;
+}
+
+export interface ProductImage {
+  id: string;
+  image_url: string;
+  sort_order: number;
+  is_primary: boolean;
+}
+
+export interface VendorProductsResponse {
+  products: VendorProduct[];
+  total_count: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+  has_more: boolean;
+}
+
+/**
+ * Fetch vendor's products with pagination and search
+ * Uses server-side RPC for security and performance
+ */
+export async function fetchVendorProductsList(params: {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  is_active?: boolean;
+}): Promise<VendorProductsResponse | null> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase.rpc('get_vendor_products_list', {
+      p_page: params.page || 1,
+      p_per_page: params.per_page || 20,
+      p_search: params.search || null,
+      p_is_active: params.is_active === undefined ? null : params.is_active
+    });
+    
+    if (error) {
+      console.error('Error fetching vendor products:', error);
+      return null;
+    }
+    
+    return data as VendorProductsResponse;
+  } catch (error) {
+    console.error('fetchVendorProductsList error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a new product
+ * Includes validation, slug generation, and audit logging
+ */
+export async function createVendorProduct(productData: any): Promise<{
+  success: boolean;
+  product_id?: string;
+  slug?: string;
+  message?: string;
+} | null> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase.rpc('create_vendor_product', {
+      p_product_data: productData
+    });
+    
+    if (error) {
+      console.error('Error creating product:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to create product'
+      };
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('createVendorProduct error:', error);
+    return {
+      success: false,
+      message: error.message || 'Unexpected error creating product'
+    };
+  }
+}
+
+/**
+ * Update existing product
+ * Only updates provided fields, includes audit logging
+ */
+export async function updateVendorProduct(
+  productId: string,
+  productData: any
+): Promise<{success: boolean; message?: string} | null> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase.rpc('update_vendor_product', {
+      p_product_id: productId,
+      p_product_data: productData
+    });
+    
+    if (error) {
+      console.error('Error updating product:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update product'
+      };
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('updateVendorProduct error:', error);
+    return {
+      success: false,
+      message: error.message || 'Unexpected error updating product'
+    };
+  }
+}
+
+/**
+ * Delete product (soft delete)
+ * Sets is_active = false, preserves data for order history
+ */
+export async function deleteVendorProduct(
+  productId: string
+): Promise<{success: boolean; message?: string} | null> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase.rpc('delete_vendor_product', {
+      p_product_id: productId
+    });
+    
+    if (error) {
+      console.error('Error deleting product:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to delete product'
+      };
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('deleteVendorProduct error:', error);
+    return {
+      success: false,
+      message: error.message || 'Unexpected error deleting product'
+    };
+  }
+}
+
+/**
+ * Toggle product active status
+ * Quick action for enable/disable
+ */
+export async function toggleProductActive(
+  productId: string
+): Promise<{success: boolean; is_active?: boolean; message?: string} | null> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase.rpc('toggle_product_active', {
+      p_product_id: productId
+    });
+    
+    if (error) {
+      console.error('Error toggling product status:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to toggle product status'
+      };
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('toggleProductActive error:', error);
+    return {
+      success: false,
+      message: error.message || 'Unexpected error toggling product status'
+    };
+  }
+}
+
+/**
+ * Upload product image to Supabase Storage
+ * Images stored in vendor-specific folders for security
+ */
+export async function uploadProductImage(
+  vendorId: string,
+  productId: string,
+  file: File
+): Promise<{url: string; path: string} | null> {
+  try {
+    const supabase = await createClient();
+    
+    // Generate unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${vendorId}/${productId}/${fileName}`;
+    
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+    
+    if (error) {
+      console.error('Error uploading image:', error);
+      return null;
+    }
+    
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+    
+    return {
+      url: publicUrl,
+      path: filePath
+    };
+  } catch (error) {
+    console.error('uploadProductImage error:', error);
+    return null;
+  }
+}
+
+// ============================================================================
+// ADMIN USERS MANAGEMENT
+// ============================================================================
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  username: string;
+  display_name: string;
+  avatar_url?: string;
+  is_verified: boolean;
+  created_at: string;
+  last_sign_in_at?: string;
+  email_confirmed_at?: string;
+  banned_until?: string;
+  roles: Array<{
+    role_name: string;
+    role_id: string;
+    assigned_at: string;
+    expires_at?: string;
+    is_active: boolean;
+  }>;
+  status: 'active' | 'inactive' | 'banned' | 'pending';
+}
+
+export interface AdminUsersListResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface AdminUsersListParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  role_filter?: string; // 'admin' | 'vendor' | 'customer' | 'support'
+  status_filter?: string; // 'active' | 'inactive' | 'banned' | 'pending'
+}
+
+/**
+ * Fetch admin users list with pagination and filters
+ * @param params - Pagination and filter parameters
+ * @returns Users list with pagination metadata or null on error
+ */
+export async function fetchAdminUsersList(
+  params: AdminUsersListParams = {}
+): Promise<AdminUsersListResponse | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('get_admin_users_list', {
+      p_page: params.page || 1,
+      p_per_page: params.per_page || 20,
+      p_search: params.search || null,
+      p_role_filter: params.role_filter || null,
+      p_status_filter: params.status_filter || null,
+    });
+    
+    if (error) {
+      console.error('fetchAdminUsersList error:', error);
+      return null;
+    }
+    
+    return data as AdminUsersListResponse;
+  } catch (error) {
+    console.error('fetchAdminUsersList error:', error);
+    return null;
+  }
+}
+
+/**
+ * Assign a role to a user
+ * @param userId - User ID to assign role to
+ * @param roleName - Role name ('admin', 'vendor', 'customer', 'support')
+ * @param expiresAt - Optional expiration timestamp
+ * @returns Success result with message
+ */
+export async function assignUserRole(
+  userId: string,
+  roleName: string,
+  expiresAt?: string
+): Promise<{ success: boolean; message: string; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('assign_user_role', {
+      p_user_id: userId,
+      p_role_name: roleName,
+      p_expires_at: expiresAt || null,
+    });
+    
+    if (error) {
+      console.error('assignUserRole error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; };
+  } catch (error: any) {
+    console.error('assignUserRole error:', error);
+    return { success: false, message: error.message || 'Failed to assign role' };
+  }
+}
+
+/**
+ * Revoke a role from a user
+ * @param userId - User ID to revoke role from
+ * @param roleName - Role name to revoke
+ * @returns Success result with message
+ */
+export async function revokeUserRole(
+  userId: string,
+  roleName: string
+): Promise<{ success: boolean; message: string; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('revoke_user_role', {
+      p_user_id: userId,
+      p_role_name: roleName,
+    });
+    
+    if (error) {
+      console.error('revokeUserRole error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; };
+  } catch (error: any) {
+    console.error('revokeUserRole error:', error);
+    return { success: false, message: error.message || 'Failed to revoke role' };
+  }
+}
+
+/**
+ * Suspend a user account
+ * @param userId - User ID to suspend
+ * @param durationDays - Number of days to suspend (null = permanent)
+ * @param reason - Reason for suspension
+ * @returns Success result with message and banned_until timestamp
+ */
+export async function suspendUser(
+  userId: string,
+  durationDays?: number,
+  reason?: string
+): Promise<{ success: boolean; message: string; banned_until?: string; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('suspend_user', {
+      p_user_id: userId,
+      p_duration_days: durationDays || null,
+      p_reason: reason || null,
+    });
+    
+    if (error) {
+      console.error('suspendUser error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; banned_until?: string; };
+  } catch (error: any) {
+    console.error('suspendUser error:', error);
+    return { success: false, message: error.message || 'Failed to suspend user' };
+  }
+}
+
+/**
+ * Activate a user account (remove suspension)
+ * @param userId - User ID to activate
+ * @returns Success result with message
+ */
+export async function activateUser(
+  userId: string
+): Promise<{ success: boolean; message: string; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('activate_user', {
+      p_user_id: userId,
+    });
+    
+    if (error) {
+      console.error('activateUser error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; };
+  } catch (error: any) {
+    console.error('activateUser error:', error);
+    return { success: false, message: error.message || 'Failed to activate user' };
+  }
+}
+
+// ============================================================================
+// ADMIN VENDORS MANAGEMENT
+// ============================================================================
+
+export interface AdminVendor {
+  user_id: string;
+  business_name: string;
+  business_type?: string;
+  tax_id?: string;
+  verification_status: 'pending' | 'verified' | 'rejected';
+  commission_rate: number;
+  created_at: string;
+  updated_at: string;
+  display_name: string;
+  username: string;
+  avatar_url?: string;
+  is_verified: boolean;
+  email: string;
+  last_sign_in_at?: string;
+  banned_until?: string;
+  total_products: number;
+  active_products: number;
+  total_revenue_cents: number;
+  total_orders: number;
+  pending_orders: number;
+}
+
+export interface AdminVendorsListResponse {
+  vendors: AdminVendor[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface AdminVendorsListParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status_filter?: string; // 'pending' | 'verified' | 'rejected'
+  business_type_filter?: string;
+}
+
+/**
+ * Fetch admin vendors list with pagination and filters
+ * @param params - Pagination and filter parameters
+ * @returns Vendors list with pagination metadata or null on error
+ */
+export async function fetchAdminVendorsList(
+  params: AdminVendorsListParams = {}
+): Promise<AdminVendorsListResponse | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('get_admin_vendors_list', {
+      p_page: params.page || 1,
+      p_per_page: params.per_page || 20,
+      p_search: params.search || null,
+      p_status_filter: params.status_filter || null,
+      p_business_type_filter: params.business_type_filter || null,
+    });
+    
+    if (error) {
+      console.error('fetchAdminVendorsList error:', error);
+      return null;
+    }
+    
+    return data as AdminVendorsListResponse;
+  } catch (error) {
+    console.error('fetchAdminVendorsList error:', error);
+    return null;
+  }
+}
+
+/**
+ * Approve a vendor application
+ * @param vendorId - Vendor user ID to approve
+ * @param notes - Optional admin notes
+ * @returns Success result with message
+ */
+export async function approveVendor(
+  vendorId: string,
+  notes?: string
+): Promise<{ success: boolean; message: string; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('approve_vendor', {
+      p_vendor_id: vendorId,
+      p_notes: notes || null,
+    });
+    
+    if (error) {
+      console.error('approveVendor error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; };
+  } catch (error: any) {
+    console.error('approveVendor error:', error);
+    return { success: false, message: error.message || 'Failed to approve vendor' };
+  }
+}
+
+/**
+ * Reject a vendor application
+ * @param vendorId - Vendor user ID to reject
+ * @param reason - Reason for rejection
+ * @returns Success result with message
+ */
+export async function rejectVendor(
+  vendorId: string,
+  reason?: string
+): Promise<{ success: boolean; message: string; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('reject_vendor', {
+      p_vendor_id: vendorId,
+      p_reason: reason || null,
+    });
+    
+    if (error) {
+      console.error('rejectVendor error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; };
+  } catch (error: any) {
+    console.error('rejectVendor error:', error);
+    return { success: false, message: error.message || 'Failed to reject vendor' };
+  }
+}
+
+/**
+ * Update vendor commission rate
+ * @param vendorId - Vendor user ID
+ * @param commissionRate - New commission rate (0-1 = 0-100%)
+ * @returns Success result with old and new rates
+ */
+export async function updateVendorCommission(
+  vendorId: string,
+  commissionRate: number
+): Promise<{ success: boolean; message: string; old_rate?: number; new_rate?: number; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('update_vendor_commission', {
+      p_vendor_id: vendorId,
+      p_commission_rate: commissionRate,
+    });
+    
+    if (error) {
+      console.error('updateVendorCommission error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; old_rate?: number; new_rate?: number; };
+  } catch (error: any) {
+    console.error('updateVendorCommission error:', error);
+    return { success: false, message: error.message || 'Failed to update commission' };
+  }
+}
+
+/**
+ * Suspend a vendor account
+ * @param vendorId - Vendor user ID to suspend
+ * @param reason - Reason for suspension
+ * @returns Success result with products_deactivated count
+ */
+export async function suspendVendor(
+  vendorId: string,
+  reason?: string
+): Promise<{ success: boolean; message: string; products_deactivated?: number; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('suspend_vendor', {
+      p_vendor_id: vendorId,
+      p_reason: reason || null,
+    });
+    
+    if (error) {
+      console.error('suspendVendor error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; products_deactivated?: number; };
+  } catch (error: any) {
+    console.error('suspendVendor error:', error);
+    return { success: false, message: error.message || 'Failed to suspend vendor' };
+  }
+}
+
+/**
+ * Activate a vendor account (remove suspension)
+ * @param vendorId - Vendor user ID to activate
+ * @returns Success result with message
+ */
+export async function activateVendor(
+  vendorId: string
+): Promise<{ success: boolean; message: string; } | null> {
+  noStore();
+  
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('activate_vendor', {
+      p_vendor_id: vendorId,
+    });
+    
+    if (error) {
+      console.error('activateVendor error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return data as { success: boolean; message: string; };
+  } catch (error: any) {
+    console.error('activateVendor error:', error);
+    return { success: false, message: error.message || 'Failed to activate vendor' };
+  }
+}
+
+// ============================================================================
+// CURATION ENGINE API CLIENT
+// Blueprint v2.1 - Week 3 Frontend Integration
+// ============================================================================
+
+/**
+ * Trending product data from curation engine
+ */
+export interface TrendingProduct {
+  product_id: string;
+  name: string;
+  slug: string;
+  trend_score: number;
+  source: 'trending' | 'new' | 'rated' | 'active';
+  min_price: number;
+  image_url?: string;
+  average_rating: number;
+  is_featured: boolean;
+}
+
+/**
+ * Featured brand data from curation engine
+ */
+export interface FeaturedBrand {
+  brand_id: string;
+  brand_name: string;
+  brand_slug: string;
+  logo_url?: string;
+  product_count: number;
+}
+
+/**
+ * Product recommendation data from curation engine
+ */
+export interface ProductRecommendation {
+  recommendation_id: string;
+  product_id: string;
+  product_name: string;
+  product_slug: string;
+  min_price: number;
+  image_url?: string;
+  display_order: number;
+  in_stock: boolean;
+}
+
+/**
+ * Featured stylist data from curation engine
+ */
+export interface FeaturedStylist {
+  stylist_id: string;
+  display_name: string;
+  title: string | null;
+  bio: string | null;
+  years_experience: number | null;
+  specialties: string[] | null;
+  rating_average: number | null;
+  total_bookings: number;
+  avatar_url: string | null;
+  featured_at: string | null;
+}
+
+/**
+ * Fetch trending products from curation Edge Function
+ * 
+ * Server Component safe - uses Next.js fetch with ISR caching
+ * Graceful degradation - returns empty array on error
+ * 
+ * @param limit - Number of products to fetch (default: 20)
+ * @returns Array of trending products
+ */
+export async function fetchTrendingProducts(limit: number = 20): Promise<TrendingProduct[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Curation API] Missing Supabase environment variables');
+    return [];
+  }
+  
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_trending_products&limit=${limit}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 }, // Cache for 5 minutes (matches Edge Function TTL)
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('[Curation API] Failed to fetch trending products:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error('[Curation API] Error fetching trending products:', error);
+    return []; // Graceful degradation: return empty array
+  }
+}
+
+/**
+ * Fetch featured brands from curation Edge Function
+ * 
+ * Server Component safe - uses Next.js fetch with ISR caching
+ * Graceful degradation - returns empty array on error
+ * 
+ * @param limit - Number of brands to fetch (default: 6)
+ * @returns Array of featured brands with active product counts
+ */
+export async function fetchFeaturedBrands(limit: number = 6): Promise<FeaturedBrand[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Curation API] Missing Supabase environment variables');
+    return [];
+  }
+  
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_featured_brands&limit=${limit}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 }, // Cache for 5 minutes
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('[Curation API] Failed to fetch featured brands:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error('[Curation API] Error fetching featured brands:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch product recommendations from curation Edge Function
+ * 
+ * Server Component safe - uses Next.js fetch with ISR caching
+ * Self-healing - Edge Function auto-filters inactive/out-of-stock products
+ * Graceful degradation - returns empty array on error
+ * 
+ * @param productId - Source product UUID
+ * @param limit - Number of recommendations to fetch (default: 4)
+ * @returns Array of product recommendations
+ */
+export async function fetchProductRecommendations(
+  productId: string,
+  limit: number = 4
+): Promise<ProductRecommendation[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Curation API] Missing Supabase environment variables');
+    return [];
+  }
+  
+  // Validate productId is a valid UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(productId)) {
+    console.error('[Curation API] Invalid product ID format:', productId);
+    return [];
+  }
+  
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_recommendations&product_id=${productId}&limit=${limit}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 }, // Cache for 5 minutes
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('[Curation API] Failed to fetch recommendations:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error('[Curation API] Error fetching recommendations:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch Top Stylists (by bookings/rating) - used in About page
+ */
+export async function fetchTopStylists(limit: number = 10): Promise<FeaturedStylist[]> {
+  noStore();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('get_top_stylists', { p_limit: limit });
+  if (error) {
+    console.error('[Top Stylists] Error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * Fetch Featured Stylists from Curation Engine
+ * Uses get-curated-content Edge Function with Redis caching (5 min TTL)
+ * 
+ * @param limit - Number of stylists to fetch (default: 6)
+ * @returns Array of featured stylists with user profile data
+ */
+export async function fetchFeaturedStylists(limit: number = 6): Promise<FeaturedStylist[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Curation API] Missing Supabase environment variables');
+    return [];
+  }
+  
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_featured_stylists&limit=${limit}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 }, // Cache for 5 minutes
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('[Curation API] Failed to fetch featured stylists:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error('[Curation API] Error fetching featured stylists:', error);
+    return [];
   }
 }

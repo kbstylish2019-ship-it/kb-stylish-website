@@ -10,6 +10,7 @@ export type UserCapability =
   | "view_cart"
   | "view_profile"
   | "vendor_access"
+  | "stylist_access"
   | "admin_access";
 
 export type NavArea = "primary" | "utility" | "profile";
@@ -162,7 +163,10 @@ export interface Stylist {
   name: string;
   specialty: string; // e.g., "Bridal", "Grooming"
   rating: number; // 0..5
+  reviewCount?: number;
   imageUrl?: string;
+  availability?: string;
+  isFeatured?: boolean;
 }
 
 // Vendor domain models

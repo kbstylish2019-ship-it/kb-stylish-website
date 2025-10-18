@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Star, Award } from "lucide-react";
 import type { Stylist } from "@/lib/types";
 
 /**
@@ -36,6 +36,14 @@ const StylistCard = React.memo(function StylistCard({
           <div className="size-full bg-gradient-to-br from-[var(--kb-primary-brand)]/20 to-[var(--kb-accent-gold)]/20" />
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10" />
+        
+        {/* Featured Badge */}
+        {stylist.isFeatured && (
+          <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/90 to-yellow-500/90 px-3 py-1.5 text-xs font-semibold text-black shadow-lg backdrop-blur-sm ring-1 ring-amber-400/50">
+            <Award className="h-3.5 w-3.5" />
+            <span>Featured</span>
+          </div>
+        )}
       </div>
       <div className="p-4">
         <div className="flex items-center justify-between">

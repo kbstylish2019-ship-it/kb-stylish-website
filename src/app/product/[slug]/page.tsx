@@ -1,10 +1,9 @@
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import type { ProductDetail, ProductVariant, ProductOption, Review, Media } from "@/lib/types";
-import { fetchProductBySlug, fetchProductReviews, type ProductWithVariants } from "@/lib/apiClient";
-import { getRelatedProducts } from "@/lib/mock/product";
+import { fetchProductBySlug, fetchProductReviews, fetchProductRecommendations, type ProductWithVariants } from "@/lib/apiClient";
 import CustomerReviews from "@/components/product/CustomerReviews";
-import RelatedProducts from "@/components/product/RelatedProducts";
+import CompleteTheLook from "@/components/product/CompleteTheLook";
 
 // Lazy load product detail client for better performance
 const ProductDetailClient = dynamic(
@@ -133,7 +132,9 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   
   // Transform to ProductDetail type
   const product: ProductDetail = transformToProductDetail(productData);
-  const related = getRelatedProducts();
+  
+  // Fetch real recommendations from curation engine (self-healing: auto-filters inactive/out-of-stock)
+  const recommendations = await fetchProductRecommendations(product.id, 4);
   
   // TEMP FIX: Skip server-side review fetching to avoid duplicates
   // The client-side Edge Function (review-manager v7) handles review fetching
@@ -162,7 +163,10 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
           canReview={!!userOrderId} // Can review if user has purchased  
           orderId={userOrderId}
         />
-        <RelatedProducts products={related} />
+        <CompleteTheLook 
+          recommendations={recommendations}
+          sourceProductId={product.id}
+        />
       </div>
     </main>
   );

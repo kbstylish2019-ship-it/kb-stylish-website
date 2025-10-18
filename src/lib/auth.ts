@@ -10,6 +10,7 @@ export interface UserCapabilities {
   canViewAnalytics: boolean
   canManageUsers: boolean
   canAccessVendorDashboard: boolean
+  canAccessStylistDashboard: boolean
   canBookServices: boolean
   canViewProfile: boolean
 }
@@ -67,6 +68,7 @@ function mapRolesToCapabilities(roles: string[]): UserCapabilities {
     canViewAnalytics: false,
     canManageUsers: false,
     canAccessVendorDashboard: false,
+    canAccessStylistDashboard: false,
     canBookServices: false,
     canViewProfile: false,
   }
@@ -80,6 +82,7 @@ function mapRolesToCapabilities(roles: string[]): UserCapabilities {
         capabilities.canViewAnalytics = true
         capabilities.canManageUsers = true
         capabilities.canAccessVendorDashboard = true
+        capabilities.canAccessStylistDashboard = true
         capabilities.canBookServices = true
         capabilities.canViewProfile = true
         break
@@ -89,6 +92,14 @@ function mapRolesToCapabilities(roles: string[]): UserCapabilities {
         capabilities.canManageBookings = true
         capabilities.canViewAnalytics = true
         capabilities.canAccessVendorDashboard = true
+        capabilities.canBookServices = true
+        capabilities.canViewProfile = true
+        break
+      
+      case 'stylist':
+        capabilities.canAccessStylistDashboard = true
+        capabilities.canManageBookings = true
+        capabilities.canViewAnalytics = true
         capabilities.canBookServices = true
         capabilities.canViewProfile = true
         break
@@ -209,6 +220,7 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
       canViewAnalytics: false,
       canManageUsers: false,
       canAccessVendorDashboard: false,
+      canAccessStylistDashboard: false,
       canBookServices: true,
       canViewProfile: true,
     }

@@ -1,0 +1,16 @@
+
+
+# Test Accounts Ready + Roles Assigned
+
+- **[credentials]**
+  - Admin: email `admin.trust@kbstylish.test` / password `KBStylish!Admin2025`
+  - Vendor: email `vendor.demo@kbstylish.test` / password `KBStylish!Vendor2025`
+
+- **[roles]**
+  - `admin.trust@kbstylish.test` → role `admin` (active)
+  - `vendor.demo@kbstylish.test` → role `vendor` (active)
+
+- **[profiles]**
+  - Created `public.user_profiles` rows for both:
+    - Admin: `username` = `admin.trust-0f634462`
+    - Vendor: `username` = `vendor.demo-db215a94`

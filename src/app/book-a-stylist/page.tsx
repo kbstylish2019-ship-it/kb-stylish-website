@@ -1,5 +1,30 @@
 import { fetchActiveStylistsWithServices } from "@/lib/apiClient";
 import BookingPageClient from "@/components/booking/BookingPageClient";
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+async function createClient() {
+  const cookieStore = await cookies();
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {}
+        },
+      },
+    }
+  );
+}
 
 // Server Component that fetches live data
 export default async function BookAStylistPage() {
@@ -18,6 +43,14 @@ export default async function BookAStylistPage() {
   
   const categories = Array.from(categoriesSet);
 
+  // Fetch active specialty types for filtering
+  const supabase = await createClient();
+  const { data: specialtyTypes } = await supabase
+    .from('specialty_types')
+    .select('id, name, slug, category')
+    .eq('is_active', true)
+    .order('display_order');
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
@@ -33,6 +66,7 @@ export default async function BookAStylistPage() {
       <BookingPageClient 
         stylists={stylists} 
         categories={categories}
+        specialtyTypes={specialtyTypes || []}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { Users, Store, Wallet, LifeBuoy, TrendingUp } from "lucide-react";
 import { fetchAdminDashboardStats } from "@/lib/apiClient";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import AdminSidebar from "@/components/admin/AdminSidebar";
 
 // Use real components in test to avoid next/dynamic being mocked to null
 const isTest = process.env.NODE_ENV === "test";
@@ -49,30 +50,7 @@ if (isTest) {
   });
 }
 
-function AdminSidebar() {
-  const items = [
-    { id: "dashboard", label: "Dashboard", href: "/admin/dashboard" },
-    { id: "users", label: "Users", href: "/admin/users" },
-    { id: "vendors", label: "Vendors", href: "/admin/vendors" },
-    { id: "analytics", label: "Analytics", href: "/admin/analytics" },
-    { id: "finance", label: "Finance", href: "/admin/finance" },
-    { id: "moderation", label: "Moderation", href: "/admin/moderation" },
-    { id: "settings", label: "Settings", href: "/admin/settings" },
-  ];
-  return (
-    <nav className="flex flex-col gap-1 text-sm">
-      {items.map((i) => (
-        <Link
-          key={i.id}
-          href={i.href}
-          className="rounded-lg px-3 py-2 text-foreground/90 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
-        >
-          {i.label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
+// Sidebar moved to shared component: @/components/admin/AdminSidebar
 
 const mockUsers: AdminUser[] = [
   { id: "U-1001", name: "Rohan Shrestha", email: "rohan@example.com", role: "customer", status: "Active", createdAt: new Date(Date.now() - 14*86400000).toISOString(), lastActiveAt: new Date().toISOString(), orders: 5 },
@@ -148,6 +126,7 @@ export default async function AdminDashboardPage() {
   const totalUsers = stats.platform_overview.total_users;
   const totalVendors = stats.platform_overview.total_vendors;
   const monthlyRevenue = (stats.last_30_days.gmv_cents / 100).toLocaleString('en-IN');
+  const monthlyRefunds = (stats.last_30_days.refunds_cents / 100).toLocaleString('en-IN');
   const todayOrders = stats.today.orders;
   const todayRevenue = (stats.today.gmv_cents / 100).toLocaleString('en-IN');
 
@@ -190,7 +169,7 @@ export default async function AdminDashboardPage() {
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10 lg:col-span-2">
           <h2 className="text-lg font-semibold mb-3">Platform Overview (30 Days)</h2>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
             <AdminStatCard
               title="Total GMV"
               value={`NPR ${monthlyRevenue}`}
@@ -200,6 +179,11 @@ export default async function AdminDashboardPage() {
               title="Platform Fees"
               value={`NPR ${(stats.last_30_days.platform_fees_cents / 100).toLocaleString('en-IN')}`}
               subtitle="15% commission"
+            />
+            <AdminStatCard
+              title="Refunds"
+              value={`NPR ${monthlyRefunds}`}
+              subtitle="Cancelled orders"
             />
             <AdminStatCard
               title="Total Orders"

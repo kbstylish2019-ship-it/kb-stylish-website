@@ -1,4 +1,7 @@
 import dynamic from "next/dynamic";
+import { fetchTrendingProducts, fetchFeaturedBrands } from "@/lib/apiClient";
+import TrendingProducts from "@/components/homepage/TrendingProducts";
+import FeaturedBrands from "@/components/homepage/FeaturedBrands";
 
 // Critical above-the-fold component - keep static
 import HeroSection from "@/components/homepage/HeroSection";
@@ -19,18 +22,22 @@ const ValueProps = dynamic(() => import("@/components/homepage/ValueProps"), {
 const FeaturedStylists = dynamic(() => import("@/components/homepage/FeaturedStylists"), {
   loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-xl mx-auto max-w-7xl px-4 my-10" />,
 });
-const TrendingProducts = dynamic(() => import("@/components/homepage/TrendingProducts"), {
-  loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-xl mx-auto max-w-7xl px-4 my-10" />,
-});
 
-export default function Home() {
+export default async function Home() {
+  // Fetch curated data server-side (parallel requests for performance)
+  const [trendingProducts, featuredBrands] = await Promise.all([
+    fetchTrendingProducts(20),
+    fetchFeaturedBrands(6),
+  ]);
+  
   return (
     <main>
       <HeroSection />
       <BrandStrip />
       <CategoryGrid />
+      <FeaturedBrands brands={featuredBrands} />
       <FeaturedStylists />
-      <TrendingProducts />
+      <TrendingProducts products={trendingProducts} />
       <ValueProps />
     </main>
   );

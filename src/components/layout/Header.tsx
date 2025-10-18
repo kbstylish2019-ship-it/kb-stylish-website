@@ -24,6 +24,7 @@ function capabilitiesToArray(capabilities: any): UserCapability[] {
   const caps: UserCapability[] = [];
   if (capabilities.canAccessAdmin) caps.push("admin_access");
   if (capabilities.canAccessVendorDashboard) caps.push("vendor_access");
+  if (capabilities.canAccessStylistDashboard) caps.push("stylist_access");
   if (capabilities.canViewProfile) caps.push("view_profile");
   if (capabilities.canBookServices) caps.push("view_bookings");
   // Add other mappings as needed based on existing UserCapability types

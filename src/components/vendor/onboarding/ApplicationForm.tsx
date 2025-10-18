@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { useVendorOnboarding } from "@/hooks/useVendorOnboarding";
+import { createClient } from "@/lib/supabase/client";
 import type {
   VendorApplication,
   VendorBusinessInfo,
@@ -65,9 +66,109 @@ export default function ApplicationForm({
     submitApplication,
   } = useVendorOnboarding();
 
-  const handleSubmit = React.useCallback(() => {
-    submitApplication(onSubmit);
+  const handleSubmit = React.useCallback(async () => {
+    // Call the actual submission function
+    await submitApplication(async (application) => {
+      try {
+        // Get Supabase session for auth
+        const supabase = createClient();
+        
+        // DEBUG: Check if user is authenticated
+        console.log('[ApplicationForm] Checking authentication...');
+        
+        // CRITICAL FIX: Use getUser() which validates the JWT and refreshes if needed
+        // getSession() only returns cached session without validation
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        console.log('[ApplicationForm] User:', user ? user.email : 'NULL', 'Error:', userError);
+        
+        if (userError || !user) {
+          console.error('[ApplicationForm] User not authenticated:', userError);
+          throw new Error('You must be logged in to submit an application. Please refresh the page and try again.');
+        }
+        
+        // Now get the session (which should be available after getUser())
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        console.log('[ApplicationForm] Session after getUser():', session ? 'Found' : 'NULL');
+        
+        if (!session || !session.access_token) {
+          console.error('[ApplicationForm] No session after getUser()');
+          throw new Error('Session expired. Please refresh the page and try again.');
+        }
+        
+        // Submit with retry logic using the validated session
+        const result = await submitWithRetry(application, session.access_token);
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Submission failed');
+        }
+        
+        // Clear draft from localStorage on success
+        localStorage.removeItem('vendor_application_draft');
+        
+        // Call optional callback
+        await onSubmit?.(application);
+      } catch (error) {
+        console.error('Application submission error:', error);
+        throw error;  // Re-throw to be caught by useVendorOnboarding
+      }
+    });
   }, [submitApplication, onSubmit]);
+  
+  // Submit with retry logic (3 attempts with exponential backoff)
+  const submitWithRetry = async (
+    application: VendorApplication,
+    accessToken: string,
+    attempt = 1
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/submit-vendor-application`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            business_name: application.business.businessName,
+            business_type: application.business.businessType,
+            contact_name: application.business.contactName,
+            email: application.business.email,
+            phone: application.business.phone,
+            website: application.business.website || null,
+            payout_method: application.payout.method,
+            bank_name: application.payout.method === 'bank' ? (application.payout as any).bankName : null,
+            bank_account_name: application.payout.method === 'bank' ? (application.payout as any).accountName : null,
+            bank_account_number: application.payout.method === 'bank' ? (application.payout as any).accountNumber : null,
+            bank_branch: application.payout.method === 'bank' ? (application.payout as any).branch : null,
+            esewa_number: application.payout.method === 'esewa' ? (application.payout as any).esewaId : null,
+            khalti_number: application.payout.method === 'khalti' ? (application.payout as any).khaltiId : null,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[ApplicationForm] Edge Function Error Response:', errorData);
+        console.error('[ApplicationForm] Status:', response.status);
+        console.error('[ApplicationForm] Headers:', Object.fromEntries(response.headers.entries()));
+        return { success: false, error: errorData.error || 'Submission failed' };
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      // Retry on network errors
+      if (attempt < 3) {
+        console.log(`Retrying submission (attempt ${attempt + 1}/3)...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));  // Exponential backoff
+        return submitWithRetry(application, accessToken, attempt + 1);
+      }
+      return { success: false, error: 'Network error. Please check your connection and try again.' };
+    }
+  };
 
   return (
     <section id="apply" className="rounded-2xl border border-white/10 bg-white/5 p-6 ring-1 ring-white/10">
@@ -316,9 +417,10 @@ export default function ApplicationForm({
                   type="button"
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="rounded-lg bg-[var(--kb-primary-brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="rounded-lg bg-[var(--kb-primary-brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50 flex items-center gap-2"
                   data-testid="submit-application"
                 >
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {submitting ? "Submitting..." : "Submit Application"}
                 </button>
               )}

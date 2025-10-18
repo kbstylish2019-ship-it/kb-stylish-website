@@ -71,7 +71,36 @@ grep -r "similar_feature_name" src/
 grep -r "related_function" supabase/
 ```
 
-**OUTPUT**: Architecture map document showing data flow, dependencies, patterns
+f
+```
+IMPORTANT: Always check the LIVE database via Supabase MCP, not just migration files!
+
+WHY: Some migrations may have been applied directly via MCP and might not 
+exist in the codebase. The live system is the source of truth.
+
+ALWAYS DO THIS:
+1. Use MCP tools to query live database schema
+2. List all tables, functions, indices, policies
+3. Compare live state with migration files
+4. Document any discrepancies
+5. Base your design on LIVE state, not files
+
+MCP Commands to Use:
+- mcp1_execute_sql() - Query live database
+- mcp1_list_tables() - See all tables
+- mcp1_list_extensions() - Check enabled extensions
+- mcp1_list_migrations() - See applied migrations
+
+Example:
+-- Check if a function exists in LIVE database
+SELECT proname, pg_get_function_arguments(oid) 
+FROM pg_proc 
+WHERE proname = 'your_function_name';
+
+-- Don't assume based on migration files alone!
+```
+
+**OUTPUT**: Architecture map document showing data flow, dependencies, patterns, AND live system verification
 
 ---
 

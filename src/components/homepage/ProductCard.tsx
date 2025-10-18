@@ -9,15 +9,28 @@ import type { Product } from "@/lib/types";
  * Memoized to prevent unnecessary re-renders in product lists.
  * 
  * @param product - Product data to display
+ * @param onClick - Optional click handler for tracking
  * @returns Memoized product card component
  */
-const ProductCard = React.memo(function ProductCard({ product }: { product: Product }) {
+interface ProductCardProps {
+  product: Product;
+  onClick?: () => void;
+}
+
+const ProductCard = React.memo(function ProductCard({ product, onClick }: ProductCardProps) {
   // Use slug if available, otherwise generate from name
   const productSlug = product.slug || product.name.toLowerCase().replace(/\s+/g, '-');
   
+  // Handle click event
+  const handleClick = () => {
+    if (onClick) {
+      onClick(); // Fire tracking (non-blocking)
+    }
+  };
+  
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 transition-all hover:ring-2 hover:ring-white/20">
-      <Link href={`/product/${productSlug}`} className="block">
+      <Link href={`/product/${productSlug}`} onClick={handleClick} className="block">
         <div className="relative aspect-square w-full bg-gradient-to-br from-white/10 to-white/0">
           {product.imageUrl ? (
             <Image
