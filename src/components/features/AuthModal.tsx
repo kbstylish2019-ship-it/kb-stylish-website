@@ -140,6 +140,7 @@ const Field = ({ id, label, type = "text", placeholder }: { id: string; label: s
 const LoginForm = ({ onClose }: { onClose: () => void }) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string>("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleSubmit = async (formData: FormData) => {
     setError("");
@@ -155,6 +156,12 @@ const LoginForm = ({ onClose }: { onClose: () => void }) => {
     }
     
     startTransition(async () => {
+      // Clear form fields for better UX
+      const emailInput = document.getElementById('email') as HTMLInputElement;
+      const passwordInput = document.getElementById('password') as HTMLInputElement;
+      if (emailInput) emailInput.value = '';
+      if (passwordInput) passwordInput.value = '';
+      
       try {
         const result = await signIn(formData);
         if (result?.error) {
@@ -166,17 +173,20 @@ const LoginForm = ({ onClose }: { onClose: () => void }) => {
         // NEXT_REDIRECT is expected behavior, not an error
         if (error && typeof error === 'object' && 'digest' in error && 
             typeof error.digest === 'string' && error.digest.includes('NEXT_REDIRECT')) {
-          // After successful login with merge (via redirect), clear guest token and fetch cart
+          // Show loading state during redirect
+          setIsRedirecting(true);
+          // After successful login with merge (via redirect), clear guest token
           if (guestToken) {
             document.cookie = 'guest_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            
-            const { useCartStore } = await import('@/lib/store/cartStore');
-            const { fetchCart } = useCartStore.getState();
-            fetchCart();
           }
-          onClose(); // Close modal on successful redirect
-          return;
+          // Close modal after a brief moment to show the spinner
+          setTimeout(() => {
+            onClose();
+          }, 500);
+          return; // Don't show error for redirects
         }
+        
+        console.error('[AuthModal] Login error:', error);
         setError("An unexpected error occurred");
       }
     });
@@ -191,12 +201,21 @@ const LoginForm = ({ onClose }: { onClose: () => void }) => {
       )}
       <Field id="email" label="Email" type="email" placeholder="you@example.com" />
       <Field id="password" label="Password" type="password" placeholder="••••••••" />
+      {isRedirecting && (
+        <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-sm text-blue-400 flex items-center gap-2">
+          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Logging you in...</span>
+        </div>
+      )}
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || isRedirecting}
         className="mt-2 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isPending ? "Signing in..." : "Sign in"}
+        {isPending || isRedirecting ? "Signing in..." : "Sign in"}
       </button>
     </form>
   );
@@ -206,11 +225,20 @@ const RegisterForm = ({ onClose }: { onClose: () => void }) => {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleSubmit = async (formData: FormData) => {
     setError("");
     setMessage("");
     startTransition(async () => {
+      // Clear form fields for better UX
+      const fullNameInput = document.getElementById('fullName') as HTMLInputElement;
+      const emailInput = document.getElementById('email') as HTMLInputElement;
+      const passwordInput = document.getElementById('password') as HTMLInputElement;
+      if (fullNameInput) fullNameInput.value = '';
+      if (emailInput) emailInput.value = '';
+      if (passwordInput) passwordInput.value = '';
+      
       try {
         const result = await signUp(formData);
         if (result?.error) {
@@ -221,9 +249,27 @@ const RegisterForm = ({ onClose }: { onClose: () => void }) => {
             onClose();
           }
         } else {
+          // Success case - redirect will happen automatically
           onClose();
         }
       } catch (error) {
+        // BUGFIX (2025-10-18): Next.js redirect() throws an error - don't show it as error
+        // Check if this is a NEXT_REDIRECT error (expected behavior)
+        if (error && typeof error === 'object' && 'digest' in error) {
+          const digest = (error as any).digest;
+          if (typeof digest === 'string' && digest.includes('NEXT_REDIRECT')) {
+            // Show loading state during redirect
+            setIsRedirecting(true);
+            // Close modal after brief delay
+            setTimeout(() => {
+              onClose();
+            }, 500);
+            return;
+          }
+        }
+        
+        // Only show error for actual errors, not redirects
+        console.error('[AuthModal] Signup error:', error);
         setError("An unexpected error occurred");
       }
     });
@@ -241,15 +287,24 @@ const RegisterForm = ({ onClose }: { onClose: () => void }) => {
           {message}
         </div>
       )}
-      <Field id="fullName" label="Full Name" placeholder="Your name" />
+      <Field id="fullName" label="Full Name" type="text" placeholder="Your name" />
       <Field id="email" label="Email" type="email" placeholder="you@example.com" />
       <Field id="password" label="Password" type="password" placeholder="Create a password" />
+      {isRedirecting && (
+        <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-sm text-blue-400 flex items-center gap-2">
+          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Setting up your account...</span>
+        </div>
+      )}
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || isRedirecting}
         className="mt-2 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isPending ? "Creating account..." : "Create account"}
+        {isPending || isRedirecting ? "Creating account..." : "Create account"}
       </button>
     </form>
   );

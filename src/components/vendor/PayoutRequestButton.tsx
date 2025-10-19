@@ -6,18 +6,10 @@ import RequestPayoutModal from "./RequestPayoutModal";
 
 interface PayoutRequestButtonProps {
   availableBalanceCents: number;
-  vendorProfile: {
-    bank_account_name: string | null;
-    bank_account_number: string | null;
-    bank_name: string | null;
-    esewa_number: string | null;
-    khalti_number: string | null;
-  };
 }
 
 export default function PayoutRequestButton({
   availableBalanceCents,
-  vendorProfile,
 }: PayoutRequestButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -45,7 +37,6 @@ export default function PayoutRequestButton({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         availableBalanceCents={availableBalanceCents}
-        vendorProfile={vendorProfile}
       />
     </>
   );

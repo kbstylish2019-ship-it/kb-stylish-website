@@ -22,13 +22,23 @@ if (isTest) {
 // Convert capabilities object to legacy capability array format
 function capabilitiesToArray(capabilities: any): UserCapability[] {
   const caps: UserCapability[] = [];
+  
+  // Base capabilities for everyone
+  caps.push("view_shop", "view_about", "view_cart");
+  
+  // Role-based capabilities
   if (capabilities.canAccessAdmin) caps.push("admin_access");
   if (capabilities.canAccessVendorDashboard) caps.push("vendor_access");
   if (capabilities.canAccessStylistDashboard) caps.push("stylist_access");
-  if (capabilities.canViewProfile) caps.push("view_profile");
   if (capabilities.canBookServices) caps.push("view_bookings");
-  // Add other mappings as needed based on existing UserCapability types
-  caps.push("view_shop", "view_about", "view_cart");
+  if (capabilities.canViewProfile) caps.push("view_profile");
+  
+  // Show "Become a Vendor" to non-vendors only
+  // This includes guests, customers, stylists, and admins (but not existing vendors)
+  if (!capabilities.canAccessVendorDashboard) {
+    caps.push("apply_vendor");
+  }
+  
   return caps;
 }
 

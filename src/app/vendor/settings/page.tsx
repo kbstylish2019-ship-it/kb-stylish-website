@@ -82,12 +82,17 @@ export default async function VendorSettingsPage() {
     redirect('/');
   }
 
-  // 3. Fetch vendor profile
-  const { data: vendorProfile } = await supabase
-    .from('vendor_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
+  // 3. Component loads payment methods via secure RPC (no need to fetch here)
+  // Payment data is encrypted and only decrypted via secure functions
+  const vendorProfile = {
+    user_id: user.id,
+    bank_account_name: null,
+    bank_account_number: null,
+    bank_name: null,
+    bank_branch: null,
+    esewa_number: null,
+    khalti_number: null,
+  };
 
   return (
     <DashboardLayout title="Settings" sidebar={<VendorSidebar />}>
@@ -110,17 +115,7 @@ export default async function VendorSettingsPage() {
         </div>
 
         {/* Payment Methods Section */}
-        <PaymentMethodsSettings
-          vendorProfile={vendorProfile || {
-            user_id: user.id,
-            bank_account_name: null,
-            bank_account_number: null,
-            bank_name: null,
-            bank_branch: null,
-            esewa_number: null,
-            khalti_number: null,
-          }}
-        />
+        <PaymentMethodsSettings vendorProfile={vendorProfile} />
       </div>
     </DashboardLayout>
   );

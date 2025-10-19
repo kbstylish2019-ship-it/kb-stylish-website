@@ -33,8 +33,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/account/bookings" className="text-foreground/80 hover:text-foreground">
+                <Link href="/bookings" className="text-foreground/80 hover:text-foreground">
                   Book a Stylist
+                </Link>
+              </li>
+              <li>
+                <Link href="/track-order" className="text-foreground/80 hover:text-foreground">
+                  Track Order
                 </Link>
               </li>
               <li>

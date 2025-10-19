@@ -17,18 +17,18 @@ export const NAV_CONFIG: NavigationItem[] = [
     requires: ["view_about"],
   },
   {
+    id: "track-order",
+    label: "Track Order",
+    href: "/track-order",
+    area: "primary",
+    requires: ["view_shop"],
+  },
+  {
     id: "book-stylist",
     label: "Book a Stylist",
     href: "/book-a-stylist",
     area: "primary",
     requires: ["view_shop"],
-  },
-  {
-    id: "bookings",
-    label: "My Bookings",
-    href: "/bookings",
-    area: "primary",
-    requires: ["authenticated", "view_bookings"],
   },
   {
     id: "apply-vendor",
@@ -50,9 +50,9 @@ export const NAV_CONFIG: NavigationItem[] = [
 
   // Profile dropdown
   {
-    id: "account",
-    label: "Account",
-    href: "/account",
+    id: "profile",
+    label: "Profile",
+    href: "/profile",
     area: "profile",
     requires: ["authenticated", "view_profile"],
   },

@@ -3,7 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { useDecoupledCartStore } from '@/lib/store/decoupledCartStore';
 import { 
-  getOrCreateGuestToken, 
+  getOrCreateServerGuestToken,  // SECURITY FIX: Use server tokens
+  getOrCreateGuestToken,         // Fallback for sync contexts
   setGuestTokenCookie, 
   adoptServerGuestToken 
 } from '@/lib/cart/guestToken';
@@ -65,11 +66,22 @@ export function CartInitializer({
         await cartAPI.refreshSession();
       }
       
+      // SECURITY FIX (CJ-SEC-001): Use server-generated tokens
       // Only create new token if we're guest and no server token was adopted
       if (!isAuthenticated && !tokenAdopted) {
-        const guestToken = getOrCreateGuestToken();
-        if (guestToken) {
-          setGuestTokenCookie(guestToken);
+        try {
+          const guestToken = await getOrCreateServerGuestToken();
+          if (guestToken) {
+            console.log('[CartInitializer] ✅ Server token obtained:', guestToken.substring(0, 20) + '...');
+            setGuestTokenCookie(guestToken);
+          }
+        } catch (error) {
+          console.error('[CartInitializer] Failed to get server token, using fallback:', error);
+          // Graceful fallback to sync version
+          const fallbackToken = getOrCreateGuestToken();
+          if (fallbackToken) {
+            setGuestTokenCookie(fallbackToken);
+          }
         }
       }
       

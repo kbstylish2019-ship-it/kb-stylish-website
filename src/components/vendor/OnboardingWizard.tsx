@@ -78,10 +78,10 @@ export default function OnboardingWizard() {
         return;
       }
       
-      // Query vendor_profiles for onboarding status (include all payout fields)
+      // Query vendor_profiles for onboarding status
       const { data, error } = await supabase
         .from('vendor_profiles')
-        .select('onboarding_complete, business_name, bank_account_name, bank_account_number, esewa_number, khalti_number, user_id')
+        .select('onboarding_complete, business_name, user_id')
         .eq('user_id', user.id)
         .single();
       
@@ -110,12 +110,20 @@ export default function OnboardingWizard() {
       // Determine step completion
       const profileComplete = !!(data.business_name && data.business_name.length > 0);
       
-      // Payout is complete if ANY payment method is configured
-      const payoutComplete = !!(
-        (data.bank_account_name && data.bank_account_number) ||
-        data.esewa_number ||
-        data.khalti_number
-      );
+      // Check payout methods via secure RPC
+      let payoutComplete = false;
+      try {
+        const { data: paymentData } = await supabase.rpc('get_vendor_payment_methods');
+        if (paymentData?.success && paymentData?.data) {
+          payoutComplete = !!(
+            paymentData.data.bank_account_number ||
+            paymentData.data.esewa_number ||
+            paymentData.data.khalti_number
+          );
+        }
+      } catch (err) {
+        console.error('Error checking payment methods:', err);
+      }
       
       // Check if vendor has products
       const { count: productCount } = await supabase

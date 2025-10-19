@@ -121,7 +121,7 @@ export default function ApplicationForm({
     application: VendorApplication,
     accessToken: string,
     attempt = 1
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; error_code?: string; current_state?: string }> => {
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/submit-vendor-application`,
@@ -154,7 +154,15 @@ export default function ApplicationForm({
         console.error('[ApplicationForm] Edge Function Error Response:', errorData);
         console.error('[ApplicationForm] Status:', response.status);
         console.error('[ApplicationForm] Headers:', Object.fromEntries(response.headers.entries()));
-        return { success: false, error: errorData.error || 'Submission failed' };
+        
+        // Return the actual error message from backend (it's user-friendly)
+        // Backend errors include helpful context like "You already have a pending application"
+        return { 
+          success: false, 
+          error: errorData.error || 'Submission failed',
+          error_code: errorData.error_code,
+          current_state: errorData.current_state
+        };
       }
       
       const data = await response.json();

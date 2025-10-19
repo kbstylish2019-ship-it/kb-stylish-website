@@ -93,6 +93,11 @@ export async function GET(request: NextRequest) {
     // Return slots with cache metadata headers (for monitoring)
     return NextResponse.json(transformedSlots, {
       headers: {
+        // Prevent client-side caching (always fetch fresh data)
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        // Cache metadata for debugging
         'X-Cache-Hit': response.cache_hit ? 'true' : 'false',
         'X-Cached': response.cached ? 'true' : 'false',
         'X-Computed-At': response.computed_at || new Date().toISOString()

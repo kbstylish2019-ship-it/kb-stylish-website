@@ -63,11 +63,27 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
 
   // Group order items by order_id
   const groupedOrders = normalizedItems.reduce((acc, item) => {
-    if (!item.orders) return acc;
+    // Handle case where orders might be null due to RLS
+    // Create a placeholder order object from order_item data
+    const orderData = item.orders || {
+      id: item.order_id,
+      order_number: `ORD-${item.order_id.slice(0, 8)}`,
+      status: 'unknown',
+      total_cents: item.total_price_cents,
+      currency: 'NPR',
+      shipping_name: 'N/A',
+      shipping_phone: 'N/A',
+      shipping_address_line1: 'N/A',
+      shipping_city: 'N/A',
+      shipping_state: 'N/A',
+      shipping_postal_code: 'N/A',
+      shipping_country: 'Nepal',
+      created_at: item.created_at,
+    };
     
     if (!acc[item.order_id]) {
       acc[item.order_id] = {
-        order: item.orders,
+        order: orderData,
         items: [],
       };
     }

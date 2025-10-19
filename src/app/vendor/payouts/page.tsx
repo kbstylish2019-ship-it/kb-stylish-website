@@ -172,13 +172,6 @@ export default async function VendorPayoutsPage() {
         {/* Request Payout Button */}
         <PayoutRequestButton 
           availableBalanceCents={available_balance.pending_payout_cents}
-          vendorProfile={vendorProfile || {
-            bank_account_name: null,
-            bank_account_number: null,
-            bank_name: null,
-            esewa_number: null,
-            khalti_number: null,
-          }}
         />
       </div>
 

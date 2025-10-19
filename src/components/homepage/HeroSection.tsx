@@ -33,7 +33,7 @@ export default function HeroSection() {
                 Shop Now
               </Link>
               <Link
-                href="/account/bookings"
+                href="/bookings"
                 className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold text-foreground transition ring-1 ring-white/10 hover:bg-white/5"
               >
                 Book a Stylist

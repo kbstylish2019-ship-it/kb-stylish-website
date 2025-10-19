@@ -227,10 +227,19 @@ export class CartAPIClient {
 
     // CRITICAL RESTORATION FIX: Always attach guest token for resilient fallback
     // This ensures the Edge Function can fall back to guest mode if JWT verification fails
+    // BUGFIX (2025-10-18): Even authenticated users need guest token as fallback
     const guestToken = getOrCreateGuestToken();
     if (guestToken) {
       headers['x-guest-token'] = guestToken;
       console.log('[CartAPI] Guest token attached for fallback:', guestToken);
+    } else if (session?.user) {
+      // If authenticated user has no guest token, create one now as emergency fallback
+      console.warn('[CartAPI] Authenticated user missing guest token, creating fallback...');
+      const fallbackToken = getOrCreateGuestToken();
+      if (fallbackToken) {
+        headers['x-guest-token'] = fallbackToken;
+        console.log('[CartAPI] Emergency guest token created:', fallbackToken);
+      }
     }
 
     if (session?.access_token) {

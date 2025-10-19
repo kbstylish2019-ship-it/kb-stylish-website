@@ -1,29 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Wallet, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { requestPayout } from "@/actions/vendor/payouts";
+import { createBrowserClient } from "@supabase/ssr";
 
 interface RequestPayoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   availableBalanceCents: number;
-  vendorProfile: {
-    bank_account_name: string | null;
-    bank_account_number: string | null;
-    bank_name: string | null;
-    esewa_number: string | null;
-    khalti_number: string | null;
-  };
 }
 
 type PaymentMethod = 'bank_transfer' | 'esewa' | 'khalti';
+
+interface PaymentMethodsData {
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_name: string | null;
+  bank_branch: string | null;
+  esewa_number: string | null;
+  khalti_number: string | null;
+  tax_id: string | null;
+}
 
 export default function RequestPayoutModal({
   isOpen,
   onClose,
   availableBalanceCents,
-  vendorProfile,
 }: RequestPayoutModalProps) {
   const [step, setStep] = useState<'form' | 'confirm' | 'success' | 'error'>('form');
   const [amount, setAmount] = useState('');
@@ -31,21 +34,53 @@ export default function RequestPayoutModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodsData | null>(null);
+  const [isLoadingMethods, setIsLoadingMethods] = useState(true);
 
   const availableBalance = availableBalanceCents / 100;
   const minAmount = 1000; // NPR 1,000
 
+  // Load payment methods securely via RPC
+  useEffect(() => {
+    if (isOpen) {
+      loadPaymentMethods();
+    }
+  }, [isOpen]);
+
+  const loadPaymentMethods = async () => {
+    setIsLoadingMethods(true);
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase.rpc('get_vendor_payment_methods');
+
+      if (error) {
+        console.error('Error loading payment methods:', error);
+      } else if (data?.success && data?.data) {
+        setPaymentMethods(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
+    } finally {
+      setIsLoadingMethods(false);
+    }
+  };
+
   // Check if vendor has payment methods configured
-  const hasPaymentMethods = 
-    vendorProfile.bank_account_number ||
-    vendorProfile.esewa_number ||
-    vendorProfile.khalti_number;
+  const hasPaymentMethods = paymentMethods && (
+    paymentMethods.bank_account_number ||
+    paymentMethods.esewa_number ||
+    paymentMethods.khalti_number
+  );
 
   // Get available payment methods
   const availableMethods: PaymentMethod[] = [];
-  if (vendorProfile.bank_account_number) availableMethods.push('bank_transfer');
-  if (vendorProfile.esewa_number) availableMethods.push('esewa');
-  if (vendorProfile.khalti_number) availableMethods.push('khalti');
+  if (paymentMethods?.bank_account_number) availableMethods.push('bank_transfer');
+  if (paymentMethods?.esewa_number) availableMethods.push('esewa');
+  if (paymentMethods?.khalti_number) availableMethods.push('khalti');
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -87,14 +122,14 @@ export default function RequestPayoutModal({
       // Build payment details based on method
       const paymentDetails: Record<string, string> = {};
       
-      if (paymentMethod === 'bank_transfer') {
-        paymentDetails.accountName = vendorProfile.bank_account_name || '';
-        paymentDetails.accountNumber = vendorProfile.bank_account_number || '';
-        paymentDetails.bankName = vendorProfile.bank_name || '';
-      } else if (paymentMethod === 'esewa') {
-        paymentDetails.phoneNumber = vendorProfile.esewa_number || '';
-      } else if (paymentMethod === 'khalti') {
-        paymentDetails.phoneNumber = vendorProfile.khalti_number || '';
+      if (paymentMethod === 'bank_transfer' && paymentMethods) {
+        paymentDetails.accountName = paymentMethods.bank_account_name || '';
+        paymentDetails.accountNumber = paymentMethods.bank_account_number || '';
+        paymentDetails.bankName = paymentMethods.bank_name || '';
+      } else if (paymentMethod === 'esewa' && paymentMethods) {
+        paymentDetails.phoneNumber = paymentMethods.esewa_number || '';
+      } else if (paymentMethod === 'khalti' && paymentMethods) {
+        paymentDetails.phoneNumber = paymentMethods.khalti_number || '';
       }
 
       const result = await requestPayout({
@@ -251,9 +286,9 @@ export default function RequestPayoutModal({
                         {method === 'bank_transfer' ? 'Bank Transfer' : method.charAt(0).toUpperCase() + method.slice(1)}
                       </div>
                       <div className="text-xs text-foreground/60">
-                        {method === 'bank_transfer' && `${vendorProfile.bank_name} - ${vendorProfile.bank_account_number}`}
-                        {method === 'esewa' && vendorProfile.esewa_number}
-                        {method === 'khalti' && vendorProfile.khalti_number}
+                        {method === 'bank_transfer' && paymentMethods && `${paymentMethods.bank_name} - ${paymentMethods.bank_account_number}`}
+                        {method === 'esewa' && paymentMethods?.esewa_number}
+                        {method === 'khalti' && paymentMethods?.khalti_number}
                       </div>
                     </div>
                   </label>
@@ -294,15 +329,15 @@ export default function RequestPayoutModal({
                   {paymentMethod === 'bank_transfer' ? 'Bank Transfer' : paymentMethod}
                 </div>
                 <div className="text-sm text-foreground/60 mt-1">
-                  {paymentMethod === 'bank_transfer' && (
+                  {paymentMethod === 'bank_transfer' && paymentMethods && (
                     <>
-                      {vendorProfile.bank_name}<br />
-                      {vendorProfile.bank_account_name}<br />
-                      {vendorProfile.bank_account_number}
+                      {paymentMethods.bank_name}<br />
+                      {paymentMethods.bank_account_name}<br />
+                      {paymentMethods.bank_account_number}
                     </>
                   )}
-                  {paymentMethod === 'esewa' && vendorProfile.esewa_number}
-                  {paymentMethod === 'khalti' && vendorProfile.khalti_number}
+                  {paymentMethod === 'esewa' && paymentMethods?.esewa_number}
+                  {paymentMethod === 'khalti' && paymentMethods?.khalti_number}
                 </div>
               </div>
 

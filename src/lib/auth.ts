@@ -126,19 +126,25 @@ async function validateRoleVersion(userId: string, jwtRoleVersion: number): Prom
   try {
     const supabase = await createClient()
     
-    // Query the current role_version from the database
-    const { data, error } = await supabase
+    const { data: profile, error } = await supabase
       .from('user_profiles')
       .select('role_version')
       .eq('id', userId)
       .single()
-
+    
     if (error) {
+      // BUGFIX (2025-10-18): During new user registration, user_profiles may not exist yet
+      // The database trigger creates it asynchronously, so we should allow a grace period
+      if (error.code === 'PGRST116' && error.details?.includes('0 rows')) {
+        console.log('[Auth] New user detected - user_profiles not created yet, allowing access')
+        return true  // Allow access for new users during registration flow
+      }
+      
       console.error('Error validating role version:', error)
       return false
     }
 
-    const currentRoleVersion = data?.role_version || 1
+    const currentRoleVersion = profile?.role_version || 1
 
     // CRITICAL: Real-time validation check
     if (currentRoleVersion !== jwtRoleVersion) {

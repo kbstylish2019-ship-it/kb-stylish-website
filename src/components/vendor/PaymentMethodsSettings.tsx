@@ -18,18 +18,52 @@ interface PaymentMethodsSettingsProps {
   vendorProfile: VendorProfile;
 }
 
-export default function PaymentMethodsSettings({ vendorProfile }: PaymentMethodsSettingsProps) {
+export default function PaymentMethodsSettings({ vendorProfile: initialProfile }: PaymentMethodsSettingsProps) {
   const [formData, setFormData] = useState({
-    bank_account_name: vendorProfile.bank_account_name || '',
-    bank_account_number: vendorProfile.bank_account_number || '',
-    bank_name: vendorProfile.bank_name || '',
-    bank_branch: vendorProfile.bank_branch || '',
-    esewa_number: vendorProfile.esewa_number || '',
-    khalti_number: vendorProfile.khalti_number || '',
+    bank_account_name: '',
+    bank_account_number: '',
+    bank_name: '',
+    bank_branch: '',
+    esewa_number: '',
+    khalti_number: '',
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Load decrypted payment methods on mount
+  React.useEffect(() => {
+    const loadPaymentMethods = async () => {
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
+        const { data, error } = await supabase.rpc('get_vendor_payment_methods');
+
+        if (error) {
+          console.error('Error loading payment methods:', error);
+        } else if (data?.success && data?.data) {
+          setFormData({
+            bank_account_name: data.data.bank_account_name || '',
+            bank_account_number: data.data.bank_account_number || '',
+            bank_name: data.data.bank_name || '',
+            bank_branch: data.data.bank_branch || '',
+            esewa_number: data.data.esewa_number || '',
+            khalti_number: data.data.khalti_number || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading payment methods:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPaymentMethods();
+  }, []);
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -47,23 +81,22 @@ export default function PaymentMethodsSettings({ vendorProfile }: PaymentMethods
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      const { error } = await supabase
-        .from('vendor_profiles')
-        .update({
-          bank_account_name: formData.bank_account_name || null,
-          bank_account_number: formData.bank_account_number || null,
-          bank_name: formData.bank_name || null,
-          bank_branch: formData.bank_branch || null,
-          esewa_number: formData.esewa_number || null,
-          khalti_number: formData.khalti_number || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', vendorProfile.user_id);
+      // Use secure RPC function that handles encryption
+      const { data, error } = await supabase.rpc('update_vendor_payment_methods', {
+        p_bank_account_name: formData.bank_account_name || null,
+        p_bank_account_number: formData.bank_account_number || null,
+        p_bank_name: formData.bank_name || null,
+        p_bank_branch: formData.bank_branch || null,
+        p_esewa_number: formData.esewa_number || null,
+        p_khalti_number: formData.khalti_number || null,
+      });
 
       if (error) {
         setMessage({ type: 'error', text: error.message });
-      } else {
+      } else if (data?.success) {
         setMessage({ type: 'success', text: 'Payment methods updated successfully!' });
+      } else {
+        setMessage({ type: 'error', text: data?.error || 'Failed to update payment methods' });
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'An unexpected error occurred' });
@@ -71,6 +104,16 @@ export default function PaymentMethodsSettings({ vendorProfile }: PaymentMethods
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 ring-1 ring-white/10">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--kb-accent-gold)]" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-6 ring-1 ring-white/10">

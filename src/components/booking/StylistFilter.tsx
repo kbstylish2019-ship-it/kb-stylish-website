@@ -87,7 +87,7 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
               />
               
               {/* Menu */}
-              <div className="absolute right-0 z-20 mt-2 w-64 max-h-96 overflow-y-auto rounded-lg border border-white/10 bg-[#0a0a0a] shadow-xl">
+              <div className="absolute right-0 z-20 mt-2 w-64 max-h-96 overflow-y-auto rounded-lg border border-white/10 bg-[var(--kb-surface-dark)] shadow-xl">
                 <div className="p-2">
                   {/* Clear filter */}
                   {specialtyTypes.some(st => st.id === value) && (

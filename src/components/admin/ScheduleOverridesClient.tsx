@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, Clock, Users, Building2, Palmtree, Sun, Sparkles, AlertCircle, Check, Loader2, Plus } from 'lucide-react';
+import { Calendar, Clock, Users, Building2, Palmtree, Sun, Sparkles, AlertCircle, Check, Loader2, Plus, Trash2, Shield, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -23,6 +23,7 @@ interface ScheduleOverride {
   priority: number;
   reason: string | null;
   created_at: string;
+  created_by: string;
   stylist_display_name?: string | null;
 }
 
@@ -35,6 +36,7 @@ interface Stylist {
 interface Props {
   initialOverrides: ScheduleOverride[];
   stylists: Stylist[];
+  currentAdminId?: string;
 }
 
 // ============================================================================
@@ -76,10 +78,11 @@ const OVERRIDE_TYPES: { value: OverrideType; label: string; icon: any; descripti
 // MAIN COMPONENT
 // ============================================================================
 
-export default function ScheduleOverridesClient({ initialOverrides, stylists }: Props) {
+export default function ScheduleOverridesClient({ initialOverrides, stylists, currentAdminId }: Props) {
   const [overrides, setOverrides] = useState<ScheduleOverride[]>(initialOverrides);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -130,8 +133,41 @@ export default function ScheduleOverridesClient({ initialOverrides, stylists }: 
   };
 
   // ============================================================================
-  // API CALL
+  // API CALLS
   // ============================================================================
+
+  const handleDeleteOverride = async (overrideId: string) => {
+    if (!confirm('Are you sure you want to delete this override? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingId(overrideId);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/admin/schedule-overrides/${overrideId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to delete override');
+      }
+
+      setSuccess('Override deleted successfully');
+      
+      // Remove from local state
+      setOverrides(prev => prev.filter(o => o.id !== overrideId));
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete override';
+      setError(message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleCreateOverride = async () => {
     // Validation
@@ -502,6 +538,25 @@ export default function ScheduleOverridesClient({ initialOverrides, stylists }: 
                           )}>
                             {override.is_closed ? 'Closed' : 'Modified Hours'}
                           </span>
+                          {/* Creator Badge */}
+                          {override.created_by && (
+                            <span className={cn(
+                              'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ring-1',
+                              currentAdminId && override.created_by === currentAdminId
+                                ? 'bg-purple-500/15 text-purple-300 ring-purple-500/30'
+                                : override.stylist_user_id && override.created_by === override.stylist_user_id
+                                ? 'bg-amber-500/15 text-amber-300 ring-amber-500/30'
+                                : 'bg-gray-500/15 text-gray-300 ring-gray-500/30'
+                            )}>
+                              {currentAdminId && override.created_by === currentAdminId ? (
+                                <><Shield className="h-3 w-3" /> Admin</>
+                              ) : override.stylist_user_id && override.created_by === override.stylist_user_id ? (
+                                <><User className="h-3 w-3" /> Stylist Request</>
+                              ) : (
+                                <><Shield className="h-3 w-3" /> Admin</>
+                              )}
+                            </span>
+                          )}
                         </div>
                         
                         <div className="mt-2 space-y-1 text-sm text-foreground/70">
@@ -532,10 +587,24 @@ export default function ScheduleOverridesClient({ initialOverrides, stylists }: 
                       </div>
                     </div>
                     
-                    <div className="text-right">
-                      <div className="text-xs text-foreground/50 mb-1">Priority</div>
-                      <div className="text-lg font-bold text-[var(--kb-primary-brand)]">
-                        {override.priority}
+                    <div className="flex flex-col items-end gap-2">
+                      <button
+                        onClick={() => handleDeleteOverride(override.id)}
+                        disabled={deletingId === override.id}
+                        className="p-2 rounded-lg hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                        title="Delete override"
+                      >
+                        {deletingId === override.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                      <div className="text-right">
+                        <div className="text-xs text-foreground/50 mb-1">Priority</div>
+                        <div className="text-lg font-bold text-[var(--kb-primary-brand)]">
+                          {override.priority}
+                        </div>
                       </div>
                     </div>
                   </div>

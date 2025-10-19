@@ -193,7 +193,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
 
 export function DialogContent({ children, className = '' }: CardProps) {
   return (
-    <div className={`bg-[#1a1f2e] border border-white/10 rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 ring-1 ring-white/10 ${className}`}>
+    <div className={`bg-[var(--kb-surface-dark)] border border-white/10 rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 ring-1 ring-white/10 ${className}`}>
       {children}
     </div>
   );

@@ -8,7 +8,7 @@ import { cookies } from 'next/headers';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { stylistId: string } }
+  { params }: { params: Promise<{ stylistId: string }> }
 ) {
   try {
     const cookieStore = await cookies();
@@ -32,7 +32,8 @@ export async function GET(
       }
     );
     
-    const { stylistId } = params;
+    // Next.js 15: params must be awaited before accessing properties
+    const { stylistId } = await params;
     
     // Use the RPC function to get specialties
     const { data, error } = await supabase.rpc('get_stylist_specialties', {

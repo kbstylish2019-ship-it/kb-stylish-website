@@ -144,10 +144,10 @@ export default function FilterSidebar({
         <select
           value={filters.sort}
           onChange={(e) => onSortChange(e.target.value)}
-          className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
+          className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)] [&>option]:bg-[var(--kb-surface-dark)] [&>option]:text-foreground"
         >
           {sortOptions.map((o) => (
-            <option key={o.id} value={o.id}>
+            <option key={o.id} value={o.id} className="bg-[var(--kb-surface-dark)] text-foreground">
               {o.label}
             </option>
           ))}
