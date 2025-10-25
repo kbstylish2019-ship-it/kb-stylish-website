@@ -68,7 +68,7 @@ export default function ReviewFilters({
   return (
     <div className="mb-6 space-y-4">
       {/* Header with average rating */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="text-3xl font-bold">
             {stats?.average ? stats.average.toFixed(1) : '0.0'}
@@ -98,7 +98,7 @@ export default function ReviewFilters({
           <div className="flex gap-1">
             <button
               onClick={() => handleSortChange('recent')}
-              className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+              className={`rounded-lg transition-colors px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm ${
                 filters.sortBy === 'recent'
                   ? 'bg-[var(--kb-primary-brand)] text-white'
                   : 'bg-white/10 text-foreground/70 hover:bg-white/20'
@@ -109,7 +109,7 @@ export default function ReviewFilters({
             </button>
             <button
               onClick={() => handleSortChange('helpful')}
-              className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+              className={`rounded-lg transition-colors px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm ${
                 filters.sortBy === 'helpful'
                   ? 'bg-[var(--kb-primary-brand)] text-white'
                   : 'bg-white/10 text-foreground/70 hover:bg-white/20'

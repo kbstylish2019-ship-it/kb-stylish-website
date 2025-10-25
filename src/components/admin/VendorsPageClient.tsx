@@ -256,7 +256,7 @@ export default function VendorsPageClient({ initialData }: VendorsPageClientProp
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -290,7 +290,7 @@ export default function VendorsPageClient({ initialData }: VendorsPageClientProp
         {/* Vendors Table */}
         <div className="overflow-hidden rounded-2xl border border-white/10 ring-1 ring-white/10">
           <div className="max-w-full overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-[1024px] text-sm">
               <thead>
                 <tr className="bg-white/5 text-left text-xs uppercase tracking-wide text-foreground/70">
                   <th className="px-4 py-3 w-12"></th>

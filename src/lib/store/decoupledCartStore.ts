@@ -22,6 +22,11 @@ export interface CartProductItem {
   product_id: string;
   product_name: string;
   variant_name?: string;
+  variant_data?: {  // ⭐ NEW: Structured variant attributes for UI
+    size?: string;
+    color?: string;
+    colorHex?: string;
+  };
   sku: string;
   price: number;
   quantity: number;
@@ -396,31 +401,46 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
           
           // CRITICAL: If we have server data, ALWAYS trust it over localStorage
           if (initialData) {
-            if (initialData.bookings && Array.isArray(initialData.bookings) && initialData.bookings.length > 0) {
-              bookingItems = initialData.bookings.map((b: any) => ({
-                id: b.reservation_id,
-                reservation_id: b.reservation_id,
-                service_id: b.service_id,
-                service_name: b.service_name,
-                stylist_id: b.stylist_id,
-                stylist_name: b.stylist_name,
-                start_time: b.start_time,
-                end_time: b.end_time,
-                price: b.price_cents / 100,
-                status: b.status,
-                customer_name: b.customer_name,
-                customer_phone: b.customer_phone,
-                customer_email: b.customer_email,
-                customer_notes: b.customer_notes,
-                expires_at: b.expires_at
-              }));
-              console.log('[DecoupledStore] Loaded bookings from server:', bookingItems.length);
-            } else {
-              // Server explicitly says no bookings - clear localStorage
-              console.log('[DecoupledStore] Server returned no bookings, clearing localStorage...');
-              bookingItems = [];
-              useBookingPersistStore.getState().saveBookings([]);
+            // CRITICAL FIX: Bookings are localStorage-only, NEVER stored on server
+          // Server will NEVER have a bookings field in cart response
+          // ALWAYS load from localStorage and filter expired ones
+          if (initialData.bookings && Array.isArray(initialData.bookings) && initialData.bookings.length > 0) {
+            // This branch should NEVER execute (server doesn't store bookings)
+            // But keep it for backwards compatibility if we ever add server-side bookings
+            bookingItems = initialData.bookings.map((b: any) => ({
+              id: b.reservation_id,
+              reservation_id: b.reservation_id,
+              service_id: b.service_id,
+              service_name: b.service_name,
+              stylist_id: b.stylist_id,
+              stylist_name: b.stylist_name,
+              start_time: b.start_time,
+              end_time: b.end_time,
+              price: b.price_cents / 100,
+              status: b.status,
+              customer_name: b.customer_name,
+              customer_phone: b.customer_phone,
+              customer_email: b.customer_email,
+              customer_notes: b.customer_notes,
+              expires_at: b.expires_at
+            }));
+            console.log('[DecoupledStore] Loaded bookings from server:', bookingItems.length);
+          } else {
+            // Server has no bookings field (normal case) - load from localStorage
+            // DO NOT clear localStorage - bookings are client-side only!
+            console.log('[DecoupledStore] Loading bookings from localStorage (server does not store bookings)...');
+            const persistedBookings = useBookingPersistStore.getState().loadBookings();
+            const now = new Date();
+            bookingItems = persistedBookings.filter(b => new Date(b.expires_at) >= now);
+            console.log('[DecoupledStore] Loaded bookings from localStorage:', persistedBookings.length);
+            console.log('[DecoupledStore] After expiry filter:', bookingItems.length);
+            
+            // Update localStorage if we filtered any expired bookings
+            if (bookingItems.length !== persistedBookings.length) {
+              console.log('[DecoupledStore] Updating localStorage after filtering expired bookings...');
+              useBookingPersistStore.getState().saveBookings(bookingItems);
             }
+          }
           } else {
             // CRITICAL FIX: Only use localStorage if we haven't fetched from server yet
             // This handles the initial load case, not post-checkout case
@@ -709,6 +729,7 @@ function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
     const sku = item.variant_sku || item.sku || '';
     let variantName = '';
     
+    // Old SKU-based parsing (fallback)
     if (sku && sku.includes('-')) {
       const parts = sku.split('-');
       if (parts.length >= 3) {
@@ -728,6 +749,19 @@ function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
       }
     }
     
+    // ⭐ NEW: Extract structured variant attributes from API
+    const variantAttrs = item.variant_attributes || [];
+    const sizeAttr = variantAttrs.find((a: any) => a.name === 'Size' || a.name === 'size');
+    const colorAttr = variantAttrs.find((a: any) => a.name === 'Color' || a.name === 'color');
+    
+    // Build display name from attributes if available
+    if (sizeAttr || colorAttr) {
+      const parts = [];
+      if (sizeAttr?.value) parts.push(sizeAttr.value);
+      if (colorAttr?.value) parts.push(colorAttr.value);
+      if (parts.length > 0) variantName = parts.join(' / ');
+    }
+    
     const price = parseFloat(item.price_snapshot || item.current_price || item.price || '0');
     
     return {
@@ -736,10 +770,15 @@ function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
       product_id: item.product?.id || '',
       product_name: item.product_name || item.product?.name || 'Product',
       variant_name: variantName,
+      variant_data: {  // ⭐ NEW: Structured variant data for UI
+        size: sizeAttr?.value,
+        color: colorAttr?.value,
+        colorHex: colorAttr?.color_hex  // ⭐ FIXED: Use color_hex from API
+      },
       sku: sku,
       price: price,
       quantity: item.quantity || 1,
-      image_url: item.product_image,
+      image_url: item.product_image,  // ⭐ FIXED: Use product_image from API
       subtotal: price * (item.quantity || 1)
     };
   });

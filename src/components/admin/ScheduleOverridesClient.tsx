@@ -358,7 +358,7 @@ export default function ScheduleOverridesClient({ initialOverrides, stylists, cu
                       value={selectedStylistId}
                       onChange={(e) => setSelectedStylistId(e.target.value)}
                       disabled={isLoading}
-                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] disabled:opacity-50"
+                      className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] disabled:opacity-50 [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
                     >
                       <option value="">Choose a stylist...</option>
                       {stylists.map((stylist) => (

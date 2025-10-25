@@ -111,6 +111,8 @@ export class ReviewAPIClient {
   private baseUrl: string;
   private anonKey: string;
   private browserClient: any;
+  private csrfToken: string | null = null;
+  private csrfPromise: Promise<void> | null = null;
   
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -125,8 +127,54 @@ export class ReviewAPIClient {
         );
         
         console.log('[ReviewAPIClient] Initialized successfully');
+        
+        // Initialize CSRF token asynchronously
+        this.initializeCsrfToken();
       } catch (error) {
         console.warn('[ReviewAPIClient] Failed to initialize browser client:', error);
+      }
+    }
+  }
+  
+  /**
+   * Initialize CSRF token from server
+   */
+  private initializeCsrfToken(): void {
+    if (typeof window === 'undefined') return;
+    
+    this.csrfPromise = (async () => {
+      try {
+        const response = await fetch('/api/auth/csrf');
+        if (response.ok) {
+          const data = await response.json();
+          this.csrfToken = data.token;
+          console.log('[ReviewAPIClient] CSRF token initialized');
+        }
+      } catch (error) {
+        console.error('[ReviewAPIClient] Failed to fetch CSRF token:', error);
+      }
+    })();
+  }
+  
+  /**
+   * Ensure CSRF token is available
+   */
+  private async ensureCsrfToken(): Promise<void> {
+    if (this.csrfPromise) {
+      await this.csrfPromise;
+      this.csrfPromise = null;
+    }
+    
+    // If still no token, try to fetch again
+    if (!this.csrfToken) {
+      try {
+        const response = await fetch('/api/auth/csrf');
+        if (response.ok) {
+          const data = await response.json();
+          this.csrfToken = data.token;
+        }
+      } catch (error) {
+        console.error('[ReviewAPIClient] Failed to fetch CSRF token:', error);
       }
     }
   }
@@ -197,19 +245,39 @@ export class ReviewAPIClient {
   
   /**
    * Submit a new review (purchase verified)
+   * Routes through Next.js API for CSRF protection and rate limiting
    */
   async submitReview(data: ReviewSubmission): Promise<ReviewResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/functions/v1/review-manager`, {
+      // Ensure CSRF token is available
+      await this.ensureCsrfToken();
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add CSRF token for write operations
+      if (this.csrfToken) {
+        headers['X-CSRF-Token'] = this.csrfToken;
+      }
+      
+      // Route through Next.js API for additional security layers
+      const response = await fetch(`/api/user/reviews/submit`, {
         method: 'POST',
-        headers: await this.getHeaders(),
-        body: JSON.stringify({
-          action: 'submit',
-          ...data
-        })
+        headers,
+        body: JSON.stringify(data)
       });
       
       if (!response.ok) {
+        // Handle rate limiting specifically
+        if (response.status === 429) {
+          const errorData = await response.json();
+          return {
+            success: false,
+            error: errorData.error || 'Too many review submissions. Please slow down.',
+            error_code: 'RATE_LIMIT_EXCEEDED'
+          };
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -231,12 +299,22 @@ export class ReviewAPIClient {
     voteType: 'helpful' | 'unhelpful'
   ): Promise<VoteResponse> {
     try {
+      // Ensure CSRF token is available
+      await this.ensureCsrfToken();
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add CSRF token for write operations
+      if (this.csrfToken) {
+        headers['X-CSRF-Token'] = this.csrfToken;
+      }
+      
       // Route through Next.js API to guarantee authenticated server-side context
       const response = await fetch(`/api/trust/vote`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           action: 'cast',
           reviewId,
@@ -270,9 +348,19 @@ export class ReviewAPIClient {
     comment: string
   ): Promise<VendorReplyResponse> {
     try {
+      // Ensure CSRF token is available
+      await this.ensureCsrfToken();
+      
+      const headers: Record<string, string> = await this.getHeaders();
+      
+      // Add CSRF token for write operations
+      if (this.csrfToken) {
+        headers['X-CSRF-Token'] = this.csrfToken;
+      }
+      
       const response = await fetch(`${this.baseUrl}/functions/v1/reply-manager`, {
         method: 'POST',
-        headers: await this.getHeaders(),
+        headers,
         body: JSON.stringify({
           action: 'submit',
           review_id: reviewId,
@@ -297,8 +385,8 @@ export class ReviewAPIClient {
   /**
    * Get authenticated headers
    */
-  private async getHeaders(): Promise<HeadersInit> {
-    const headers: HeadersInit = {
+  private async getHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
     

@@ -66,7 +66,7 @@ export default async function StylistBookingsPage() {
 
   return (
     <DashboardLayout sidebar={<StylistSidebar />}>
-      <div className="p-6">
+      <div className="p-3 sm:p-4">
         <BookingsListClient userId={user.id} />
       </div>
     </DashboardLayout>

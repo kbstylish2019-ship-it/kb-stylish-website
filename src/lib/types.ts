@@ -123,7 +123,11 @@ export interface CartProductItem {
   name: string;
   variant?: string; // e.g., "M / Royal Purple"
   variantId?: string; // The actual variant ID from database
-  variantData?: any; // Full variant object from database
+  variantData?: {  // ⭐ Structured variant attributes for UI
+    size?: string;
+    color?: string;
+    colorHex?: string;
+  };
   imageUrl?: string;
   price: number; // per unit
   quantity: number;

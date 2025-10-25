@@ -118,7 +118,7 @@ export default function AddSpecialtyForm({ onClose, onSuccess }: AddSpecialtyFor
             value={formData.category}
             onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
             required
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             {categories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
@@ -144,7 +144,7 @@ export default function AddSpecialtyForm({ onClose, onSuccess }: AddSpecialtyFor
           <select
             value={formData.icon}
             onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             {iconOptions.map(icon => (
               <option key={icon} value={icon}>{icon}</option>

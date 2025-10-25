@@ -102,23 +102,37 @@ async function handleFetchReviews(
   authenticatedUser: any,
   cors: Record<string, string>
 ) {
+  console.log('[Review Manager] handleFetchReviews called with:', JSON.stringify({
+    filters: request.filters,
+    cursor: request.cursor,
+    limit: request.limit,
+    hasAuth: !!authenticatedUser
+  }));
+  
   const { filters = {}, cursor, limit: requestLimit } = request;
   const { limit } = validatePagination({ limit: requestLimit });
   
+  console.log('[Review Manager] Validated limit:', limit);
+  
   // Validate product ID if provided
   if (filters.productId && !isValidUUID(filters.productId)) {
+    console.log('[Review Manager] Invalid product ID:', filters.productId);
     return errorResponse('Invalid product ID', 'INVALID_PRODUCT_ID', 400, cors);
   }
+  
+  console.log('[Review Manager] Product ID validated:', filters.productId);
   
   // Build select columns dynamically to support hasReply inner join when needed
   const isVendor = !!authenticatedUser?.is_vendor || authenticatedUser?.roles?.includes('vendor');
   const isAdmin = authenticatedUser?.roles?.includes('admin');
-  const joinVendorReplies = filters.hasReply === true ? 'review_replies!inner' : 'review_replies';
+  // FIX: Use explicit foreign key constraint to disambiguate multiple relationships
+  // reviews table has 3 FKs to user_profiles: user_id, moderated_by, deleted_by
+  // PostgREST requires explicit constraint name when multiple relationships exist
   const selectColumns = `
       *,
-      user:user_profiles!inner(display_name, avatar_url),
+      author:user_profiles!reviews_user_id_fkey(display_name, avatar_url),
       product:products!inner(vendor_id),
-      vendor_reply:${joinVendorReplies}(id, comment, reply_type, is_visible, is_approved, deleted_at, created_at),
+      vendor_reply:review_replies(id, comment, reply_type, is_visible, is_approved, deleted_at, created_at),
       review_vote_shards(helpful_count, unhelpful_count)
     `;
   // Build query
@@ -149,8 +163,16 @@ async function handleFetchReviews(
       query = query.eq('product.vendor_id', authenticatedUser.id);
     }
   } else {
-    // Default: approved only
-    query = query.eq('is_approved', true);
+    // Default: Show approved reviews + user's own pending reviews
+    // This allows users to see their pending reviews on product pages
+    // RLS policy ensures security (users can only see their own pending reviews)
+    if (authenticatedUser) {
+      // Show: (1) all approved reviews OR (2) user's own reviews (any status)
+      query = query.or(`is_approved.eq.true,user_id.eq.${authenticatedUser.id}`);
+    } else {
+      // Guest users: approved only
+      query = query.eq('is_approved', true);
+    }
   }
   
   // Rating filter - can be single value or array
@@ -173,14 +195,10 @@ async function handleFetchReviews(
     query = query.eq('has_media', true);
   }
   
-  // Has vendor reply filter handled via inner join above when hasReply === true
-  if (filters.hasReply === true) {
-    query = query
-      .eq('review_replies.reply_type', 'vendor')
-      .is('review_replies.deleted_at', null)
-      .eq('review_replies.is_visible', true)
-      .eq('review_replies.is_approved', true);
-  }
+  // Has vendor reply filter - requires manual filtering in post-processing
+  // PostgREST doesn't support parent-level filtering on embedded many-to-one relations
+  // We'll filter in JavaScript after fetching
+  const filterByReply = filters.hasReply === true;
   
   // Sort by helpfulness (most helpful first) using denormalized column
   if (filters.sortBy === 'helpful') {
@@ -201,44 +219,95 @@ async function handleFetchReviews(
   }
   query = query.limit(limit);
   
+  console.log('[Review Manager] About to execute query with filters:', {
+    productId: filters.productId,
+    sortBy: filters.sortBy,
+    hasReply: filters.hasReply,
+    limit
+  });
+  
   const { data: reviews, error } = await query;
   
+  console.log('[Review Manager] Query completed. Error:', !!error, 'Reviews:', reviews?.length);
+  
   if (error) {
-    console.error('[Review Manager] Query error:', error);
-    return errorResponse('Failed to fetch reviews', 'QUERY_ERROR', 400, cors);
+    console.error('[Review Manager] Query error:', JSON.stringify(error, null, 2));
+    console.error('[Review Manager] Query details:', {
+      productId: filters.productId,
+      hasReply: filters.hasReply,
+      status: filters.status,
+      selectColumns: selectColumns.substring(0, 200) + '...'
+    });
+    return errorResponse(
+      `Failed to fetch reviews: ${error.message || 'Unknown error'}`,
+      'QUERY_ERROR',
+      400,
+      cors
+    );
+  }
+  
+  // Batch fetch user votes if authenticated
+  let userVotesMap = new Map<string, string>();
+  if (authenticatedUser && reviews && reviews.length > 0) {
+    const reviewIds = reviews.map((r: any) => r.id);
+    const { data: userVotes } = await serviceClient
+      .from('review_votes')
+      .select('review_id, vote_type')
+      .eq('user_id', authenticatedUser.id)
+      .in('review_id', reviewIds);
+    
+    if (userVotes) {
+      userVotesMap = new Map(userVotes.map((v: any) => [v.review_id, v.vote_type]));
+      console.log(`[Review Manager] Fetched ${userVotes.length} user votes`);
+    }
   }
   
   // Process reviews to calculate total votes from shards and map vendor reply
-  const processedReviews = (reviews || []).map((review: any) => {
-    // Sum up votes from shards
-    const totalHelpful = review.review_vote_shards?.reduce(
-      (sum: number, shard: any) => sum + (shard.helpful_count || 0), 0
-    ) || 0;
-    
-    const totalUnhelpful = review.review_vote_shards?.reduce(
-      (sum: number, shard: any) => sum + (shard.unhelpful_count || 0), 0
-    ) || 0;
-    
-    // Vendor reply normalization - pick only vendor reply if array
-    let vendorReply = null as any;
-    const vr = (review.vendor_reply ?? null);
-    if (Array.isArray(vr)) {
-      vendorReply = vr.find((r: any) => r.reply_type === 'vendor' && r.is_visible && r.is_approved && r.deleted_at === null) || null;
-    } else if (vr && vr.reply_type === 'vendor' && vr.is_visible && vr.is_approved && vr.deleted_at === null) {
-      vendorReply = vr;
-    }
+  const processedReviews = (reviews || [])
+    .map((review: any) => {
+      // Sum up votes from shards
+      const totalHelpful = review.review_vote_shards?.reduce(
+        (sum: number, shard: any) => sum + (shard.helpful_count || 0), 0
+      ) || 0;
+      
+      const totalUnhelpful = review.review_vote_shards?.reduce(
+        (sum: number, shard: any) => sum + (shard.unhelpful_count || 0), 0
+      ) || 0;
+      
+      // Vendor reply normalization - pick only vendor reply if array
+      let vendorReply = null as any;
+      const vr = (review.vendor_reply ?? null);
+      if (Array.isArray(vr)) {
+        vendorReply = vr.find((r: any) => r.reply_type === 'vendor' && r.is_visible && r.is_approved && r.deleted_at === null) || null;
+      } else if (vr && vr.reply_type === 'vendor' && vr.is_visible && vr.is_approved && vr.deleted_at === null) {
+        vendorReply = vr;
+      }
 
-    // Clean up the response
-    const { review_vote_shards, ...cleanReview } = review;
-    
-    return {
-      ...cleanReview,
-      vendor_reply: vendorReply ? { id: vendorReply.id, comment: vendorReply.comment, created_at: vendorReply.created_at } : null,
-      helpful_votes: totalHelpful,
-      unhelpful_votes: totalUnhelpful,
-      user_vote: null // TODO: Fetch user's vote if authenticated
-    };
-  });
+      // Get user's vote for this review
+      const userVote = userVotesMap.get(review.id) || null;
+
+      // Clean up the response
+      const { review_vote_shards, ...cleanReview } = review;
+      
+      return {
+        ...cleanReview,
+        vendor_reply: vendorReply ? { id: vendorReply.id, comment: vendorReply.comment, created_at: vendorReply.created_at } : null,
+        helpful_votes: totalHelpful,
+        unhelpful_votes: totalUnhelpful,
+        user_vote: userVote,
+        _hasVendorReply: !!vendorReply // Add flag for filtering
+      };
+    })
+    .filter((review: any) => {
+      // Apply hasReply filter if requested
+      if (filterByReply && !review._hasVendorReply) return false;
+      return true;
+    })
+    .map((review: any) => {
+      // Remove internal flag
+      const { _hasVendorReply, ...cleanReview } = review;
+      return cleanReview;
+    });
   
   // Get product stats if fetching for a specific product
   let stats = null;

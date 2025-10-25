@@ -28,16 +28,17 @@ export function getCorsHeaders(origin: string | null): Record<string, string> {
     // All headers the client might send
     'Access-Control-Allow-Headers': [
       'authorization',
-      'x-client-info', 
+      'x-client-info',
       'apikey',
       'content-type',
-      'x-guest-token',  // Our custom header
-      'cookie',         // For cookie forwarding
+      'x-guest-token',
+      'x-csrf-token',
+      'cookie',
       'stripe-signature',
       'x-webhook-signature',
       'x-hub-signature-256',
       'x-esewa-signature',
-      'x-khalti-signature'
+      'x-khalti-signature',
     ].join(', '),
     
     // Expose headers that client might need to read

@@ -18,7 +18,7 @@ interface ReviewWithMeta {
   is_edited: boolean;
   created_at: string;
   updated_at: string;
-  user: {
+  author: {
     display_name: string;
     avatar_url?: string;
   };
@@ -151,7 +151,7 @@ export default function ReviewCard({
       <div className="mb-2 flex items-start justify-between">
         <div>
           <div className="font-medium text-sm">
-            {review.user?.display_name || 'Anonymous'}
+            {review.author?.display_name || 'Anonymous'}
           </div>
           <div className="flex items-center gap-2 mt-1">
             {review.is_verified && (

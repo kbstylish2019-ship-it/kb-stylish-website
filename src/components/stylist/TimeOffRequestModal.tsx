@@ -182,7 +182,7 @@ export default function TimeOffRequestModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-[var(--kb-surface-dark)] border-white/10">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[var(--kb-surface-dark)] border-white/10 px-4 sm:px-6 py-4 sm:py-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <CalendarIcon className="w-5 h-5" />

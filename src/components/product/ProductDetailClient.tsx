@@ -47,8 +47,7 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
     [product.variants, selection]
   );
 
-  // Mobile sticky CTA
-  const priceToShow = selectedVariant?.price ?? product.price;
+  
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -74,20 +73,6 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
           </div>
 
           <PDPTrustBar />
-        </div>
-      </div>
-
-      {/* Mobile sticky bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-background/90 backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-          <div className="text-lg font-semibold">NPR {priceToShow.toLocaleString("en-NP")}</div>
-          <button
-            type="button"
-            disabled={!selectedVariant || (selectedVariant && selectedVariant.stock <= 0)}
-            className="flex-1 rounded-lg bg-[var(--kb-primary-brand)] px-5 py-3 text-sm font-semibold text-foreground shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Add to Cart
-          </button>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, UserPlus, Shield, Ban, CheckCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminUsersListResponse } from "@/lib/apiClient";
@@ -15,8 +15,11 @@ interface UsersPageClientProps {
 
 export default function UsersPageClient({ initialData, currentUserId }: UsersPageClientProps) {
   const [users, setUsers] = useState(initialData.users);
-  const [totalUsers] = useState(initialData.total); // Store total from server
+  const [totalUsers, setTotalUsers] = useState(initialData.total);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(initialData.total_pages || 1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -29,6 +32,23 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
     setToast({ message, type });
     setTimeout(() => setToast(null), 5000);
   };
+  
+  // Debounce search input (500ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  
+  // Trigger server-side fetch when filters change
+  useEffect(() => {
+    if (debouncedSearch !== '' || roleFilter !== 'all' || statusFilter !== 'all') {
+      handlePageChange(1); // Reset to page 1 when filters change
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, roleFilter, statusFilter]);
   
   // Handle user suspension
   const handleSuspend = async (user: AdminUser) => {
@@ -95,31 +115,42 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
     setIsRoleModalOpen(true);
   };
   
-  // Filter users
-  const filteredUsers = users.filter(user => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        (user.display_name?.toLowerCase() || '').includes(query) ||
-        (user.username?.toLowerCase() || '').includes(query) ||
-        (user.email?.toLowerCase() || '').includes(query);
-      if (!matchesSearch) return false;
+  // Handle pagination - fetch from server
+  const handlePageChange = async (newPage: number) => {
+    setIsLoading(true);
+    try {
+      const { fetchAdminUsersList } = await import('@/lib/apiClientBrowser');
+      const result = await fetchAdminUsersList({
+        page: newPage,
+        per_page: 20,
+        search: debouncedSearch || undefined,
+        role_filter: roleFilter !== 'all' ? roleFilter : undefined,
+        status_filter: statusFilter !== 'all' ? statusFilter : undefined,
+      });
+      
+      if (result) {
+        setUsers(result.users);
+        setTotalUsers(result.total);
+        setCurrentPage(result.page);
+        setTotalPages(result.total_pages);
+      } else {
+        showToast('Failed to load users', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to load users', 'error');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Role filter
-    if (roleFilter !== 'all') {
-      const hasRole = user.roles.some(r => r.role_name === roleFilter && r.is_active);
-      if (!hasRole) return false;
-    }
-    
-    // Status filter
-    if (statusFilter !== 'all' && user.status !== statusFilter) {
-      return false;
-    }
-    
-    return true;
-  });
+  };
+  
+  // Handle filter changes - refetch from server
+  const handleFilterChange = async () => {
+    setCurrentPage(1); // Reset to page 1
+    await handlePageChange(1);
+  };
+  
+  // ✅ FIXED: Server-side filtering (no client-side filter needed)
+  const filteredUsers = users; // Already filtered by server
   
   return (
     <>
@@ -156,7 +187,7 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             <option value="all">All Roles</option>
             <option value="admin">Admin</option>
@@ -168,7 +199,7 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -207,7 +238,7 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
         {/* Users Table */}
         <div className="overflow-hidden rounded-2xl border border-white/10 ring-1 ring-white/10">
           <div className="max-w-full overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-[1024px] text-sm">
               <thead>
                 <tr className="bg-white/5 text-left text-xs uppercase tracking-wide text-foreground/70">
                   <th className="px-4 py-3 w-12"></th>
@@ -358,15 +389,76 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
           </div>
         </div>
         
-        {/* Pagination Info */}
-        <div className="text-sm text-foreground/60 text-center">
-          Showing {filteredUsers.length} of {totalUsers} users
-          {totalUsers > 20 && (
-            <div className="mt-2 text-xs text-amber-400">
-              Note: Pagination controls coming soon. Currently showing first 20 users only.
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10">
+            {/* Page Info */}
+            <div className="text-sm text-foreground/60">
+              Showing {(currentPage - 1) * 20 + 1} to {Math.min(currentPage * 20, totalUsers)} of {totalUsers} users
             </div>
-          )}
-        </div>
+            
+            {/* Pagination Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1 || isLoading}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  currentPage === 1 || isLoading
+                    ? "bg-white/5 text-foreground/40 cursor-not-allowed"
+                    : "bg-white/10 text-foreground hover:bg-white/15 ring-1 ring-white/10"
+                )}
+              >
+                Previous
+              </button>
+              
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      disabled={isLoading}
+                      className={cn(
+                        "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        currentPage === pageNum
+                          ? "bg-[var(--kb-primary-brand)] text-white"
+                          : "bg-white/10 text-foreground hover:bg-white/15 ring-1 ring-white/10"
+                      )}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages || isLoading}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  currentPage >= totalPages || isLoading
+                    ? "bg-white/5 text-foreground/40 cursor-not-allowed"
+                    : "bg-white/10 text-foreground hover:bg-white/15 ring-1 ring-white/10"
+                )}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Role Assignment Modal */}

@@ -181,38 +181,67 @@ export async function signIn(formData: FormData) {
       }
     }
 
-    // NON-BLOCKING MERGE: Attempt cart merge with timeout
+    // BLOCKING MERGE: Wait for cart merge to complete before redirect
+    // This ensures guest cart items are reliably merged before user sees their dashboard
     if (data.user && validatedFields.guestToken) {
-      // Fire and forget - don't wait for merge to complete
-      const mergePromise = (async () => {
-        try {
-          const serviceClient = await createServiceClient()
-          
-          // Attempt merge with service role privileges
-          await serviceClient
-            .rpc('merge_carts_secure', {
+      try {
+        console.log('[Auth] Starting cart merge for user:', data.user.id);
+        
+        // Wait for merge with 5-second timeout (increased from 1s for reliability)
+        const mergeResult = await Promise.race([
+          (async () => {
+            const serviceClient = await createServiceClient()
+            
+            // Attempt merge with service role privileges
+            const { error } = await serviceClient.rpc('merge_carts_secure', {
               p_user_id: data.user.id,
               p_guest_token: validatedFields.guestToken
             })
-          
-          // Clear guest token after successful merge
+            
+            if (error) {
+              console.error('[Auth] Cart merge RPC error:', error);
+              throw error;
+            }
+            
+            console.log('[Auth] Cart merge completed successfully');
+            return { success: true };
+          })(),
+          new Promise<{ success: boolean, timeout?: boolean }>((_, reject) => 
+            setTimeout(() => reject(new Error('Cart merge timeout after 5s')), 5000)
+          )
+        ]);
+        
+        // Only clear guest token after SUCCESSFUL merge
+        if (mergeResult.success) {
           cookieStore.delete('guest_token')
-        } catch (error) {
-          console.error('Cart merge failed:', error)
+          console.log('[Auth] Guest token cleared after successful merge');
         }
-      })()
-      
-      // Don't await - let it run in background
-      // Set a timeout to prevent hanging
-      Promise.race([
-        mergePromise,
-        new Promise(resolve => setTimeout(resolve, 1000)) // 1 second timeout
-      ]).catch(console.error)
+        
+      } catch (error) {
+        // Log error but don't block login - user can manually refresh their cart
+        console.error('[Auth] Cart merge failed, but allowing login to proceed:', error);
+        // Guest token kept so user can try merging again if needed
+      }
     }
 
-    // Redirect immediately - merge will happen in background
+    // Smart redirect based on user role
     revalidatePath('/', 'layout')
-    redirect('/')
+    
+    // Determine redirect path based on user roles
+    const userRoles = data.user?.user_metadata?.user_roles || [];
+    let redirectPath = '/';
+    
+    if (userRoles.includes('admin')) {
+      redirectPath = '/admin/dashboard';
+    } else if (userRoles.includes('vendor')) {
+      redirectPath = '/vendor/dashboard';
+    } else if (userRoles.includes('stylist')) {
+      redirectPath = '/stylist/dashboard';
+    }
+    // else: customer goes to home
+    
+    console.log('[Auth] Redirecting user to:', redirectPath);
+    redirect(redirectPath)
 
   } catch (error) {
     // NEXT_REDIRECT is expected behavior, not an error

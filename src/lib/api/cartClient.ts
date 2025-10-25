@@ -87,6 +87,7 @@ export interface ShippingAddress {
   state: string;
   postal_code: string;
   country: string;
+  notes?: string;  // Delivery instructions from checkout
 }
 
 export interface CreateOrderIntentRequest {

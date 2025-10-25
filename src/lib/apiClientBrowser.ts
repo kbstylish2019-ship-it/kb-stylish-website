@@ -20,7 +20,7 @@ function createClient() {
 }
 
 // ============================================================================
-// TYPES (re-exported from apiClient for convenience)
+// TYPES & ADMIN USER MANAGEMENT
 // ============================================================================
 
 export interface AdminUser {
@@ -42,6 +42,22 @@ export interface AdminUser {
     is_active: boolean;
   }>;
   status: 'active' | 'inactive' | 'banned' | 'pending';
+}
+
+export interface AdminUsersListResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface AdminUsersListParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  role_filter?: string;
+  status_filter?: string;
 }
 
 export interface AdminVendor {
@@ -70,6 +86,35 @@ export interface AdminVendor {
 // ============================================================================
 // ADMIN USERS MANAGEMENT
 // ============================================================================
+
+/**
+ * Fetch admin users list with pagination and filters (browser-safe)
+ */
+export async function fetchAdminUsersList(
+  params: AdminUsersListParams = {}
+): Promise<AdminUsersListResponse | null> {
+  const supabase = createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('get_admin_users_list', {
+      p_page: params.page || 1,
+      p_per_page: params.per_page || 20,
+      p_search: params.search || null,
+      p_role_filter: params.role_filter || null,
+      p_status_filter: params.status_filter || null,
+    });
+    
+    if (error) {
+      console.error('fetchAdminUsersList error:', error);
+      return null;
+    }
+    
+    return data as AdminUsersListResponse;
+  } catch (error) {
+    console.error('fetchAdminUsersList error:', error);
+    return null;
+  }
+}
 
 /**
  * Assign a role to a user

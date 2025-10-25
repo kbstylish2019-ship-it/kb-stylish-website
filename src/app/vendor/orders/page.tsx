@@ -123,6 +123,7 @@ export default async function VendorOrdersPage() {
         shipping_state,
         shipping_postal_code,
         shipping_country,
+        notes,
         created_at,
         confirmed_at,
         shipped_at,

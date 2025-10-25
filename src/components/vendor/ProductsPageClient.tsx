@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Search, Package, Edit, Trash2, Power, ImageIcon } from "lucide-react";
+import { Plus, Search, Package, Edit, Trash2, Power, ImageIcon, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { VendorProductsResponse } from "@/lib/apiClient";
 import { toggleProductActive, deleteVendorProduct } from "@/app/actions/vendor";
 import AddProductModal from "./AddProductModal";
+import VendorReviewsManager from "./VendorReviewsManager";
 
 interface ProductsPageClientProps {
   initialData: VendorProductsResponse;
@@ -17,6 +18,7 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'products' | 'reviews'>('products');
   
   const handleToggleActive = async (productId: string, currentActive: boolean) => {
     setIsLoading(true);
@@ -72,32 +74,70 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
   return (
     <>
       <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex-1 min-w-[200px] max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
-              />
-            </div>
+        {/* Tab Navigation */}
+        <div className="border-b border-white/10">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setActiveTab('products')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+                activeTab === 'products'
+                  ? "border-[var(--kb-primary-brand)] text-[var(--kb-primary-brand)]"
+                  : "border-transparent text-foreground/60 hover:text-foreground/80"
+              )}
+            >
+              <Package className="h-4 w-4" />
+              Products
+              <span className="px-2 py-0.5 bg-white/10 rounded-full text-xs">
+                {products.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+                activeTab === 'reviews'
+                  ? "border-[var(--kb-primary-brand)] text-[var(--kb-primary-brand)]"
+                  : "border-transparent text-foreground/60 hover:text-foreground/80"
+              )}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Customer Reviews
+            </button>
           </div>
-          
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_80%,black)] px-4 py-2 text-sm font-semibold text-white transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)]"
-          >
-            <Plus className="h-4 w-4" />
-            Add Product
-          </button>
         </div>
-        
-        {/* Products Stats */}
-        <div className="grid gap-4 sm:grid-cols-3">
+
+        {/* Content Area */}
+        {activeTab === 'reviews' ? (
+          <VendorReviewsManager />
+        ) : (
+          <>
+            {/* Header Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex-1 min-w-[200px] max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search products..."
+                    className="w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+                  />
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_80%,black)] px-4 py-2 text-sm font-semibold text-white transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)]"
+              >
+                <Plus className="h-4 w-4" />
+                Add Product
+              </button>
+            </div>
+            
+            {/* Products Stats */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
             <p className="text-xs font-medium text-foreground/70">Total Products</p>
             <div className="mt-2 text-2xl font-semibold">{products.length}</div>
@@ -118,8 +158,8 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
         
         {/* Products Table */}
         <div className="overflow-hidden rounded-2xl border border-white/10 ring-1 ring-white/10">
-          <div className="max-w-full overflow-x-auto">
-            <table className="min-w-full text-sm">
+          <div className="w-full overflow-x-auto">
+            <table className="min-w-[900px] text-sm">
               <thead>
                 <tr className="bg-white/5 text-left text-xs uppercase tracking-wide text-foreground/70">
                   <th className="px-4 py-3 w-16"></th>
@@ -248,6 +288,8 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
             </table>
           </div>
         </div>
+          </>
+        )}
       </div>
       
       {/* Add Product Modal */}

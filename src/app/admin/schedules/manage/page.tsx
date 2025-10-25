@@ -69,10 +69,10 @@ export default async function AdminScheduleManagePage() {
 
   return (
     <DashboardLayout sidebar={<AdminSidebar />}>
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Manage Stylist Schedules</h1>
-          <p className="text-gray-600 mt-1">
+      <div className="p-3 sm:p-4">
+        <div className="mb-3 sm:mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Manage Stylist Schedules</h1>
+          <p className="text-xs sm:text-sm text-foreground/70 mt-1">
             Set working hours for each stylist to enable bookings
           </p>
         </div>

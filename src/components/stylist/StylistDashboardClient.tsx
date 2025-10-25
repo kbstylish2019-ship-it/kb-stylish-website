@@ -297,7 +297,7 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 p-6 hover:bg-white/10 transition-all">
+              <div key={booking.id} className="rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 p-4 sm:p-6 hover:bg-white/10 transition-all">
                 {/* Time & Service */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -322,11 +322,11 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
                           {booking.customerName[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="font-medium text-foreground flex items-center gap-2">
-                          {booking.customerName}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-foreground flex items-center gap-2 flex-wrap">
+                          <span className="truncate">{booking.customerName}</span>
                           {booking.isRepeatCustomer && (
-                            <Badge variant="secondary" className="text-xs bg-purple-500/20 text-purple-300 border-purple-500/30">
+                            <Badge variant="secondary" className="text-xs bg-purple-500/20 text-purple-300 border-purple-500/30 shrink-0">
                               <Star className="w-3 h-3 mr-1" />
                               Repeat Customer
                             </Badge>
@@ -346,7 +346,7 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
                         <div className="text-xs font-medium text-foreground/60 uppercase">
                           Previous Visits
                         </div>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                           <div>
                             <span className="text-foreground/70">Total visits:</span>
                             <span className="font-medium text-foreground ml-2">

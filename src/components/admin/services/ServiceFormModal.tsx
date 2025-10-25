@@ -156,7 +156,7 @@ export default function ServiceFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit Service' : 'Create New Service'}</DialogTitle>
         </DialogHeader>
@@ -199,7 +199,7 @@ export default function ServiceFormModal({
           </div>
 
           {/* Category & Duration */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">
                 Category *
@@ -208,7 +208,7 @@ export default function ServiceFormModal({
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
               >
                 {CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>

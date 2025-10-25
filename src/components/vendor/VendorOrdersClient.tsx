@@ -19,6 +19,7 @@ interface Order {
   shipping_state: string;
   shipping_postal_code: string;
   shipping_country: string;
+  notes?: string;
   created_at: string;
   confirmed_at?: string;
   shipped_at?: string;
@@ -280,7 +281,7 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-4 py-2.5 bg-background/50 border border-white/10 rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] focus:border-transparent transition-all"
+            className="px-4 py-2.5 bg-background/50 border border-white/10 rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] focus:border-transparent transition-all [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -383,7 +384,7 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
                             <select
                               value={newStatus}
                               onChange={(e) => setNewStatus(e.target.value)}
-                              className="w-full px-3 py-2 bg-background border border-white/10 rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+                              className="w-full px-3 py-2 bg-background border border-white/10 rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
                               disabled={isUpdating}
                             >
                               {getAllowedStatuses(item.fulfillment_status).map(status => (
@@ -505,6 +506,14 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
                       {order.shipping_country}
                     </div>
                   </div>
+                  {order.notes && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <div className="text-xs font-medium text-blue-400">Delivery Instructions</div>
+                      <div className="text-foreground bg-blue-500/10 border border-blue-500/20 p-2 rounded">
+                        {order.notes}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

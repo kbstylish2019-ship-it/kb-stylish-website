@@ -173,6 +173,52 @@ export default function HeaderClientControls({
           mobileOpen ? "pointer-events-auto scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
         )}
       >
+        {/* Mobile Auth/Profile quick actions */}
+        {!isAuthed ? (
+          <button
+            onClick={() => {
+              setMobileOpen(false);
+              setAuthOpen(true);
+            }}
+            className="mb-3 w-full rounded-lg bg-[var(--kb-primary-brand)] px-3 py-2 text-sm font-semibold text-white ring-1 ring-white/10 hover:brightness-110"
+          >
+            Login / Register
+          </button>
+        ) : (
+          <div className="mb-3 rounded-xl border border-white/10 bg-white/5 p-2 ring-1 ring-white/10">
+            <div className="px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-foreground/60">
+              Account
+            </div>
+            <div className="flex flex-col">
+              {profileNav.map((item) => (
+                <Link
+                  key={`m-prof-${item.id}`}
+                  href={item.href}
+                  className="rounded-lg px-3 py-2 text-sm text-foreground/90 hover:bg-white/5"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <div className="border-t border-white/10 mt-2 pt-2">
+                <form
+                  action={async () => {
+                    await signOut();
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg px-3 py-2 text-sm text-foreground/90 hover:bg-white/5 text-left"
+                    data-testid="logout-button-mobile"
+                  >
+                    Log Out
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
         <nav className="flex flex-col gap-2">
           {primaryNav.map((item) => (
             <Link

@@ -46,15 +46,34 @@ export default function ProductList({
                 <div className="flex size-full items-center justify-center text-xs text-foreground/60">No image</div>
               )}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{it.name}</div>
-                  {it.variant && (
-                    <div className="text-xs text-foreground/70">{it.variant}</div>
-                  )}
+                  
+                  {/* Enhanced variant display with badges and color swatches */}
+                  {it.variantData && (it.variantData.size || it.variantData.color) ? (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {it.variantData.size && (
+                        <span key={`size-${it.id}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-white/10 text-foreground/80 font-medium border border-white/5">
+                          {it.variantData.size}
+                        </span>
+                      )}
+                      {it.variantData.color && (
+                        <span key={`color-${it.id}`} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-white/10 text-foreground/80 border border-white/5">
+                          <span 
+                            className="w-3 h-3 rounded-full border border-white/30 shadow-sm" 
+                            style={{ backgroundColor: it.variantData.colorHex || '#666' }} 
+                          />
+                          {it.variantData.color}
+                        </span>
+                      )}
+                    </div>
+                  ) : it.variant ? (
+                    <div className="text-xs text-foreground/70 mt-1">{it.variant}</div>
+                  ) : null}
                 </div>
-                <div className="text-sm font-medium">{formatNPR(it.price)}</div>
+                <div className="text-sm font-medium whitespace-nowrap">{formatNPR(it.price)}</div>
               </div>
               <div className="mt-2 flex items-center gap-3">
                 <div className="inline-flex items-center rounded-lg ring-1 ring-white/10">

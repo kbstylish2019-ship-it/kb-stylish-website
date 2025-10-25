@@ -56,6 +56,8 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
   const [schedule, setSchedule] = useState<Record<number, DaySchedule>>(DEFAULT_SCHEDULE);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [effectiveFrom, setEffectiveFrom] = useState<string>('');
+  const [effectiveUntil, setEffectiveUntil] = useState<string>('');
 
   function updateDay(dayOfWeek: number, field: keyof DaySchedule, value: any) {
     setSchedule(prev => ({
@@ -78,6 +80,13 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
     for (const day of workingDays) {
       if (day.start_time >= day.end_time) {
         return `Invalid time range for ${DAYS.find(d => d.value === day.day_of_week)?.label}`;
+      }
+    }
+
+    // Validate effective date range
+    if (effectiveFrom && effectiveUntil) {
+      if (new Date(effectiveFrom) > new Date(effectiveUntil)) {
+        return 'End date must be after start date';
       }
     }
 
@@ -107,7 +116,9 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stylistId: stylist.stylist_user_id,
-          schedules: workingDays
+          schedules: workingDays,
+          effectiveFrom: effectiveFrom || undefined,
+          effectiveUntil: effectiveUntil || undefined
         })
       });
 
@@ -130,22 +141,23 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl bg-[var(--kb-surface-dark)] border-white/10">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] bg-[var(--kb-surface-dark)] border-white/10 flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Calendar className="w-5 h-5" />
             Create Schedule for {stylist.display_name}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm">
-            <p className="font-medium text-blue-300">Default Schedule Applied</p>
-            <p className="text-blue-200/80 text-xs">Mon-Fri: 9am-5pm | Sat-Sun: Off</p>
-            <p className="text-blue-200/60 text-xs mt-1">Customize below as needed</p>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm">
+              <p className="font-medium text-blue-300">Default Schedule Applied</p>
+              <p className="text-blue-200/80 text-xs">Mon-Fri: 9am-5pm | Sat-Sun: Off</p>
+              <p className="text-blue-200/60 text-xs mt-1">Customize below as needed</p>
+            </div>
 
-          <div className="max-h-96 overflow-y-auto">
+            <div>
             <table className="w-full">
               <thead className="sticky top-0 bg-[var(--kb-surface-dark)]">
                 <tr className="border-b border-white/10">
@@ -191,13 +203,73 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
             </table>
           </div>
 
+          {/* Effective Dates Section */}
+          <div className="border-t border-white/10 pt-4 mt-4">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-4 h-4 text-blue-300" />
+                <span className="font-medium text-blue-300">Optional: Set Effective Dates</span>
+              </div>
+              <p className="text-xs text-blue-200/80">
+                Use this for seasonal workers, temporary schedules, or time-limited arrangements.
+                Leave empty for permanent schedules.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="effective-from" className="text-sm text-foreground/80">Start Date (Optional)</Label>
+                <input
+                  type="date"
+                  id="effective-from"
+                  value={effectiveFrom}
+                  onChange={(e) => setEffectiveFrom(e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
+                />
+                <p className="text-xs text-foreground/60 mt-1">
+                  Schedule starts on this date (default: today)
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="effective-until" className="text-sm text-foreground/80">End Date (Optional)</Label>
+                <input
+                  type="date"
+                  id="effective-until"
+                  value={effectiveUntil}
+                  onChange={(e) => setEffectiveUntil(e.target.value)}
+                  min={effectiveFrom || undefined}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
+                />
+                <p className="text-xs text-foreground/60 mt-1">
+                  Schedule ends on this date (leave empty for permanent)
+                </p>
+              </div>
+            </div>
+
+            {/* Examples Accordion */}
+            <details className="mt-3">
+              <summary className="text-xs text-foreground/60 cursor-pointer hover:text-foreground/80 select-none">
+                📚 When to use effective dates? (Click to expand)
+              </summary>
+              <div className="mt-2 space-y-1 text-xs text-foreground/70 pl-4 border-l-2 border-blue-500/30 ml-1">
+                <div>✅ <strong>Summer intern:</strong> Jun 1 - Aug 31</div>
+                <div>✅ <strong>Holiday staff:</strong> Nov 15 - Jan 15</div>
+                <div>✅ <strong>Maternity cover:</strong> Mar 1 - May 31</div>
+                <div>✅ <strong>Temporary schedule:</strong> Specific week or month</div>
+                <div>💡 <strong>Permanent staff:</strong> Leave end date empty</div>
+              </div>
+            </details>
+          </div>
+          </div>
+
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex-shrink-0">
               <p className="text-sm text-red-300">{error}</p>
             </div>
           )}
 
-          <div className="flex gap-3 justify-end pt-2">
+          <div className="flex gap-3 justify-end pt-2 border-t border-white/10 flex-shrink-0">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>

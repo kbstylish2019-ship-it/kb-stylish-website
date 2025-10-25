@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { verifyCsrfToken, CSRF_TOKEN_HEADER } from '@/lib/csrf';
 
 async function hashUserAgent(userAgent: string): Promise<string | null> {
   if (!userAgent) return null;
@@ -13,6 +14,19 @@ async function hashUserAgent(userAgent: string): Promise<string | null> {
 
 export async function POST(req: NextRequest) {
   try {
+    // CSRF Protection - Verify token before processing
+    const csrfToken = req.headers.get(CSRF_TOKEN_HEADER);
+    const csrfValid = await verifyCsrfToken(csrfToken);
+    
+    if (!csrfValid) {
+      console.error('[Vote API] CSRF validation failed');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid security token. Please refresh the page.',
+        error_code: 'CSRF_INVALID' 
+      }, { status: 403 });
+    }
+    
     const { reviewId, voteType, action } = await req.json();
 
     if (!reviewId || typeof reviewId !== 'string') {

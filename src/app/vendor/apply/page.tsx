@@ -45,6 +45,17 @@ export default async function VendorApplyPage() {
   // Check if user is authenticated and their vendor status
   let applicationState = null;
   if (user) {
+    // Check if user has vendor role (they're already approved)
+    const { data: { user: userWithMeta } } = await supabase.auth.getUser();
+    const userRoles = userWithMeta?.user_metadata?.user_roles || [];
+    const isVendor = userRoles.includes('vendor');
+    
+    // If they have vendor role, redirect to dashboard
+    if (isVendor) {
+      redirect('/vendor/dashboard');
+    }
+    
+    // Otherwise check application state
     const { data: vendorProfile } = await supabase
       .from('vendor_profiles')
       .select('application_state, business_name')
@@ -54,7 +65,7 @@ export default async function VendorApplyPage() {
     if (vendorProfile) {
       applicationState = vendorProfile.application_state;
       
-      // Redirect approved vendors to dashboard
+      // Also redirect if application_state is approved (backup check)
       if (applicationState === 'approved') {
         redirect('/vendor/dashboard');
       }
@@ -69,7 +80,7 @@ export default async function VendorApplyPage() {
         <HowItWorks />
         
         {/* Show appropriate UI based on application state */}
-        {applicationState && applicationState !== 'rejected' ? (
+        {applicationState === 'submitted' || applicationState === 'under_review' || applicationState === 'info_requested' ? (
           <section className="rounded-2xl border border-white/10 bg-white/5 p-6 ring-1 ring-white/10">
             <div className="text-center">
               {applicationState === 'submitted' || applicationState === 'under_review' ? (
@@ -118,6 +129,19 @@ export default async function VendorApplyPage() {
                     <h3 className="font-medium text-amber-300 mb-1">Previous Application Not Approved</h3>
                     <p className="text-sm text-amber-200/80">
                       Your previous vendor application was not approved. You may submit a new application with updated information below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {applicationState === 'draft' && (
+              <div className="mb-4 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-medium text-blue-300 mb-1">Continue Your Application</h3>
+                    <p className="text-sm text-blue-200/80">
+                      You have a draft application. Complete the form below to submit it for review.
                     </p>
                   </div>
                 </div>

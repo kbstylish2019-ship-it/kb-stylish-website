@@ -102,8 +102,8 @@ function transformToProductDetail(data: ProductWithVariants): ProductDetail {
     options,
     variants: transformedVariants,
     badges: raw.is_featured ? ['Featured'] : [],
-    avgRating: 4.0, // Will be updated from real data
-    reviewCount: 2, // Will be updated from real data
+    avgRating: raw.average_rating || 0,
+    reviewCount: raw.review_count || 0,
     reviews,
     stockStatus,
     shipping: {
@@ -145,10 +145,14 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     distribution: {}
   };
 
-  // Get user's order for this product (if authenticated)
-  // Note: This should be fetched based on the actual authenticated user
-  // For now, only allow reviews from users who have purchased this product
-  const userOrderId = undefined; // Will be determined client-side based on auth user
+  // Review eligibility will be determined client-side via API call
+  // This prevents SSR hydration issues with auth state
+  // The API endpoint /api/user/reviews/eligibility will verify:
+  // 1. User is authenticated
+  // 2. User has purchased this product
+  // 3. Order is delivered/completed
+  // 4. Review window hasn't expired (90 days)
+  // 5. User hasn't already reviewed this product
 
   return (
     <main>
@@ -160,8 +164,6 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
           reviewCount={reviewStats.total} 
           initialReviews={initialReviews}
           stats={reviewStats}
-          canReview={!!userOrderId} // Can review if user has purchased  
-          orderId={userOrderId}
         />
         <CompleteTheLook 
           recommendations={recommendations}

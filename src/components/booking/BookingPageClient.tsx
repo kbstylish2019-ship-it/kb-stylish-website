@@ -78,7 +78,7 @@ export default function BookingPageClient({
   return (
     <>
       {/* Filter bar */}
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6">
         <StylistFilter 
           categories={categories}
           specialtyTypes={specialtyTypes}
@@ -98,7 +98,7 @@ export default function BookingPageClient({
             specialty: stylist.specialties[0] || 'General',
             bio: stylist.bio,
             imageUrl: stylist.avatarUrl || '/stylist-placeholder.jpg',
-            rating: stylist.ratingAverage || 5.0,
+            rating: stylist.ratingAverage || 0,
             reviewCount: stylist.totalBookings || 0,
             availability: 'Available Today', // Could be calculated from actual availability
             isFeatured: stylist.isFeatured,

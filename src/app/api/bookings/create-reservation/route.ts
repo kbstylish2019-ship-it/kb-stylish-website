@@ -91,8 +91,16 @@ export async function POST(request: NextRequest) {
       if (error.message?.includes('slot is no longer available') || error.message?.includes('SLOT_UNAVAILABLE')) {
         return NextResponse.json({
           success: false,
-          error: 'This time slot is no longer available',
+          error: 'This time slot is no longer available. Someone else may have just booked it.',
           code: 'SLOT_UNAVAILABLE'
+        });
+      }
+      
+      if (error.message?.includes('cannot book appointments with themselves') || error.message?.includes('SELF_BOOKING')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Stylists cannot book appointments with themselves',
+          code: 'SELF_BOOKING_NOT_ALLOWED'
         });
       }
       

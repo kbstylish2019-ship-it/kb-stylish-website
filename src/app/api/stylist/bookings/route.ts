@@ -96,12 +96,18 @@ export async function GET(request: NextRequest) {
         customer_phone,
         customer_email,
         customer_notes,
+        customer_address_line1,
+        customer_city,
+        customer_state,
+        customer_postal_code,
+        customer_country,
         stylist_notes,
         start_time,
         end_time,
         status,
         price_cents,
         booking_source,
+        payment_intent_id,
         created_at,
         cancelled_at,
         cancellation_reason,
@@ -153,30 +159,87 @@ export async function GET(request: NextRequest) {
     }
 
     // ========================================================================
+    // FETCH RELATED ORDER DATA
+    // ========================================================================
+    
+    // Get unique payment_intent_ids
+    const paymentIntentIds = (bookings || [])
+      .map((b: any) => b.payment_intent_id)
+      .filter((id: string | null) => id !== null);
+    
+    // Fetch orders if we have payment intents
+    let ordersMap = new Map();
+    if (paymentIntentIds.length > 0) {
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('payment_intent_id, shipping_name, shipping_phone, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_postal_code, shipping_country, notes')
+        .in('payment_intent_id', paymentIntentIds);
+      
+      // Create map for quick lookup
+      (orders || []).forEach((order: any) => {
+        ordersMap.set(order.payment_intent_id, order);
+      });
+    }
+    
+    // ========================================================================
     // TRANSFORM RESPONSE
     // ========================================================================
     
-    const transformedBookings = (bookings || []).map((booking: any) => ({
-      id: booking.id,
-      customerName: booking.customer_name,
-      customerPhone: booking.customer_phone,
-      customerEmail: booking.customer_email,
-      customerNotes: booking.customer_notes,
-      stylistNotes: booking.stylist_notes,
-      startTime: booking.start_time,
-      endTime: booking.end_time,
-      status: booking.status,
-      priceCents: booking.price_cents,
-      bookingSource: booking.booking_source,
-      createdAt: booking.created_at,
-      cancelledAt: booking.cancelled_at,
-      cancellationReason: booking.cancellation_reason,
-      service: booking.service ? {
-        name: booking.service.name,
-        durationMinutes: booking.service.duration_minutes,
-        category: booking.service.category
-      } : null
-    }));
+    const transformedBookings = (bookings || []).map((booking: any) => {
+      // Get order data via payment_intent_id
+      const order = ordersMap.get(booking.payment_intent_id);
+      const hasOrderData = order && order.shipping_name;
+      
+      // Determine address source: order (preferred) or booking
+      const hasBookingAddress = booking.customer_address_line1 || booking.customer_city;
+      let customerAddress = null;
+      
+      if (hasOrderData) {
+        // Use order shipping address (has line2)
+        customerAddress = {
+          line1: order.shipping_address_line1,
+          line2: order.shipping_address_line2,
+          city: order.shipping_city,
+          state: order.shipping_state,
+          postalCode: order.shipping_postal_code,
+          country: order.shipping_country
+        };
+      } else if (hasBookingAddress) {
+        // Fallback to booking address (no line2)
+        customerAddress = {
+          line1: booking.customer_address_line1,
+          line2: null,
+          city: booking.customer_city,
+          state: booking.customer_state,
+          postalCode: booking.customer_postal_code,
+          country: booking.customer_country
+        };
+      }
+      
+      return {
+        id: booking.id,
+        customerName: hasOrderData ? order.shipping_name : booking.customer_name,
+        customerPhone: hasOrderData ? order.shipping_phone : booking.customer_phone,
+        customerEmail: booking.customer_email, // Orders don't have email
+        customerAddress,
+        customerNotes: booking.customer_notes,
+        deliveryNotes: hasOrderData ? order.notes : null,
+        stylistNotes: booking.stylist_notes,
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        status: booking.status,
+        priceCents: booking.price_cents,
+        bookingSource: booking.booking_source,
+        createdAt: booking.created_at,
+        cancelledAt: booking.cancelled_at,
+        cancellationReason: booking.cancellation_reason,
+        service: booking.service ? {
+          name: booking.service.name,
+          durationMinutes: booking.service.duration_minutes,
+          category: booking.service.category
+        } : null
+      };
+    });
 
     // ========================================================================
     // SUCCESS RESPONSE

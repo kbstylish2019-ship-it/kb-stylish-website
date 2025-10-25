@@ -139,7 +139,8 @@ export default function SpecialtiesClient({ specialties: initialSpecialties }: S
             </h3>
             
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-              <table className="w-full">
+              <div className="max-w-full overflow-x-auto">
+              <table className="min-w-[720px] w-full">
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="px-6 py-3 text-left text-xs font-semibold">Name</th>
@@ -182,6 +183,7 @@ export default function SpecialtiesClient({ specialties: initialSpecialties }: S
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         );

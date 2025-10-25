@@ -122,15 +122,16 @@ export default function BookingModal({
     setBookingError(null);
     
     try {
-      // THE GREAT DECOUPLING: Create a booking reservation (separate from cart)
+      // THE GREAT DECOUPLING: Create a booking reservation
+      // Note: Customer data will be collected at checkout
       const reservationResponse = await createBookingReservation({
         stylistId: stylist.id,
         serviceId: selectedService.id,
         startTime: selectedSlot.slotStartUtc,
-        customerName: 'Customer', // In production, fetch from user profile
-        customerPhone: '', // Optional
-        customerEmail: '', // Optional
-        customerNotes: '' // Optional
+        customerName: 'Customer', // Placeholder - real data from checkout
+        customerPhone: '',
+        customerEmail: '',
+        customerNotes: ''
       });
       
       if (reservationResponse.success && reservationResponse.reservation_id) {
@@ -144,7 +145,7 @@ export default function BookingModal({
           start_time: reservationResponse.start_time || selectedSlot.slotStartUtc,
           end_time: reservationResponse.end_time || selectedSlot.slotEndUtc,
           price: (reservationResponse.price_cents || selectedSlot.priceCents) / 100,
-          customer_name: 'Customer', // In production, fetch from user profile
+          customer_name: 'Customer', // Collected at checkout
           customer_phone: '',
           customer_email: '',
           customer_notes: '',
@@ -183,7 +184,7 @@ export default function BookingModal({
         data-testid="booking-modal"
       >
         <div 
-          className="absolute inset-0 bg-black/50" 
+          className="absolute inset-0 bg-black/70" 
           onClick={onClose}
           role="button"
           tabIndex={0}
@@ -195,7 +196,7 @@ export default function BookingModal({
             }
           }}
         />
-        <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-background shadow-2xl ring-1 ring-white/10">
+        <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-background shadow-2xl ring-1 ring-white/10 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--kb-primary-brand)]/15 ring-1 ring-[var(--kb-primary-brand)]/30">
@@ -211,7 +212,7 @@ export default function BookingModal({
           </button>
         </div>
 
-        <div className="grid gap-5 p-5 sm:grid-cols-2">
+        <div className="grid gap-5 p-5 sm:grid-cols-2 flex-1 overflow-y-auto">
           {/* Services */}
           <div>
             <div className="mb-2 text-sm font-medium">Select a Service</div>
@@ -336,15 +337,19 @@ export default function BookingModal({
                         disabled={disabled}
                         className={slotClassName}
                         aria-label={`Time ${slot.slotDisplay} - ${status}`}
-                        title={status === 'booked' ? 'Already booked' : 
-                               status === 'in_break' ? 'Break time' : 
-                               status === 'unavailable' ? 'Unavailable' : 
-                               'Available'}
+                        title={
+                          status === 'booked' ? '🔒 Already booked - This slot is confirmed' : 
+                          status === 'reserved' ? '⏳ Temporarily held by another customer - May become available in 15 minutes' :
+                          status === 'in_break' ? '☕ Break time' : 
+                          status === 'unavailable' ? 'Unavailable' : 
+                          '✨ Available - Click to book'
+                        }
                       >
                         {statusIcon}
                         {slot.slotDisplay.split(' - ')[0]}
                       </button>
                     );
+
                   })}
                 </div>
               )}

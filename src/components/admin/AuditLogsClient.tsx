@@ -252,7 +252,7 @@ export default function AuditLogsClient() {
               id="category-filter"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as Category | 'all')}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
             >
               <option value="all">All Categories</option>
               <option value="governance">Governance</option>
@@ -280,7 +280,7 @@ export default function AuditLogsClient() {
               id="severity-filter"
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value as Severity | 'all')}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
             >
               <option value="all">All Severities</option>
               <option value="info">Info</option>
@@ -332,7 +332,7 @@ export default function AuditLogsClient() {
               id="page-size"
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
             >
               <option value="50">50</option>
               <option value="100">100</option>

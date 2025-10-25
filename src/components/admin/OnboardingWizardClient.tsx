@@ -461,40 +461,42 @@ export default function OnboardingWizardClient() {
   return (
     <div className="space-y-6">
       {/* Progress Steps */}
-      <div className="flex items-center justify-between">
-        {STEPS.map((step, idx) => (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center">
-              <div
-                className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full ring-2 transition-colors',
-                  state.currentStep > step.id
-                    ? 'bg-emerald-500/20 ring-emerald-500/50 text-emerald-300'
-                    : state.currentStep === step.id
-                    ? 'bg-[var(--kb-primary-brand)]/20 ring-[var(--kb-primary-brand)] text-[var(--kb-primary-brand)]'
-                    : 'bg-white/5 ring-white/20 text-foreground/50'
-                )}
-              >
-                {state.currentStep > step.id ? (
-                  <Check className="h-5 w-5" />
-                ) : (
-                  <step.icon className="h-5 w-5" />
-                )}
+      <div className="overflow-x-auto lg:overflow-x-visible pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+        <div className="flex items-center justify-between min-w-max lg:min-w-0">
+          {STEPS.map((step, idx) => (
+            <React.Fragment key={step.id}>
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-full ring-2 transition-colors',
+                    state.currentStep > step.id
+                      ? 'bg-emerald-500/20 ring-emerald-500/50 text-emerald-300'
+                      : state.currentStep === step.id
+                      ? 'bg-[var(--kb-primary-brand)]/20 ring-[var(--kb-primary-brand)] text-[var(--kb-primary-brand)]'
+                      : 'bg-white/5 ring-white/20 text-foreground/50'
+                  )}
+                >
+                  {state.currentStep > step.id ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    <step.icon className="h-5 w-5" />
+                  )}
+                </div>
+                <span className="mt-2 text-xs font-medium whitespace-nowrap">{step.name}</span>
               </div>
-              <span className="mt-2 text-xs font-medium">{step.name}</span>
-            </div>
-            {idx < STEPS.length - 1 && (
-              <div
-                className={cn(
-                  'h-0.5 flex-1 mx-4 transition-colors',
-                  state.currentStep > step.id
-                    ? 'bg-emerald-500/50'
-                    : 'bg-white/10'
-                )}
-              />
-            )}
-          </React.Fragment>
-        ))}
+              {idx < STEPS.length - 1 && (
+                <div
+                  className={cn(
+                    'h-0.5 w-16 mx-4 transition-colors shrink-0',
+                    state.currentStep > step.id
+                      ? 'bg-emerald-500/50'
+                      : 'bg-white/10'
+                  )}
+                />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
 
       {/* Resume Info Banner */}
@@ -784,7 +786,7 @@ function Step2Verification({
             value={checkStatus.background_check}
             onChange={(e) => onUpdateCheck('background_check', e.target.value)}
             disabled={isLoading}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] disabled:opacity-50"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] disabled:opacity-50 [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
@@ -810,7 +812,7 @@ function Step2Verification({
             value={checkStatus.id_verification}
             onChange={(e) => onUpdateCheck('id_verification', e.target.value)}
             disabled={isLoading}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] disabled:opacity-50"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] disabled:opacity-50 [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             <option value="pending">Pending</option>
             <option value="submitted">Submitted</option>
@@ -950,7 +952,7 @@ function Step3ProfileSetup({
           <select
             value={profileData.timezone}
             onChange={(e) => onUpdateProfile('timezone', e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
           >
             <option value="Asia/Kathmandu">Asia/Kathmandu (Nepal Time)</option>
             <option value="Asia/Kolkata">Asia/Kolkata (India Time)</option>
@@ -1012,7 +1014,7 @@ function Step5ServiceSelection({
           <Loader2 className="w-6 h-6 animate-spin text-foreground/50" />
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
           {services.map((service) => (
             <button
               key={service.id}

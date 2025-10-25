@@ -13,6 +13,11 @@ export interface BookingReservationParams {
   customerName: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerAddressLine1?: string;
+  customerCity?: string;
+  customerState?: string;
+  customerPostalCode?: string;
+  customerCountry?: string;
   customerNotes?: string;
 }
 
@@ -133,6 +138,35 @@ export async function updateBookingReservation(params: UpdateBookingReservationP
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update reservation',
       code: 'NETWORK_ERROR'
+    };
+  }
+}
+
+/**
+ * Cancel a booking reservation
+ * Used when user wants to remove or change their appointment
+ */
+export async function cancelBookingReservation(reservationId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch('/api/bookings/cancel-reservation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reservationId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to cancel reservation: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Failed to cancel booking reservation:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel reservation'
     };
   }
 }

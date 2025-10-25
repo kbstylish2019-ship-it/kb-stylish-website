@@ -231,7 +231,7 @@ export default function ApplicationForm({
                 id="businessType"
                 value={business.businessType}
                 onChange={(e) => updateBusiness({ businessType: e.target.value as VendorBusinessInfo["businessType"] })}
-                className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50"
+                className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]/50 [&>option]:bg-[var(--kb-surface-dark)] [&>option]:text-foreground"
               >
                 {BUSINESS_TYPES.map((t) => (
                   <option key={t} value={t}>

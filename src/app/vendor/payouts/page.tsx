@@ -147,8 +147,8 @@ export default async function VendorPayoutsPage() {
       </div>
 
       {/* Summary Cards + Request Button */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div className="grid gap-4 sm:grid-cols-3 flex-1">
+      <div className="mb-6 space-y-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
         <StatCard
           title="Total Payouts"
           value={`NPR ${(summary.total_paid_cents / 100).toLocaleString('en-IN')}`}
@@ -179,8 +179,8 @@ export default async function VendorPayoutsPage() {
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 ring-1 ring-white/10">
         <h2 className="text-lg font-semibold mb-4">Payout History</h2>
         
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
+        <div className="w-full overflow-x-auto">
+          <table className="min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-white/10">
                 <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">

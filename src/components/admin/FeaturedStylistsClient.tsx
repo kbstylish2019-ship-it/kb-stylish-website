@@ -156,7 +156,8 @@ export default function FeaturedStylistsClient({ stylists: initialStylists }: Fe
       
       {/* Stylists table */}
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-        <table className="w-full">
+        <div className="max-w-full overflow-x-auto">
+        <table className="min-w-[900px] w-full">
           <thead>
             <tr className="border-b border-white/10">
               <th className="px-6 py-4 text-left text-sm font-semibold">Stylist Name</th>
@@ -219,6 +220,7 @@ export default function FeaturedStylistsClient({ stylists: initialStylists }: Fe
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       
       {stylists.length === 0 && (

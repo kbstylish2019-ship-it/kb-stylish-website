@@ -134,7 +134,7 @@ export default async function AdminDashboardPage() {
   return (
     <DashboardLayout title="Admin Control Panel" sidebar={<AdminSidebar />}> 
       {/* Live Stat Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <AdminStatCard 
           title="Total Users" 
           value={totalUsers} 
@@ -166,10 +166,10 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Platform Metrics Summary */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 grid-cols-1 lg:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10 lg:col-span-2">
           <h2 className="text-lg font-semibold mb-3">Platform Overview (30 Days)</h2>
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <AdminStatCard
               title="Total GMV"
               value={`NPR ${monthlyRevenue}`}
@@ -178,7 +178,7 @@ export default async function AdminDashboardPage() {
             <AdminStatCard
               title="Platform Fees"
               value={`NPR ${(stats.last_30_days.platform_fees_cents / 100).toLocaleString('en-IN')}`}
-              subtitle="15% commission"
+              subtitle="Blended commission"
             />
             <AdminStatCard
               title="Refunds"

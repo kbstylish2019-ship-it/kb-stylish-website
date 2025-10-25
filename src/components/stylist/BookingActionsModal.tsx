@@ -233,7 +233,7 @@ export default function BookingActionsModal({
   if (!selectedAction) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
           <DialogHeader>
             <DialogTitle>Manage Booking</DialogTitle>
             <DialogDescription>
@@ -295,7 +295,7 @@ export default function BookingActionsModal({
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
         <DialogHeader>
           <DialogTitle>
             {selectedAction === 'add_notes' ? 'Add Notes' : 

@@ -28,18 +28,19 @@ export default function SchedulePageClient({ userId }: SchedulePageClientProps) 
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Schedule Management</h1>
-          <p className="text-foreground/70 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Schedule Management</h1>
+          <p className="text-xs sm:text-sm text-foreground/70 mt-1">
             Manage your working hours and time off requests
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="flex items-center gap-2">
+        <Button onClick={() => setShowModal(true)} className="flex items-center gap-2 w-full sm:w-auto justify-center">
           <Plus className="w-4 h-4" />
-          Request Time Off
+          <span className="hidden sm:inline">Request Time Off</span>
+          <span className="sm:hidden">Time Off</span>
         </Button>
       </div>
 

@@ -1,36 +1,34 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/lib/apiClient";
+import AvatarUpload from "@/components/upload/AvatarUpload";
 
 interface ProfileViewProps {
   profile: UserProfile;
 }
 
 export default function ProfileView({ profile }: ProfileViewProps) {
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(profile.avatar_url);
+
+  const handleAvatarUploadSuccess = (newUrl: string) => {
+    setCurrentAvatarUrl(newUrl);
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Profile Header */}
       <div className="bg-gradient-to-r from-[var(--kb-primary-brand)]/10 to-[var(--kb-accent-gold)]/10 rounded-2xl p-8 mb-8">
-        <div className="flex items-start gap-6">
-          {/* Avatar */}
+        <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+          {/* Avatar Upload Section */}
           <div className="relative">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={`${profile.display_name}'s avatar`}
-                className="w-24 h-24 rounded-full object-cover ring-4 ring-white/20"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--kb-primary-brand)] to-[var(--kb-accent-gold)] flex items-center justify-center ring-4 ring-white/20">
-                <span className="text-2xl font-bold text-white">
-                  {profile.display_name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
+            <AvatarUpload 
+              currentAvatarUrl={currentAvatarUrl}
+              onUploadSuccess={handleAvatarUploadSuccess}
+            />
             {profile.is_verified && (
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-[var(--kb-accent-gold)] rounded-full flex items-center justify-center">
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-[var(--kb-accent-gold)] rounded-full flex items-center justify-center ring-2 ring-background">
                 <svg
                   className="w-5 h-5 text-black"
                   fill="currentColor"
@@ -90,15 +88,15 @@ export default function ProfileView({ profile }: ProfileViewProps) {
         <div className="bg-background/50 backdrop-blur rounded-xl border border-white/10 p-6">
           <h2 className="text-xl font-semibold text-foreground mb-4">Account Information</h2>
           <div className="grid gap-4">
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
+            <div className="flex flex-wrap justify-between items-center gap-2 py-2 border-b border-white/5">
               <span className="text-foreground/70">Username</span>
               <span className="font-medium text-foreground">@{profile.username}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
+            <div className="flex flex-wrap justify-between items-center gap-2 py-2 border-b border-white/5">
               <span className="text-foreground/70">Display Name</span>
               <span className="font-medium text-foreground">{profile.display_name}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
+            <div className="flex flex-wrap justify-between items-center gap-2 py-2 border-b border-white/5">
               <span className="text-foreground/70">Account Status</span>
               <span className={cn(
                 "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
@@ -113,7 +111,7 @@ export default function ProfileView({ profile }: ProfileViewProps) {
                 {profile.is_verified ? "Verified" : "Unverified"}
               </span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex flex-wrap justify-between items-center gap-2 py-2">
               <span className="text-foreground/70">Role Version</span>
               <span className="font-mono text-sm bg-white/5 px-2 py-1 rounded text-foreground">
                 v{profile.role_version}
@@ -133,7 +131,7 @@ export default function ProfileView({ profile }: ProfileViewProps) {
               <div className="text-sm text-foreground/70">Days Active</div>
             </div>
             <div className="text-center p-4 bg-white/5 rounded-lg">
-              <div className="text-2xl font-bold text-[var(--kb-accent-gold)] mb-1">
+              <div className="text-lg sm:text-2xl font-bold text-[var(--kb-accent-gold)] mb-1">
                 {new Date(profile.updated_at).toLocaleDateString()}
               </div>
               <div className="text-sm text-foreground/70">Last Updated</div>

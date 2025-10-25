@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, Button, Badge, Avatar, AvatarFallback } from '@/components/ui/custom-ui';
-import { Calendar, Clock, Search, Loader2, User, Scissors, MapPin, Phone, Mail, FileText, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Search, Loader2, User, Scissors, MapPin, Phone, Mail, FileText, AlertCircle, Star } from 'lucide-react';
 import { format, parseISO, isFuture, isPast } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import RatingModal from '@/components/booking/RatingModal';
 
 /**
  * MyBookingsClient - Customer Booking History Component
@@ -49,6 +50,11 @@ interface Booking {
     displayName: string;
     avatarUrl?: string;
   } | null;
+  rating?: {
+    rating: number;
+    review_text: string | null;
+    created_at: string;
+  } | null;
 }
 
 type FilterType = 'all' | 'upcoming' | 'past' | 'cancelled';
@@ -73,10 +79,13 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [bookingToRate, setBookingToRate] = useState<Booking | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   
   const router = useRouter();
   const supabase = createClient();
-  const abortControllerRef = useRef<AbortController>();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // ========================================================================
   // DATA FETCHING
@@ -92,7 +101,7 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
 
     try {
       const response = await fetch('/api/bookings?limit=1000', {
-        signal: abortControllerRef.current.signal,
+        signal: abortControllerRef.current!.signal,
       });
       
       if (!response.ok) {
@@ -193,9 +202,8 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
   // ========================================================================
   
   const handleRebook = (booking: Booking) => {
-    // Navigate to booking page with pre-filled stylist
-    const stylistSlug = booking.stylist?.displayName.toLowerCase().replace(/\s+/g, '-');
-    router.push(`/book-stylist?stylist=${stylistSlug}`);
+    // Navigate to booking page
+    router.push('/book-a-stylist');
   };
 
   const handleCancel = async (booking: Booking) => {
@@ -212,38 +220,35 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
 
     // Confirm cancellation
     const confirmed = confirm(
-      `Cancel your booking for ${booking.service?.name} on ${format(parseISO(booking.startTime), 'MMM d, yyyy at h:mm a')}?`
+      `Cancel your booking for ${booking.service?.name} on ${format(parseISO(booking.startTime), 'MMM d, yyyy at h:mm a')}?\n\nYour stylist will be notified.`
     );
 
     if (!confirmed) return;
 
-    // Optimistic update
-    setBookings(prev => 
-      prev.map(b => b.id === booking.id 
-        ? { ...b, status: 'cancelled', cancelledAt: new Date().toISOString() } 
-        : b
-      )
-    );
+    // Show loading state (NO optimistic update)
+    setCancellingId(booking.id);
 
     try {
       const response = await fetch(`/api/bookings/${booking.id}/cancel`, {
         method: 'POST',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to cancel booking');
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to cancel booking');
       }
 
       toast.success('Booking cancelled successfully');
+      
+      // Refresh bookings to get updated data from server
+      await fetchBookings();
+      
     } catch (err: any) {
-      // Revert on error
-      setBookings(prev => 
-        prev.map(b => b.id === booking.id 
-          ? { ...b, status: booking.status, cancelledAt: booking.cancelledAt } 
-          : b
-        )
-      );
-      toast.error(err.message || 'Failed to cancel booking');
+      console.error('[Cancel] Error:', err);
+      toast.error(err.message || 'Failed to cancel booking. Please try again.');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -333,7 +338,7 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
         <div className="grid gap-4">
           {filteredBookings.map(booking => (
             <Card key={booking.id} className="p-4">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col sm:flex-row items-start gap-4">
                 {/* Stylist Avatar */}
                 <Avatar className="h-12 w-12">
                   {booking.stylist?.avatarUrl ? (
@@ -377,25 +382,56 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between mt-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
                     <div className="font-semibold text-lg">
                       NPR {(booking.priceCents / 100).toFixed(2)}
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                       <Button
                         onClick={() => setSelectedBooking(booking)}
                         size="sm"
                         variant="outline"
+                        className="sm:flex-none"
                       >
                         Details
                       </Button>
+                      
+                      {booking.status === 'completed' && (
+                        <>
+                          {booking.rating ? (
+                            <Button
+                              disabled
+                              size="sm"
+                              className="bg-green-500/20 text-green-300 cursor-not-allowed border border-green-500/30"
+                              
+                            >
+                              <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
+                              Rated {booking.rating.rating}★
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => {
+                                setBookingToRate(booking);
+                                setRatingModalOpen(true);
+                              }}
+                              size="sm"
+                              className="bg-[var(--kb-accent-gold)] text-black hover:brightness-110"
+                              
+                            >
+                              <Star className="h-4 w-4 mr-1" />
+                              Rate
+                            </Button>
+                          )}
+                        </>
+                      )}
                       
                       {booking.status !== 'cancelled' && (
                         <Button
                           onClick={() => handleRebook(booking)}
                           size="sm"
                           variant="outline"
+                          className="sm:flex-none"
                         >
                           Rebook
                         </Button>
@@ -405,9 +441,18 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
                         <Button
                           onClick={() => handleCancel(booking)}
                           size="sm"
-                          variant="destructive"
+                          variant="outline"
+                          disabled={cancellingId === booking.id}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                         >
-                          Cancel
+                          {cancellingId === booking.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              Cancelling...
+                            </>
+                          ) : (
+                            'Cancel'
+                          )}
                         </Button>
                       )}
                     </div>
@@ -441,9 +486,14 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
 
       {/* Details Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedBooking(null)}>
+          <div 
+            className="max-w-lg w-full rounded-xl border border-white/10 shadow-2xl" 
+            style={{ backgroundColor: '#1a1625' }}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <Card className="bg-transparent border-0 shadow-none p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-start justify-between mb-4">
               <h2 className="text-xl font-bold">Booking Details</h2>
               <Button
                 onClick={() => setSelectedBooking(null)}
@@ -517,16 +567,46 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
                       handleCancel(selectedBooking);
                       setSelectedBooking(null);
                     }}
-                    variant="destructive"
-                    className="flex-1"
+                    variant="outline"
+                    disabled={cancellingId === selectedBooking.id}
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                   >
-                    Cancel Booking
+                    {cancellingId === selectedBooking.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      'Cancel Booking'
+                    )}
                   </Button>
                 )}
               </div>
             </div>
-          </Card>
+            </Card>
+          </div>
         </div>
+      )}
+
+      {/* Rating Modal */}
+      {bookingToRate && (
+        <RatingModal
+          isOpen={ratingModalOpen}
+          onClose={() => {
+            setRatingModalOpen(false);
+            setBookingToRate(null);
+          }}
+          booking={{
+            id: bookingToRate.id,
+            stylistName: bookingToRate.stylist?.displayName || 'Stylist',
+            serviceName: bookingToRate.service?.name || 'Service',
+            date: format(parseISO(bookingToRate.startTime), 'MMM d, yyyy')
+          }}
+          onSuccess={() => {
+            toast.success('Thank you for your rating!');
+            fetchBookings(); // Refresh bookings
+          }}
+        />
       )}
     </div>
   );

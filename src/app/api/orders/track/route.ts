@@ -77,20 +77,9 @@ export async function GET(request: NextRequest) {
       .eq('order_number', orderNumber.trim().toUpperCase())
       .single();
 
-    // Fetch order items with correct column names including fulfillment status
+    // Fetch order items with vendor contact information using RPC
     const { data: items, error: itemsError } = await supabase
-      .from('order_items')
-      .select(`
-        quantity,
-        unit_price_cents,
-        total_price_cents,
-        product_name,
-        variant_sku,
-        fulfillment_status,
-        tracking_number,
-        shipping_carrier
-      `)
-      .eq('order_id', orderIdData?.id);
+      .rpc('get_order_items_with_vendor', { p_order_id: orderIdData?.id });
 
     if (itemsError) {
       console.error('[TrackOrder] Error fetching items:', itemsError);

@@ -2,10 +2,15 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import FocusTrap from "focus-trap-react";
-import { X, Package, Info, Check, Image as ImageIcon, Loader2 } from "lucide-react";
+import { X, Package, Info, Check, Image as ImageIcon, Loader2, Grid } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createVendorProduct } from "@/app/actions/vendor";
 import { createClient } from "@/lib/supabase/client";
+import ImageUploader from "@/components/vendor/ImageUploader";
+import VariantBuilder from "@/components/vendor/VariantBuilder";
+import CustomSelect from "@/components/ui/CustomSelect";
+import type { ImageForBackend } from "@/lib/hooks/useImageUpload";
 
 interface Category {
   id: string;
@@ -20,39 +25,55 @@ interface AddProductModalProps {
   onSuccess?: (product: any) => void;
 }
 
-type Step = "basic" | "pricing" | "media" | "review";
+type Step = "basic" | "media" | "variants" | "review";
 
 const steps: { id: Step; label: string; icon: React.ReactNode }[] = [
   { id: "basic", label: "Basic Info", icon: <Package className="h-4 w-4" /> },
-  { id: "pricing", label: "Pricing", icon: <Info className="h-4 w-4" /> },
-  { id: "media", label: "Media", icon: <ImageIcon className="h-4 w-4" /> },
+  { id: "media", label: "Images", icon: <ImageIcon className="h-4 w-4" /> },
+  { id: "variants", label: "Variants", icon: <Grid className="h-4 w-4" /> },
   { id: "review", label: "Review", icon: <Check className="h-4 w-4" /> },
 ];
 
 // REMOVED: Hardcoded CATEGORY_MAP - now loading dynamically from database
 
 export default function AddProductModal({ open, onClose, userId, onSuccess }: AddProductModalProps) {
+  const router = useRouter();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     category: "",
-    price: "",
-    comparePrice: "",
-    inventory: "",
-    sku: "",
   });
+  const [images, setImages] = useState<ImageForBackend[]>([]);
+  const [variants, setVariants] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [vendorId, setVendorId] = useState<string | null>(null);
 
   const currentStep = steps[currentStepIndex].id;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === steps.length - 1;
   const canSubmit = isLastStep;
+
+  // Get vendor ID from auth
+  useEffect(() => {
+    if (!open) return;
+    
+    const getUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setVendorId(user.id);
+      }
+    };
+    
+    getUser();
+  }, [open]);
 
   // Set initial focus when modal opens
   useEffect(() => {
@@ -118,61 +139,76 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
     
     setIsSubmitting(true);
     setError(null);
+    setSuccessMessage(null);
     
     try {
-      // Validate category selected (formData.category now contains UUID)
+      // Validation
+      if (!formData.name.trim()) {
+        setError('Please enter a product name');
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (!formData.category) {
         setError('Please select a category');
         setIsSubmitting(false);
         return;
       }
       
-      // Create product data matching backend schema
+      if (images.length === 0) {
+        setError('Please upload at least one product image');
+        setCurrentStepIndex(1); // Go back to images step
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (variants.length === 0) {
+        setError('Please configure at least one variant');
+        setCurrentStepIndex(2); // Go back to variants step
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Validate all variants have SKU and price
+      const invalidVariants = variants.filter(v => !v.sku || v.price <= 0);
+      if (invalidVariants.length > 0) {
+        setError('All variants must have a SKU and price greater than 0');
+        setCurrentStepIndex(2); // Go back to variants step
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create product data
       const productData = {
-        name: formData.name,
-        description: formData.description,
-        category_id: formData.category, // Already a UUID from select value
-        variants: [{
-          sku: formData.sku || `SKU-${Date.now()}`,
-          price: parseFloat(formData.price),
-          compare_at_price: formData.comparePrice ? parseFloat(formData.comparePrice) : null,
-          quantity: parseInt(formData.inventory) || 0,
-        }],
-        images: [], // TODO: Add image upload support
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        category_id: formData.category,
+        variants: variants,
+        images: images,
       };
       
       console.log('Creating product with data:', productData);
       const result = await createVendorProduct(productData);
-      console.log('Product creation result:', result);
       
       if (result?.success) {
-        console.log('Product created successfully', result);
-        
-        // ✅ FIX: Just trigger page refresh via router and close modal
-        // The parent component will refetch data automatically
-        
-        // Reset form state
-        setError(null);
-        setIsSubmitting(false);
-        setCurrentStepIndex(0);
-        setFormData({
-          name: "",
-          description: "",
-          category: "",
-          price: "",
-          comparePrice: "",
-          inventory: "",
-          sku: "",
-        });
-        
-        // Close modal immediately - parent will refetch via revalidatePath
-        onClose();
+        console.log('Product created successfully:', result);
         
         // Show success message
-        alert(`Product "${formData.name}" created successfully!`);
+        setSuccessMessage(`Product "${formData.name}" created successfully!`);
         
-        // Trigger page refresh to show new product
-        window.location.reload();
+        // Reset form
+        setFormData({ name: "", description: "", category: "" });
+        setImages([]);
+        setVariants([]);
+        setCurrentStepIndex(0);
+        setIsSubmitting(false);
+        
+        // Close modal after short delay to show success
+        setTimeout(() => {
+          onClose();
+          // Refresh page data
+          router.refresh();
+        }, 1500);
       } else {
         console.error('Product creation failed:', result?.message);
         setError(result?.message || 'Failed to create product');
@@ -215,9 +251,9 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
         />
       
       {/* Modal */}
-      <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-background p-6 shadow-xl ring-1 ring-white/10">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-white/10 bg-background shadow-xl ring-1 ring-white/10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between p-6 pb-4 shrink-0">
           <h2 id="add-product-title" className="text-xl font-semibold">Add Product/Service</h2>
           <button
             ref={closeButtonRef}
@@ -231,14 +267,21 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
         
         {/* Error Display */}
         {error && (
-          <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
+          <div className="mx-6 mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
             <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+        
+        {/* Success Display */}
+        {successMessage && (
+          <div className="mx-6 mb-4 rounded-xl border border-green-500/20 bg-green-500/10 p-3">
+            <p className="text-sm text-green-400">{successMessage}</p>
           </div>
         )}
 
         {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        <div className="px-6 pb-4 shrink-0">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
             {steps.map((step, idx) => (
               <div key={step.id} className="flex items-center">
                 <div
@@ -251,7 +294,7 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
                 >
                   {step.icon}
                 </div>
-                <div className="ml-3">
+                <div className="ml-3 hidden sm:block">
                   <p className={cn("text-sm font-medium", idx <= currentStepIndex ? "text-foreground" : "text-foreground/60")}>
                     {step.label}
                   </p>
@@ -265,7 +308,7 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
         </div>
 
         {/* Step Content */}
-        <div className="min-h-[300px] mb-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           {currentStep === "basic" && (
             <div className="space-y-4">
               <div>
@@ -300,130 +343,125 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
                     {categoryError}
                   </div>
                 ) : (
-                  <select
+                  <CustomSelect
                     value={formData.category}
-                    onChange={(e) => updateField("category", e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
-                    disabled={categories.length === 0}
-                  >
-                    <option value="">Select category</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, category: value })}
+                    options={categories.map((cat) => ({ value: cat.id, label: cat.name }))}
+                    placeholder="Select a category"
+                    required
+                    disabled={loadingCategories}
+                  />
                 )}
-              </div>
-            </div>
-          )}
-
-          {currentStep === "pricing" && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">SKU *</label>
-                <input
-                  type="text"
-                  value={formData.sku}
-                  onChange={(e) => updateField("sku", e.target.value)}
-                  placeholder="PROD-001"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
-                />
-                <p className="mt-1 text-xs text-foreground/60">Unique product identifier</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Selling Price (NPR) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) => updateField("price", e.target.value)}
-                  placeholder="2999"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
-                />
-                <p className="text-xs text-[var(--kb-text-secondary)] mt-1">Current selling price for customers</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Original Price (NPR) - Optional</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.comparePrice}
-                  onChange={(e) => updateField("comparePrice", e.target.value)}
-                  placeholder="3999"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
-                />
-                <p className="text-xs text-[var(--kb-text-secondary)] mt-1">
-                  Original/MSRP price before discount. Must be higher than selling price. Example: "Was NPR 3999, now NPR 2999"
-                </p>
-                {formData.comparePrice && formData.price && parseFloat(formData.comparePrice) < parseFloat(formData.price) && (
-                  <p className="text-xs text-red-400 mt-1">⚠️ Original price must be higher than selling price</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Inventory *</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.inventory}
-                  onChange={(e) => updateField("inventory", e.target.value)}
-                  placeholder="50"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
-                />
               </div>
             </div>
           )}
 
           {currentStep === "media" && (
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Product Images</label>
-                <div className="rounded-xl border-2 border-dashed border-white/20 bg-white/5 p-8 text-center">
-                  <ImageIcon className="mx-auto h-12 w-12 text-foreground/40" />
-                  <p className="mt-2 text-sm text-foreground/60">
-                    Drag and drop images here, or <span className="text-[var(--kb-primary-brand)]">browse</span>
-                  </p>
-                  <p className="mt-1 text-xs text-foreground/40">PNG, JPG, GIF up to 10MB each</p>
+              {vendorId ? (
+                <ImageUploader
+                  vendorId={vendorId}
+                  onChange={setImages}
+                />
+              ) : (
+                <div className="text-center py-8 text-white/60">
+                  Loading...
                 </div>
-              </div>
+              )}
+            </div>
+          )}
+
+          {currentStep === "variants" && (
+            <div className="space-y-4">
+              <VariantBuilder
+                productName={formData.name}
+                onChange={setVariants}
+              />
             </div>
           )}
 
           {currentStep === "review" && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Review Your Product</h3>
+              
+              {/* Basic Info */}
               <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h4 className="text-sm font-medium text-foreground/70 mb-3">Basic Information</h4>
                 <dl className="space-y-2">
                   <div className="flex justify-between">
-                    <dt className="text-sm text-foreground/70">Name:</dt>
+                    <dt className="text-sm text-foreground/60">Name:</dt>
                     <dd className="text-sm font-medium">{formData.name || "—"}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-sm text-foreground/70">Category:</dt>
+                    <dt className="text-sm text-foreground/60">Category:</dt>
                     <dd className="text-sm font-medium">
                       {formData.category 
                         ? categories.find(c => c.id === formData.category)?.name || "Unknown"
                         : "—"}
                     </dd>
                   </div>
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-foreground/70">Price:</dt>
-                    <dd className="text-sm font-medium">{formData.price ? `NPR ${formData.price}` : "—"}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-foreground/70">Inventory:</dt>
-                    <dd className="text-sm font-medium">{formData.inventory || "—"}</dd>
-                  </div>
+                  {formData.description && (
+                    <div className="pt-2 border-t border-white/10">
+                      <dt className="text-sm text-foreground/60 mb-1">Description:</dt>
+                      <dd className="text-sm text-foreground/80">{formData.description}</dd>
+                    </div>
+                  )}
                 </dl>
+              </div>
+              
+              {/* Images */}
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h4 className="text-sm font-medium text-foreground/70 mb-3">
+                  Images ({images.length})
+                </h4>
+                {images.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-2">
+                    {images.map((img, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-white/10">
+                        <img src={img.image_url} alt={img.alt_text} className="w-full h-full object-cover" />
+                        {img.is_primary && (
+                          <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">Primary</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground/60">No images uploaded</p>
+                )}
+              </div>
+              
+              {/* Variants */}
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h4 className="text-sm font-medium text-foreground/70 mb-3">
+                  Variants ({variants.length})
+                </h4>
+                {variants.length > 0 ? (
+                  <div className="space-y-2">
+                    {variants.slice(0, 5).map((variant, idx) => (
+                      <div key={idx} className="flex justify-between items-center py-2 border-b border-white/10 last:border-0">
+                        <span className="text-sm text-foreground/80">{variant.sku}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium">NPR {variant.price}</span>
+                          <span className="text-xs text-foreground/60">Stock: {variant.quantity}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {variants.length > 5 && (
+                      <p className="text-xs text-foreground/60 text-center pt-2">
+                        + {variants.length - 5} more variants
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground/60">No variants configured</p>
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 shrink-0">
           <button
             onClick={handlePrev}
             disabled={isFirstStep}

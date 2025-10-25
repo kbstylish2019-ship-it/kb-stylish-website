@@ -20,7 +20,16 @@ interface Booking {
   customerName: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerAddress?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  } | null;
   customerNotes?: string;
+  deliveryNotes?: string;
   stylistNotes?: string;
   startTime: string;
   endTime: string;
@@ -397,11 +406,30 @@ export default function BookingsListClient({ userId }: { userId: string }) {
                         </div>
                       )}
 
+                      {/* Address */}
+                      {booking.customerAddress && (
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          <span>📍 {booking.customerAddress.line1}
+                          {booking.customerAddress.line2 && `, ${booking.customerAddress.line2}`}
+                          {booking.customerAddress.city && `, ${booking.customerAddress.city}`}
+                          {booking.customerAddress.state && `, ${booking.customerAddress.state}`}
+                          {booking.customerAddress.postalCode && ` ${booking.customerAddress.postalCode}`}</span>
+                        </div>
+                      )}
+
                       {/* Customer Notes */}
                       {booking.customerNotes && (
                         <div className="mt-2 p-2 bg-muted/50 rounded text-sm">
-                          <p className="font-medium text-xs text-muted-foreground mb-1">Customer Notes:</p>
+                          <p className="font-medium text-xs text-muted-foreground mb-1">Booking Notes:</p>
                           <p className="text-foreground">{booking.customerNotes}</p>
+                        </div>
+                      )}
+
+                      {/* Delivery Notes from Checkout */}
+                      {booking.deliveryNotes && (
+                        <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-sm">
+                          <p className="font-medium text-xs text-blue-400 mb-1">Delivery Instructions:</p>
+                          <p className="text-foreground">{booking.deliveryNotes}</p>
                         </div>
                       )}
                       <div>

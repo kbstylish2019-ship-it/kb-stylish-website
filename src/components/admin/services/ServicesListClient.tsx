@@ -261,7 +261,7 @@ export default function ServicesListClient() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
         >
           <option value="all">All Categories</option>
           {CATEGORIES.map(cat => (
@@ -273,7 +273,7 @@ export default function ServicesListClient() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Search, Package, Truck, CheckCircle, XCircle, Clock, MapPin, Phone, Mail } from 'lucide-react';
 import { formatNPR } from '@/lib/utils';
+import VendorContactCard from './VendorContactCard';
 
 interface OrderDetails {
   order_number: string;
@@ -30,6 +31,13 @@ interface OrderDetails {
     fulfillment_status: string;
     tracking_number?: string | null;
     shipping_carrier?: string | null;
+    vendor?: {
+      business_name: string;
+      user: {
+        email: string;
+        phone: string | null;
+      };
+    };
   }>;
 }
 
@@ -109,7 +117,7 @@ export default function TrackOrderClient() {
             <label htmlFor="orderNumber" className="block text-sm font-medium text-foreground/90 mb-2">
               Order Number
             </label>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <input
                 id="orderNumber"
                 type="text"
@@ -122,7 +130,7 @@ export default function TrackOrderClient() {
               <button
                 type="submit"
                 disabled={isSearching}
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-6 py-3 font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_70%,black)] px-6 py-3 font-semibold text-foreground ring-1 ring-white/10 hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
               >
                 {isSearching ? (
                   <>
@@ -289,32 +297,38 @@ export default function TrackOrderClient() {
           {/* Order Items */}
           <div className="rounded-xl border border-white/10 bg-white/5 p-6">
             <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
-            <div className="space-y-3">
+            <div className="space-y-6">
               {order.items.map((item, index) => (
-                <div key={index} className="flex justify-between items-start py-3 border-b border-white/10 last:border-0">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-medium text-foreground">{item.product_name}</p>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        item.fulfillment_status === 'delivered' ? 'bg-green-500/20 text-green-400' :
-                        item.fulfillment_status === 'shipped' ? 'bg-purple-500/20 text-purple-400' :
-                        item.fulfillment_status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {item.fulfillment_status}
-                      </span>
+                <div key={index} className="pb-6 border-b border-white/10 last:border-0 last:pb-0">
+                  {/* Item Details */}
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-foreground">{item.product_name}</p>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          item.fulfillment_status === 'delivered' ? 'bg-green-500/20 text-green-400' :
+                          item.fulfillment_status === 'shipped' ? 'bg-purple-500/20 text-purple-400' :
+                          item.fulfillment_status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {item.fulfillment_status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/60">SKU: {item.variant_sku}</p>
+                      <p className="text-sm text-foreground/60">Quantity: {item.quantity}</p>
+                      <p className="text-sm text-foreground/60">Unit Price: {formatNPR(item.unit_price_cents / 100)}</p>
+                      {item.tracking_number && (
+                        <p className="text-xs text-foreground/70 mt-1 font-mono bg-white/5 px-2 py-1 rounded inline-block">
+                          Tracking: {item.tracking_number}
+                          {item.shipping_carrier && ` (${item.shipping_carrier})`}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-sm text-foreground/60">SKU: {item.variant_sku}</p>
-                    <p className="text-sm text-foreground/60">Quantity: {item.quantity}</p>
-                    <p className="text-sm text-foreground/60">Unit Price: {formatNPR(item.unit_price_cents / 100)}</p>
-                    {item.tracking_number && (
-                      <p className="text-xs text-foreground/70 mt-1 font-mono bg-white/5 px-2 py-1 rounded inline-block">
-                        Tracking: {item.tracking_number}
-                        {item.shipping_carrier && ` (${item.shipping_carrier})`}
-                      </p>
-                    )}
+                    <p className="font-semibold text-foreground">{formatNPR(item.total_price_cents / 100)}</p>
                   </div>
-                  <p className="font-semibold text-foreground">{formatNPR(item.total_price_cents / 100)}</p>
+                  
+                  {/* Vendor Contact Card */}
+                  {item.vendor && <VendorContactCard vendor={item.vendor} />}
                 </div>
               ))}
             </div>
@@ -324,11 +338,11 @@ export default function TrackOrderClient() {
             </div>
           </div>
 
-          {/* Help Section */}
-          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-3">Need Help?</h3>
+          {/* Platform Support Section */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-3">KB Stylish Platform Support</h3>
             <p className="text-sm text-foreground/70 mb-4">
-              If you have any questions about your order, please don't hesitate to contact us.
+              For issues with payment, refunds, account access, or general platform inquiries:
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
@@ -336,16 +350,19 @@ export default function TrackOrderClient() {
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-foreground/80 hover:bg-white/10 transition"
               >
                 <Mail className="h-4 w-4" />
-                Email Support
+                Email Platform Support
               </a>
               <a
                 href="tel:+9771234567890"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-foreground/80 hover:bg-white/10 transition"
               >
                 <Phone className="h-4 w-4" />
-                Call Us
+                Call Platform Support
               </a>
             </div>
+            <p className="text-xs text-foreground/50 mt-3">
+              💡 Tip: For questions about specific items, use the vendor contact above each product.
+            </p>
           </div>
         </div>
       )}

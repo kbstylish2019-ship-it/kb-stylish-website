@@ -118,6 +118,26 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     categories = [];
   }
 
+  // Helper to build URLs for removing a specific filter
+  function buildUrl(remover: (u: URLSearchParams) => void) {
+    const usp = new URLSearchParams(params as any);
+    remover(usp);
+    usp.delete('cursor');
+    // Clean defaults
+    if (!usp.get('search')) usp.delete('search');
+    if (!usp.get('categories')) usp.delete('categories');
+    if (!usp.get('minPrice')) usp.delete('minPrice');
+    if (!usp.get('maxPrice')) usp.delete('maxPrice');
+    if (!usp.get('sort') || usp.get('sort') === 'popularity') usp.delete('sort');
+    const qs = usp.toString();
+    return `/shop${qs ? `?${qs}` : ''}`;
+  }
+
+  const hasActiveFilters = Boolean(
+    (filters.categories && filters.categories.length) ||
+    filters.search || params.minPrice || params.maxPrice
+  );
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-10">
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
@@ -149,6 +169,70 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               {fetchError ? 'Error loading products' : `${products.length} of ${totalCount} products`}
             </p>
           </div>
+
+          {/* Applied Filters Summary */}
+          {hasActiveFilters && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {/* Search chip */}
+              {filters.search && (
+                <Link
+                  href={buildUrl(u => u.delete('search'))}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10"
+                >
+                  <span className="text-foreground/80">Search:</span>
+                  <span className="font-medium">"{filters.search}"</span>
+                  <span aria-hidden>×</span>
+                </Link>
+              )}
+
+              {/* Category chips */}
+              {(filters.categories || []).map(cat => (
+                <Link
+                  key={`chip-${cat}`}
+                  href={buildUrl(u => {
+                    const list = (u.get('categories') || '')
+                      .split(',')
+                      .filter(Boolean)
+                      .filter(c => c !== cat);
+                    if (list.length) u.set('categories', list.join(','));
+                    else u.delete('categories');
+                  })}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10 capitalize"
+                >
+                  {cat}
+                  <span aria-hidden>×</span>
+                </Link>
+              ))}
+
+              {/* Price chips */}
+              {params.minPrice && (
+                <Link
+                  href={buildUrl(u => u.delete('minPrice'))}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10"
+                >
+                  Min NPR {params.minPrice}
+                  <span aria-hidden>×</span>
+                </Link>
+              )}
+              {params.maxPrice && (
+                <Link
+                  href={buildUrl(u => u.delete('maxPrice'))}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10"
+                >
+                  Max NPR {params.maxPrice}
+                  <span aria-hidden>×</span>
+                </Link>
+              )}
+
+              {/* Clear all */}
+              <Link
+                href="/shop"
+                className="ml-auto text-xs text-[var(--kb-primary-brand)] hover:underline"
+              >
+                Clear all
+              </Link>
+            </div>
+          )}
           <div className="mt-6">
             {fetchError ? (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center ring-1 ring-red-500/20">

@@ -147,15 +147,41 @@ export default function ChangeAppointmentModal({
         startTime: selectedSlot.slotStartUtc
       });
       
-      // If reservation has expired (error from update), create a new one
+      // Try to update the existing reservation
       let response = await updateBookingReservation({
         reservationId: booking.reservation_id || booking.id,
         serviceId: selectedService.id,
         startTime: selectedSlot.slotStartUtc,
       });
       
-      // If update failed due to expired/missing reservation, create a new one
-      if (!response.success && (response.code === 'RESERVATION_NOT_FOUND' || response.error?.includes('not found'))) {
+      // 🔒 FIX #4: Handle SLOT_UNAVAILABLE with auto-cancel-and-replace
+      if (!response.success && response.code === 'SLOT_UNAVAILABLE') {
+        console.log('[ChangeAppointment] Slot unavailable - implementing auto-cancel-and-replace...');
+        
+        // Import cancel function
+        const { cancelBookingReservation, createBookingReservation } = await import('@/lib/api/bookingClient');
+        
+        // Step 1: Cancel the old reservation
+        const cancelResult = await cancelBookingReservation(booking.reservation_id);
+        
+        if (!cancelResult.success) {
+          // If cancel failed, just try to create new one anyway (old one might be expired)
+          console.warn('[ChangeAppointment] Cancel failed, proceeding with new reservation...');
+        }
+        
+        // Step 2: Create new reservation
+        response = await createBookingReservation({
+          serviceId: selectedService.id,
+          stylistId: stylist.id,
+          startTime: selectedSlot.slotStartUtc,
+          customerName: booking.customer_name,
+          customerPhone: booking.customer_phone || '',
+          customerEmail: booking.customer_email || '',
+          customerNotes: booking.customer_notes || ''
+        });
+      }
+      // Handle expired reservation
+      else if (!response.success && (response.code === 'RESERVATION_NOT_FOUND' || response.error?.includes('not found'))) {
         console.log('[ChangeAppointment] Reservation expired, creating new one...');
         
         const { createBookingReservation } = await import('@/lib/api/bookingClient');
@@ -196,7 +222,11 @@ export default function ChangeAppointmentModal({
           setBookingError('Failed to update booking in cart. Please try again.');
         }
       } else {
-        setBookingError(response.error || 'Failed to update appointment. Please try again.');
+        // Show user-friendly error message
+        const friendlyError = response.code === 'SLOT_UNAVAILABLE' 
+          ? 'This time slot is no longer available. Please choose a different time.'
+          : response.error || 'Failed to update appointment. Please try again.';
+        setBookingError(friendlyError);
       }
     } catch (error) {
       console.error('Booking update error:', error);
@@ -331,7 +361,7 @@ export default function ChangeAppointmentModal({
                   <Loader2 className="h-6 w-6 animate-spin text-[var(--kb-primary-brand)]" />
                 </div>
               ) : availableSlots.length > 0 ? (
-                <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
                   {availableSlots.map((slot) => {
                     const active = selectedSlot?.slotStartUtc === slot.slotStartUtc;
                     const status = slot.status || (slot.isAvailable ? 'available' : 'unavailable');
@@ -374,10 +404,13 @@ export default function ChangeAppointmentModal({
                         disabled={disabled}
                         className={slotClassName}
                         aria-label={`Time ${displayTime} - ${status}`}
-                        title={status === 'booked' ? 'Already booked' : 
-                               status === 'in_break' ? 'Break time' : 
-                               status === 'unavailable' ? 'Unavailable' : 
-                               'Available'}
+                        title={
+                          status === 'booked' ? '🔒 Already booked - This slot is confirmed' : 
+                          status === 'reserved' ? '⏳ Temporarily held by another customer - May become available in 15 minutes' :
+                          status === 'in_break' ? '☕ Break time' : 
+                          status === 'unavailable' ? 'Unavailable' : 
+                          '✨ Available - Click to book'
+                        }
                       >
                         {statusIcon}
                         {displayTime}
@@ -400,7 +433,7 @@ export default function ChangeAppointmentModal({
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-slate-900 border-t border-white/10 p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-sm text-foreground/70">
               {selectedService ? (
                 <>
@@ -410,11 +443,11 @@ export default function ChangeAppointmentModal({
                 <>Select service, date and time</>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-white transition-colors w-full sm:w-auto"
               >
                 Cancel
               </button>
@@ -422,7 +455,7 @@ export default function ChangeAppointmentModal({
                 type="button"
                 onClick={handleConfirm}
                 disabled={!canConfirm}
-                className="inline-flex items-center justify-center rounded-lg bg-[var(--kb-primary-brand)] px-6 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-[var(--kb-primary-brand)]/90 transition-colors"
+                className="inline-flex items-center justify-center rounded-lg bg-[var(--kb-primary-brand)] px-6 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-[var(--kb-primary-brand)]/90 transition-colors w-full sm:w-auto"
               >
                 {isProcessing ? (
                   <>

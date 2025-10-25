@@ -69,6 +69,8 @@ export default function CheckoutClient() {
     specialties: ['Hair', 'Makeup'],
     timezone: 'Asia/Kathmandu',
     isActive: true,
+    isFeatured: false,
+    avatarUrl: '',
     ratingAverage: 4.9,
     totalBookings: 150,
     services: [
@@ -135,6 +137,7 @@ export default function CheckoutClient() {
         name: item.product_name || 'Product',
         variant: item.variant_name,
         variantId: item.variant_id,
+        variantData: item.variant_data,  // ⭐ Include structured variant data
         imageUrl: item.image_url,
         price: item.price,
         quantity: item.quantity,
@@ -225,7 +228,8 @@ export default function CheckoutClient() {
           city: address.city,
           state: address.region,
           postal_code: '44600', // Default postal code for Nepal
-          country: 'Nepal'
+          country: 'Nepal',
+          notes: address.notes || undefined  // Delivery instructions
         },
         metadata: {
           discount_code: discountCode || undefined,
@@ -237,21 +241,20 @@ export default function CheckoutClient() {
       if (!response.success) {
         // Handle specific error cases
         // Safely check response.details regardless of type (string or array)
-        const details = response.details;
-        const hasInsufficientStock = details && (
-          Array.isArray(details) 
-            ? details.some((d: string) => d.includes('Insufficient'))
-            : String(details).includes('Insufficient')
+        const details = (response as any).details as unknown;
+        const detailsStr = typeof details === 'string' ? details : '';
+        const detailsArr = Array.isArray(details) ? (details as unknown[]) : [];
+        const hasInsufficientStock = (
+          detailsArr.some((d) => String(d).includes('Insufficient')) ||
+          detailsStr.includes('Insufficient')
         );
         
-        const hasAuthError = response.error?.includes('Authentication required') 
-          || response.error?.includes('Invalid authentication token')
-          || response.error?.includes('401')
-          || (details && (
-            typeof details === 'string' 
-              ? (details.includes('authentication') || details.includes('401'))
-              : (Array.isArray(details) && details.some((d: string) => d.includes('authentication')))
-          ));
+        const hasAuthError = (response.error?.includes('Authentication required') ?? false)
+          || (response.error?.includes('Invalid authentication token') ?? false)
+          || (response.error?.includes('401') ?? false)
+          || detailsStr.includes('authentication')
+          || detailsStr.includes('401')
+          || detailsArr.some((d) => String(d).includes('authentication'));
         
         if (hasInsufficientStock) {
           setOrderError('Some items in your cart are no longer available. Please review your cart.');
@@ -323,7 +326,7 @@ export default function CheckoutClient() {
                   const booking = bookingWrapper.booking;
                   const startDate = new Date(booking.date);
                   return (
-                    <div key={booking.id} className="flex items-start gap-4 p-4 bg-white/5 rounded-lg">
+                    <div key={booking.id} className="flex flex-col sm:flex-row items-start gap-4 p-4 bg-white/5 rounded-lg">
                       <div className="flex-shrink-0">
                         <div className="w-10 h-10 bg-[var(--kb-primary-brand)] rounded-lg flex items-center justify-center">
                           <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -334,7 +337,7 @@ export default function CheckoutClient() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-white">{booking.service}</h3>
                         <p className="text-sm text-foreground/70 mt-1">with {booking.stylist}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-foreground/60">
+                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-foreground/60">
                           <div className="flex items-center gap-1">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
@@ -353,9 +356,11 @@ export default function CheckoutClient() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex-shrink-0 text-right">
-                        <p className="font-semibold text-white">NPR {booking.price.toFixed(0)}</p>
-                        <div className="flex gap-2 mt-1">
+                      <div className="sm:text-right w-full sm:w-auto mt-3 sm:mt-0">
+                        <div className="flex items-center justify-between sm:block">
+                          <p className="font-semibold text-white">NPR {booking.price.toFixed(0)}</p>
+                        </div>
+                        <div className="flex gap-3 mt-2 sm:justify-end">
                           <button
                             onClick={() => {
                               const bookingItem = bookingItems.find(b => 

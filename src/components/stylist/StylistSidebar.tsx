@@ -7,7 +7,8 @@ import {
   Calendar, 
   Clock, 
   DollarSign, 
-  User 
+  User,
+  Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
@@ -44,6 +45,12 @@ export default function StylistSidebar() {
       label: 'My Bookings', 
       href: '/stylist/bookings',
       icon: Calendar 
+    },
+    { 
+      id: 'reviews', 
+      label: 'Reviews', 
+      href: '/stylist/reviews',
+      icon: Star 
     },
     { 
       id: 'schedule', 

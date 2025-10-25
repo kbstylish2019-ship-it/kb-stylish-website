@@ -1,0 +1,9 @@
+# Edge Function Configuration
+# https://supabase.com/docs/guides/functions/deploy#function-configuration
+
+# CRITICAL: Disable JWT verification to allow anonymous users to view reviews
+# Authentication is handled manually in the function code via verifyUser()
+verify_jwt = false
+
+# Import map not needed (using JSR imports)
+import_map = false

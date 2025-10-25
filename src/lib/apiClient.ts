@@ -232,8 +232,18 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
     }
 
     // Apply category filter
+    // Note: We need to filter by category_id since we're joining categories table
     if (filters.categories && filters.categories.length > 0) {
-      query = query.in('categories.slug', filters.categories);
+      // First get category IDs from slugs
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('id')
+        .in('slug', filters.categories);
+      
+      if (categoryData && categoryData.length > 0) {
+        const categoryIds = categoryData.map((c: any) => c.id);
+        query = query.in('category_id', categoryIds);
+      }
     }
 
     // Apply price filters (we'll filter after getting data due to aggregation complexity)
@@ -459,18 +469,31 @@ async function fetchProductsMock(params: FetchProductsParams = {}): Promise<Prod
 
 /**
  * Get available product categories for filter UI
- * In production, this would be a separate API endpoint
+ * Fetches from categories table
  */
 export async function getProductCategories(): Promise<string[]> {
-  await new Promise(resolve => setTimeout(resolve, 50));
+  noStore();
   
-  const categories = Array.from(new Set(
-    MOCK_PRODUCTS
-      .map(product => product.category)
-      .filter((category): category is string => Boolean(category))
-  ));
-
-  return categories.sort();
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('slug')
+      .eq('is_active', true)
+      .order('sort_order')
+      .order('name');
+    
+    if (error) {
+      console.error('Error fetching categories:', error);
+      return [];
+    }
+    
+    return data?.map(c => c.slug) || [];
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
 }
 
 /**
@@ -502,12 +525,31 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
   
   try {
     // L1: Check Vercel KV Cache
+    const supabase = await createClient();
     try {
       const cached = await redis.get<ProductWithVariants>(cacheKey);
       if (cached) {
         const latency = Date.now() - startTime;
         cacheMetrics.hits++;
         console.log(`[CACHE HIT] L1 Vercel KV - Key: ${cacheKey} - Latency: ${latency}ms`);
+        
+        // CRITICAL: Even on cache hit, fetch fresh review stats (volatile data)
+        try {
+          const { data: freshStats } = await supabase
+            .from('products')
+            .select('average_rating, review_count, rating_distribution')
+            .eq('id', cached.product.id)
+            .single();
+          
+          if (freshStats) {
+            cached.product.average_rating = freshStats.average_rating;
+            cached.product.review_count = freshStats.review_count;
+            cached.product.rating_distribution = freshStats.rating_distribution;
+          }
+        } catch (statsError) {
+          console.warn('Failed to fetch fresh stats on cache hit:', statsError);
+        }
+        
         return cached;
       }
     } catch (kvError) {
@@ -519,7 +561,6 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
     cacheMetrics.misses++;
     console.log(`[CACHE MISS] L1 - Fetching from database for: ${cacheKey}`);
     
-    const supabase = await createClient();
     const { data, error } = await supabase
       .rpc('get_product_with_variants', { product_slug: slug })
       .single<{
@@ -545,6 +586,25 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
       images: data.images || [],
       inventory: data.inventory || {}
     };
+
+    // CRITICAL: Always fetch fresh review stats (don't cache these volatile fields)
+    // Product stats change frequently when reviews are approved/submitted
+    try {
+      const { data: freshStats } = await supabase
+        .from('products')
+        .select('average_rating, review_count, rating_distribution')
+        .eq('id', productData.product.id)
+        .single();
+      
+      if (freshStats) {
+        productData.product.average_rating = freshStats.average_rating;
+        productData.product.review_count = freshStats.review_count;
+        productData.product.rating_distribution = freshStats.rating_distribution;
+      }
+    } catch (statsError) {
+      console.warn('Failed to fetch fresh stats:', statsError);
+      // Continue with cached stats if fresh fetch fails
+    }
 
     // Write to L1 cache (fire-and-forget)
     try {

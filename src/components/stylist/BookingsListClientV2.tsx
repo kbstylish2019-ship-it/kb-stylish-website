@@ -20,7 +20,16 @@ interface Booking {
   customerName: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerAddress?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  } | null;
   customerNotes?: string;
+  deliveryNotes?: string;
   stylistNotes?: string;
   startTime: string;
   endTime: string;
@@ -415,11 +424,11 @@ export default function BookingsListClientV2({ userId }: { userId: string }) {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="px-3 py-2 border border-white/10 rounded-lg bg-white/5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="px-3 py-2 border border-white/10 rounded-lg bg-[#1a1625] text-foreground focus:outline-none focus:ring-2 focus:ring-primary [&>option]:bg-[#1a1625] [&>option]:text-foreground"
             aria-label="Sort bookings"
           >
             {(Object.entries(SORT_OPTIONS) as [string, SortOption][]).map(([key, value]) => (
-              <option key={value} value={value}>
+              <option key={value} value={value} className="bg-[#1a1625] text-foreground">
                 {value === SORT_OPTIONS.DATE_DESC ? 'Newest First' :
                  value === SORT_OPTIONS.DATE_ASC ? 'Oldest First' :
                  value === SORT_OPTIONS.CUSTOMER_NAME ? 'Customer A-Z' :
@@ -467,7 +476,7 @@ export default function BookingsListClientV2({ userId }: { userId: string }) {
           {filteredAndSortedBookings.map((booking, index) => (
             <Card 
               key={booking.id} 
-              className={`p-6 rounded-xl border border-white/10 bg-white/5 ring-1 ring-white/10 transition-all ${
+              className={`p-4 sm:p-6 rounded-xl border border-white/10 bg-white/5 ring-1 ring-white/10 transition-all ${
                 focusedIndex === index ? 'ring-2 ring-primary' : ''
               } ${hasSelection ? 'hover:bg-white/10' : 'hover:bg-white/8'}`}
             >
@@ -540,11 +549,30 @@ export default function BookingsListClientV2({ userId }: { userId: string }) {
                         </div>
                       )}
 
+                      {/* Address */}
+                      {booking.customerAddress && (
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          <span>📍 {booking.customerAddress.line1}
+                          {booking.customerAddress.line2 && `, ${booking.customerAddress.line2}`}
+                          {booking.customerAddress.city && `, ${booking.customerAddress.city}`}
+                          {booking.customerAddress.state && `, ${booking.customerAddress.state}`}
+                          {booking.customerAddress.postalCode && ` ${booking.customerAddress.postalCode}`}</span>
+                        </div>
+                      )}
+
                       {/* Customer Notes */}
                       {booking.customerNotes && (
                         <div className="mt-2 p-2 bg-white/5 border border-white/10 rounded text-sm">
-                          <p className="font-medium text-xs text-muted-foreground mb-1">Customer Notes:</p>
+                          <p className="font-medium text-xs text-muted-foreground mb-1">Booking Notes:</p>
                           <p className="text-foreground">{booking.customerNotes}</p>
+                        </div>
+                      )}
+
+                      {/* Delivery Notes from Checkout */}
+                      {booking.deliveryNotes && (
+                        <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-sm">
+                          <p className="font-medium text-xs text-blue-400 mb-1">Delivery Instructions:</p>
+                          <p className="text-foreground">{booking.deliveryNotes}</p>
                         </div>
                       )}
 

@@ -37,13 +37,13 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
   return (
     <div className="flex items-center gap-3">
       {/* Category Pills (compact) */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto whitespace-nowrap -mx-1 px-1 pb-1">
         {categories.map((category) => (
           <button
             key={category}
             onClick={() => onChange(category)}
             className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+              "rounded-full px-3 py-1.5 text-xs font-medium transition-colors shrink-0",
               value === category
                 ? "bg-[var(--kb-primary-brand)] text-white"
                 : "bg-white/5 text-foreground/70 hover:bg-white/10 hover:text-foreground"

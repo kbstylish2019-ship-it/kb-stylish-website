@@ -97,6 +97,11 @@ export async function GET(request: NextRequest) {
         stylist:stylist_profiles!bookings_stylist_user_id_fkey (
           display_name,
           user_id
+        ),
+        rating:stylist_ratings!stylist_ratings_booking_id_fkey (
+          rating,
+          review_text,
+          created_at
         )
       `)
       .eq('customer_user_id', user.id)
@@ -164,6 +169,11 @@ export async function GET(request: NextRequest) {
       stylist: booking.stylist ? {
         displayName: booking.stylist.display_name,
         avatarUrl: null, // TODO: Fetch from user_profiles separately if needed
+      } : null,
+      rating: booking.rating && (Array.isArray(booking.rating) ? booking.rating.length > 0 : booking.rating) ? {
+        rating: Array.isArray(booking.rating) ? booking.rating[0].rating : booking.rating.rating,
+        review_text: Array.isArray(booking.rating) ? booking.rating[0].review_text : booking.rating.review_text,
+        created_at: Array.isArray(booking.rating) ? booking.rating[0].created_at : booking.rating.created_at,
       } : null,
     }));
 

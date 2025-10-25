@@ -73,17 +73,14 @@ function mapRolesToCapabilities(roles: string[]): UserCapabilities {
     canViewProfile: false,
   }
 
+  // IMPORTANT: Each role grants ONLY its own capabilities
+  // Admins don't automatically get vendor/stylist access unless they have those roles too
   roles.forEach(role => {
     switch (role) {
       case 'admin':
         capabilities.canAccessAdmin = true
-        capabilities.canManageProducts = true
-        capabilities.canManageBookings = true
-        capabilities.canViewAnalytics = true
         capabilities.canManageUsers = true
-        capabilities.canAccessVendorDashboard = true
-        capabilities.canAccessStylistDashboard = true
-        capabilities.canBookServices = true
+        capabilities.canViewAnalytics = true
         capabilities.canViewProfile = true
         break
       

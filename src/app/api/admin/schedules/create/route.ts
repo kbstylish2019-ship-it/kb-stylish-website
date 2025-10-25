@@ -12,6 +12,8 @@ interface ScheduleDay {
 interface CreateScheduleRequest {
   stylistId: string;
   schedules: ScheduleDay[];
+  effectiveFrom?: string;  // Optional YYYY-MM-DD
+  effectiveUntil?: string; // Optional YYYY-MM-DD
 }
 
 /**
@@ -23,17 +25,27 @@ interface CreateScheduleRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CreateScheduleRequest = await request.json();
-    const { stylistId, schedules } = body;
+    const { stylistId, schedules, effectiveFrom, effectiveUntil } = body;
 
     // ========================================================================
     // VALIDATION
     // ========================================================================
     
-    if (!stylistId || !schedules || !Array.isArray(schedules)) {
+    if (!stylistId || !schedules || !Array.isArray(schedules) || schedules.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: stylistId, schedules', code: 'VALIDATION_ERROR' },
+        { success: false, error: 'Invalid request data', code: 'VALIDATION_ERROR' },
         { status: 400 }
       );
+    }
+
+    // Validate effective date range if both provided
+    if (effectiveFrom && effectiveUntil) {
+      if (new Date(effectiveFrom) > new Date(effectiveUntil)) {
+        return NextResponse.json(
+          { success: false, error: 'End date must be after start date', code: 'VALIDATION_ERROR' },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate each schedule day
@@ -122,7 +134,9 @@ export async function POST(request: NextRequest) {
       'admin_create_stylist_schedule',
       {
         p_stylist_id: stylistId,
-        p_schedules: schedules
+        p_schedules: schedules,
+        p_effective_from: effectiveFrom || null,
+        p_effective_until: effectiveUntil || null
       }
     );
 

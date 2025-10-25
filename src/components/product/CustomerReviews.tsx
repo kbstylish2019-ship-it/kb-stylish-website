@@ -46,26 +46,29 @@ export default function CustomerReviews({
   reviewCount,
   initialReviews = [],
   stats,
-  canReview = false,
-  orderId,
 }: {
   productId?: string;
   avgRating: number;
   reviewCount: number;
   initialReviews?: ReviewWithMeta[];
   stats?: ReviewStats;
-  canReview?: boolean;
-  orderId?: string;
 }) {
   const [reviews, setReviews] = useState<ReviewWithMeta[]>(initialReviews);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [localReviewCount, setLocalReviewCount] = useState(reviewCount);
   const [localAvgRating, setLocalAvgRating] = useState(avgRating);
+  const [localDistribution, setLocalDistribution] = useState(stats?.distribution || {});
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [nextCursor, setNextCursor] = useState<string>();
   const [hasMore, setHasMore] = useState(true);
-  const [initialLoadDone, setInitialLoadDone] = useState(false); // Always start with false to trigger initial load
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  
+  // Review eligibility state (server-verified)
+  const [canReview, setCanReview] = useState(false);
+  const [orderId, setOrderId] = useState<string | undefined>();
+  const [eligibilityChecked, setEligibilityChecked] = useState(false);
+  const [eligibilityMessage, setEligibilityMessage] = useState<string>();
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -81,22 +84,34 @@ export default function CustomerReviews({
     triggerOnce: false
   });
   
-  // Check authentication status and user's order for this product on mount
+  // Check authentication status and review eligibility on mount
   useEffect(() => {
     checkAuthStatus();
-    fetchUserOrder();
-  }, []);
+    checkReviewEligibility();
+  }, [productId]);
 
-  const fetchUserOrder = async () => {
+  const checkReviewEligibility = async () => {
     if (!productId) return;
     
     try {
-      // TODO: Create an API endpoint to fetch user's order for this product
-      // For now, we'll disable the review form for vendor users
-      // since vendors shouldn't be reviewing their own products
-      console.log('[CustomerReviews] Checking user order for product:', productId);
+      console.log('[CustomerReviews] Checking review eligibility for product:', productId);
+      
+      const response = await fetch(`/api/user/reviews/eligibility?productId=${productId}`);
+      const data = await response.json();
+      
+      setCanReview(data.canReview);
+      setOrderId(data.orderId);
+      setEligibilityMessage(data.message);
+      setEligibilityChecked(true);
+      
+      console.log('[CustomerReviews] Eligibility result:', {
+        canReview: data.canReview,
+        reason: data.reason,
+        message: data.message
+      });
     } catch (error) {
-      console.error('[CustomerReviews] Error fetching user order:', error);
+      console.error('[CustomerReviews] Error checking eligibility:', error);
+      setEligibilityChecked(true);
     }
   };
 
@@ -125,6 +140,7 @@ export default function CustomerReviews({
           if (response.stats) {
             setLocalAvgRating(response.stats.average);
             setLocalReviewCount(response.stats.total);
+            setLocalDistribution(response.stats.distribution || {});
           }
         }
       } catch (error) {
@@ -359,25 +375,35 @@ export default function CustomerReviews({
           stats={{
             average: localAvgRating,
             total: localReviewCount,
-            distribution: stats?.distribution || {}
+            distribution: localDistribution
           }}
         />
         
-        {/* Review Submission Form - Show for verified purchasers */}
-        {productId && canReview && orderId && (
-          <ReviewSubmissionForm
-            productId={productId}
-            orderId={orderId}
-            onSuccess={handleReviewSuccess}
-          />
-        )}
-        
-        {productId && canReview && !orderId && (
-          <div className="p-6 bg-yellow-900/30 border border-yellow-600/30 rounded-lg">
-            <p className="text-yellow-200 text-sm">
-              ⚠️ You can only review products you have purchased and received.
-            </p>
-          </div>
+        {/* Review Submission Form - Show only after eligibility check */}
+        {eligibilityChecked && productId && (
+          <>
+            {canReview && orderId ? (
+              <ReviewSubmissionForm
+                productId={productId}
+                orderId={orderId}
+                onSuccess={handleReviewSuccess}
+              />
+            ) : eligibilityMessage && (
+              <div className={`p-6 rounded-lg border ${
+                eligibilityMessage.includes('purchase')
+                  ? 'bg-blue-900/20 border-blue-600/30'
+                  : 'bg-yellow-900/30 border-yellow-600/30'
+              }`}>
+                <p className={`text-sm ${
+                  eligibilityMessage.includes('purchase')
+                    ? 'text-blue-200'
+                    : 'text-yellow-200'
+                }`}>
+                  {eligibilityMessage}
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
       

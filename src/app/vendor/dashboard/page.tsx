@@ -105,6 +105,25 @@ export default async function VendorDashboardPage() {
   const { getVendorPayouts } = await import('@/actions/vendor/payouts');
   const payoutData = await getVendorPayouts();
   
+  // 4. Fetch vendor commission rate
+  let commissionRate = 0.15; // Default to 15%
+  try {
+    const { data: vendorProfile } = await supabase
+      .from('vendor_profiles')
+      .select('commission_rate')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (vendorProfile?.commission_rate) {
+      commissionRate = vendorProfile.commission_rate;
+    }
+  } catch (error) {
+    console.error('Failed to fetch commission rate:', error);
+    // Use default 15%
+  }
+  
+  const commissionPercentage = (commissionRate * 100).toFixed(0); // e.g., "15" or "12"
+  
   // 3.6. Fetch recent orders (last 10)
   const { data: recentOrders } = await supabase
     .from('orders')
@@ -139,7 +158,7 @@ export default async function VendorDashboardPage() {
     );
   }
   
-  // 5. Transform stats for display (cents to NPR)
+  // 6. Transform stats for display (cents to NPR)
   const todayOrders = stats.today.orders;
   const todayRevenue = (stats.today.gmv_cents / 100).toLocaleString('en-IN');
   const todayRefunds = (stats.today.refunds_cents / 100).toLocaleString('en-IN');
@@ -162,10 +181,10 @@ export default async function VendorDashboardPage() {
 
   return (
     <>
-      <OnboardingWizardWrapper />
-      <DashboardLayout title="Vendor Dashboard" actions={<VendorCtaButton />} sidebar={<VendorSidebar />}> 
+      <DashboardLayout title="Vendor Dashboard" actions={<VendorCtaButton userId={user.id} />} sidebar={<VendorSidebar />}> 
+        <OnboardingWizardWrapper />
         {/* Live Stat Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard 
             title="Today's Orders" 
             value={todayOrders} 
@@ -189,7 +208,7 @@ export default async function VendorDashboardPage() {
           <StatCard 
             title="Platform Fees" 
             value={`NPR ${platformFees}`} 
-            subtitle="Last 30 days (15%)"
+            subtitle={`Last 30 days (${commissionPercentage}%)`}
             icon={<TrendingUp className="h-5 w-5 text-[var(--kb-primary-brand)]" />} 
           />
         </div>
@@ -219,13 +238,13 @@ export default async function VendorDashboardPage() {
         )}
 
         {/* Payouts Snapshot */}
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 grid-cols-1 lg:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10 lg:col-span-2">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Payouts Snapshot (30 Days)</h2>
               <Link className="text-sm text-[var(--kb-accent-gold)] hover:underline" href="/vendor/payouts">View all</Link>
             </div>
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard 
                 title="Available Balance" 
                 value={`NPR ${availableBalance}`} 
@@ -234,7 +253,7 @@ export default async function VendorDashboardPage() {
               <StatCard 
                 title="Platform Fees" 
                 value={`NPR ${platformFees}`} 
-                subtitle="15% commission" 
+                subtitle={`${commissionPercentage}% commission`}
               />
               <StatCard 
                 title="Refunds" 
@@ -279,8 +298,8 @@ export default async function VendorDashboardPage() {
           
           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden ring-1 ring-white/10">
             {recentOrders && recentOrders.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto w-full">
+                <table className="min-w-[900px] text-sm">
                   <thead className="bg-white/5">
                     <tr className="border-b border-white/10">
                       <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Order #</th>
