@@ -87,8 +87,8 @@ function PaymentCallbackContent() {
     const purchaseOrderId = searchParams.get('purchase_order_id'); // Khalti
     const purchaseOrderName = searchParams.get('purchase_order_name'); // Khalti
     const transactionId = searchParams.get('transaction_id'); // Khalti
-    const merchantTxnId = searchParams.get('MerchantTxnId'); // NPX
-    const gatewayTxnId = searchParams.get('GatewayTxnId'); // NPX
+    let merchantTxnId = searchParams.get('MerchantTxnId'); // NPX
+    let gatewayTxnId = searchParams.get('GatewayTxnId'); // NPX
     let data = searchParams.get('data'); // eSewa v2 callback data (base64 JSON)
 
     console.log('[PaymentCallback] Raw received params:', {
@@ -111,6 +111,31 @@ function PaymentCallbackContent() {
       provider = parts[0]; // Extract clean provider name
       data = parts[1]; // Extract base64 data
       console.log('[PaymentCallback] Extracted from malformed provider:', { provider, dataLength: data?.length });
+    }
+
+    // Handle malformed NPX provider parameter (e.g., 'npx?MerchantTxnId=...')
+    // This happens when NPX appends ?MerchantTxnId=... to a URL that already has query params
+    if (provider && provider.includes('?')) {
+      const parts = provider.split('?');
+      provider = parts[0]; // Extract clean provider name (e.g., 'npx')
+      
+      // Parse the malformed query string from provider parameter
+      const malformedQuery = parts[1];
+      const malformedParams = new URLSearchParams(malformedQuery);
+      
+      // Extract NPX parameters if not already present
+      if (!merchantTxnId && malformedParams.has('MerchantTxnId')) {
+        merchantTxnId = malformedParams.get('MerchantTxnId');
+      }
+      if (!gatewayTxnId && malformedParams.has('GatewayTxnId')) {
+        gatewayTxnId = malformedParams.get('GatewayTxnId');
+      }
+      
+      console.log('[PaymentCallback] Extracted from malformed NPX provider:', { 
+        provider, 
+        merchantTxnId, 
+        gatewayTxnId 
+      });
     }
 
     // Handle eSewa v2 callback format where data is base64-encoded JSON
