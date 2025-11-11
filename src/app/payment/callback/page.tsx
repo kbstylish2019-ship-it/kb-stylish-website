@@ -80,13 +80,15 @@ function PaymentCallbackContent() {
   }
 
   async function verifyPayment() {
-    let provider = searchParams.get('provider'); // 'esewa' or 'khalti'
+    let provider = searchParams.get('provider'); // 'esewa', 'khalti', or 'npx'
     let transactionUuid = searchParams.get('transaction_uuid'); // eSewa
     const transactionCode = searchParams.get('transaction_code'); // eSewa
     const pidx = searchParams.get('pidx'); // Khalti
     const purchaseOrderId = searchParams.get('purchase_order_id'); // Khalti
     const purchaseOrderName = searchParams.get('purchase_order_name'); // Khalti
     const transactionId = searchParams.get('transaction_id'); // Khalti
+    const merchantTxnId = searchParams.get('MerchantTxnId'); // NPX
+    const gatewayTxnId = searchParams.get('GatewayTxnId'); // NPX
     let data = searchParams.get('data'); // eSewa v2 callback data (base64 JSON)
 
     console.log('[PaymentCallback] Raw received params:', {
@@ -97,7 +99,9 @@ function PaymentCallbackContent() {
       pidx,
       purchaseOrderId,
       purchaseOrderName,
-      transactionId
+      transactionId,
+      merchantTxnId, // NPX
+      gatewayTxnId // NPX
     });
 
     // Handle malformed provider parameter (e.g., 'esewa?data=...')
@@ -134,7 +138,7 @@ function PaymentCallbackContent() {
     }
 
     // Validate provider
-    if (!provider || (provider !== 'esewa' && provider !== 'khalti')) {
+    if (!provider || (provider !== 'esewa' && provider !== 'khalti' && provider !== 'npx')) {
       setStatus('error');
       setError(`Invalid payment provider: ${provider}`);
       return;
@@ -153,12 +157,20 @@ function PaymentCallbackContent() {
       return;
     }
 
+    if (provider === 'npx' && !merchantTxnId) {
+      setStatus('error');
+      setError('Missing transaction details from NPX');
+      return;
+    }
+
     try {
       // Call verify-payment Edge Function
       const verifyRequest = {
-        provider: provider as 'esewa' | 'khalti',
+        provider: provider as 'esewa' | 'khalti' | 'npx',
         transaction_uuid: transactionUuid || undefined,
         pidx: pidx || undefined,
+        merchant_txn_id: merchantTxnId || undefined, // NPX
+        gateway_txn_id: gatewayTxnId || undefined, // NPX
       };
       console.log('[PaymentCallback] Verifying payment with backend...');
       console.log('[PaymentCallback] Verify request payload:', JSON.stringify(verifyRequest, null, 2));

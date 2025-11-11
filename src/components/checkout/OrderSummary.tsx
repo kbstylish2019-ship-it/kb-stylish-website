@@ -30,7 +30,8 @@ export default function OrderSummary({
   onClearError,
 }: OrderSummaryProps) {
   const paymentBtns: { id: PaymentMethod; label: string }[] = [
-    { id: "esewa", label: "eSewa" },
+    // { id: "esewa", label: "eSewa" }, // Temporarily hidden due to business conflict
+    { id: "npx", label: "Nepal Payment (NPX)" },
     { id: "khalti", label: "Khalti" },
     { id: "cod", label: "Cash on Delivery" },
   ];

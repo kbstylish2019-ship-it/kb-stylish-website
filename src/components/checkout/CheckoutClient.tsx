@@ -208,7 +208,7 @@ export default function CheckoutClient() {
     
     // Check if payment method is supported by gateway
     if (payment === 'cod') {
-      setOrderError('Cash on Delivery is not yet supported. Please select eSewa or Khalti.');
+      setOrderError('Cash on Delivery is not yet supported. Please select Nepal Payment or Khalti.');
       return;
     }
     
@@ -219,7 +219,7 @@ export default function CheckoutClient() {
       // Step 1: Create order intent with backend (includes payment gateway integration)
       console.log('[CheckoutClient] Creating order intent with payment method:', payment);
       const response = await cartAPI.createOrderIntent({
-        payment_method: payment as 'esewa' | 'khalti',
+        payment_method: payment as 'esewa' | 'khalti' | 'npx',
         shipping_address: {
           name: address.fullName,
           phone: address.phone,
@@ -270,7 +270,27 @@ export default function CheckoutClient() {
       }
       
       // Step 2: Handle payment gateway redirect based on method
-      if (response.payment_method === 'esewa') {
+      if (response.payment_method === 'npx') {
+        // NPX: Auto-submit form to redirect to NPX gateway
+        console.log('[CheckoutClient] Redirecting to NPX with form fields');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = response.payment_url!;
+        
+        // Add all form fields from response
+        Object.entries(response.form_fields || {}).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+        // User will be redirected, no need to continue
+        
+      } else if (response.payment_method === 'esewa') {
         // eSewa: Auto-submit form to redirect to gateway
         console.log('[CheckoutClient] Redirecting to eSewa with form fields');
         const form = document.createElement('form');

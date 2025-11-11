@@ -89,6 +89,138 @@ export async function updateFulfillmentStatus(
       };
     }
 
+    // ========================================================================
+    // SEND ORDER SHIPPED EMAIL
+    // ========================================================================
+    if (params.newStatus === 'shipped') {
+      try {
+        // Get order details including customer info
+        const { data: orderItem } = await supabase
+          .from('order_items')
+          .select(`
+            *,
+            orders!inner(
+              id,
+              user_id,
+              order_number,
+              shipping_name
+            )
+          `)
+          .eq('id', params.orderItemId)
+          .single();
+        
+        if (orderItem?.orders) {
+          // Get customer email from auth
+          const { data: { user } } = await supabase.auth.admin.getUserById(orderItem.orders.user_id);
+          
+          if (user?.email) {
+            // Trigger send-email Edge Function
+            await supabase.functions.invoke('send-email', {
+              body: {
+                email_type: 'order_shipped',
+                recipient_email: user.email,
+                recipient_user_id: orderItem.orders.user_id,
+                recipient_name: orderItem.orders.shipping_name,
+                reference_id: orderItem.orders.id,
+                reference_type: 'order',
+                template_data: {
+                  customerName: orderItem.orders.shipping_name,
+                  orderNumber: orderItem.orders.order_number,
+                  trackingNumber: params.trackingNumber || null,
+                  shippingCarrier: params.shippingCarrier || null,
+                  estimatedDelivery: null, // Can add later
+                  trackingUrl: `https://kbstylish.com.np/orders/${orderItem.orders.order_number}`,
+                },
+              },
+            });
+            console.log('[Fulfillment] Shipped email triggered for order:', orderItem.orders.order_number);
+          }
+        }
+      } catch (emailError) {
+        // Don't fail the status update if email fails
+        console.error('[Fulfillment] Failed to send shipped email:', emailError);
+      }
+    }
+
+    // ========================================================================
+    // SEND ORDER CANCELLED EMAIL
+    // ========================================================================
+    if (params.newStatus === 'cancelled') {
+      try {
+        // Get order details including customer info and all items
+        const { data: orderItem } = await supabase
+          .from('order_items')
+          .select(`
+            *,
+            orders!inner(
+              id,
+              user_id,
+              order_number,
+              shipping_name,
+              subtotal_cents,
+              total_cents,
+              payment_status,
+              order_items(
+                id,
+                product_name,
+                quantity,
+                price_at_purchase
+              )
+            )
+          `)
+          .eq('id', params.orderItemId)
+          .single();
+        
+        if (orderItem?.orders) {
+          // Get customer email from auth
+          const { data: { user } } = await supabase.auth.admin.getUserById(orderItem.orders.user_id);
+          
+          if (user?.email) {
+            // Build items array for email template
+            const items = orderItem.orders.order_items.map((item: any) => ({
+              name: item.product_name,
+              quantity: item.quantity,
+              price: item.price_at_purchase,
+            }));
+
+            // Determine refund info
+            const refundAmount = orderItem.orders.payment_status === 'captured' 
+              ? orderItem.orders.total_cents 
+              : null;
+
+            // Trigger send-email Edge Function
+            await supabase.functions.invoke('send-email', {
+              body: {
+                email_type: 'order_cancelled',
+                recipient_email: user.email,
+                recipient_user_id: orderItem.orders.user_id,
+                recipient_name: orderItem.orders.shipping_name,
+                reference_id: orderItem.orders.id,
+                reference_type: 'order_cancelled',
+                template_data: {
+                  customerName: orderItem.orders.shipping_name || 'Valued Customer',
+                  orderNumber: orderItem.orders.order_number,
+                  cancelledDate: new Date().toLocaleDateString('en-NP'),
+                  cancelledTime: new Date().toLocaleTimeString('en-NP'),
+                  reason: 'Cancelled by vendor', // Can be made dynamic
+                  refundAmount: refundAmount,
+                  refundMethod: 'Original payment method',
+                  refundETA: '3-5 business days',
+                  items: items,
+                  subtotal: orderItem.orders.subtotal_cents,
+                  supportEmail: 'support@kbstylish.com.np',
+                },
+              },
+            });
+            console.log('[Fulfillment] Cancelled email triggered for order:', orderItem.orders.order_number);
+          }
+        }
+      } catch (emailError) {
+        // Don't fail the status update if email fails
+        console.error('[Fulfillment] Failed to send cancelled email:', emailError);
+      }
+    }
+
     // Revalidate orders page to show updated data
     revalidatePath('/vendor/orders');
     revalidatePath('/vendor/dashboard');

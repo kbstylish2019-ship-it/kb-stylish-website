@@ -151,7 +151,7 @@ export interface Address {
   notes?: string;
 }
 
-export type PaymentMethod = "esewa" | "khalti" | "cod";
+export type PaymentMethod = "esewa" | "khalti" | "npx" | "cod";
 
 export interface OrderCosts {
   productSubtotal: number;

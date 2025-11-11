@@ -39,6 +39,47 @@ export default function VendorsPageClient({ initialData }: VendorsPageClientProp
           : v
       ));
       showToast(`${vendor.business_name} approved successfully`, 'success');
+      
+      // ========================================================================
+      // SEND VENDOR APPROVAL EMAIL
+      // ========================================================================
+      try {
+        const { createBrowserClient } = await import('@supabase/ssr');
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        
+        // Fetch vendor profile for contact_email (from application form)
+        const { data: vendorProfile } = await supabase
+          .from('vendor_profiles')
+          .select('contact_email, contact_name')
+          .eq('user_id', vendor.user_id)
+          .single();
+        
+        const recipientEmail = vendorProfile?.contact_email || vendor.email;
+        const recipientName = vendorProfile?.contact_name || vendor.display_name;
+        
+        await supabase.functions.invoke('send-email', {
+          body: {
+            email_type: 'vendor_approved',
+            recipient_email: recipientEmail,
+            recipient_user_id: vendor.user_id,
+            recipient_name: recipientName,
+            reference_id: vendor.user_id,
+            reference_type: 'vendor_application',
+            template_data: {
+              vendorName: recipientName,
+              businessName: vendor.business_name,
+              dashboardUrl: 'https://kbstylish.com.np/vendor/dashboard',
+            },
+          },
+        });
+        console.log('[Admin] Approval email triggered for:', vendor.business_name);
+      } catch (emailError) {
+        console.error('[Admin] Failed to send approval email:', emailError);
+        // Don't block UI - approval already succeeded
+      }
     } else {
       showToast(result?.message || 'Failed to approve vendor', 'error');
     }
@@ -60,6 +101,48 @@ export default function VendorsPageClient({ initialData }: VendorsPageClientProp
           : v
       ));
       showToast(`${vendor.business_name} rejected`, 'success');
+      
+      // ========================================================================
+      // SEND VENDOR REJECTION EMAIL
+      // ========================================================================
+      try {
+        const { createBrowserClient } = await import('@supabase/ssr');
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        
+        // Fetch vendor profile for contact_email (from application form)
+        const { data: vendorProfile } = await supabase
+          .from('vendor_profiles')
+          .select('contact_email, contact_name')
+          .eq('user_id', vendor.user_id)
+          .single();
+        
+        const recipientEmail = vendorProfile?.contact_email || vendor.email;
+        const recipientName = vendorProfile?.contact_name || vendor.display_name;
+        
+        await supabase.functions.invoke('send-email', {
+          body: {
+            email_type: 'vendor_rejected',
+            recipient_email: recipientEmail,
+            recipient_user_id: vendor.user_id,
+            recipient_name: recipientName,
+            reference_id: vendor.user_id,
+            reference_type: 'vendor_application',
+            template_data: {
+              vendorName: recipientName,
+              businessName: vendor.business_name,
+              reason: reason || null,
+              canReapply: true, // Allow reapplication by default
+            },
+          },
+        });
+        console.log('[Admin] Rejection email triggered for:', vendor.business_name);
+      } catch (emailError) {
+        console.error('[Admin] Failed to send rejection email:', emailError);
+        // Don't block UI - rejection already succeeded
+      }
     } else {
       showToast(result?.message || 'Failed to reject vendor', 'error');
     }

@@ -69,9 +69,9 @@ export interface CartItem {
 export interface PaymentIntentResponse {
   success: boolean;
   payment_intent_id?: string;
-  payment_method?: 'esewa' | 'khalti';
+  payment_method?: 'esewa' | 'khalti' | 'npx';
   payment_url?: string;
-  form_fields?: Record<string, string>; // eSewa only
+  form_fields?: Record<string, string>; // eSewa and NPX
   amount_cents?: number;
   expires_at?: string;
   error?: string;
@@ -91,15 +91,17 @@ export interface ShippingAddress {
 }
 
 export interface CreateOrderIntentRequest {
-  payment_method: 'esewa' | 'khalti';
+  payment_method: 'esewa' | 'khalti' | 'npx';
   shipping_address: ShippingAddress;
   metadata?: Record<string, any>;
 }
 
 export interface VerifyPaymentRequest {
-  provider: 'esewa' | 'khalti';
+  provider: 'esewa' | 'khalti' | 'npx';
   transaction_uuid?: string; // eSewa
   pidx?: string; // Khalti
+  merchant_txn_id?: string; // NPX
+  gateway_txn_id?: string; // NPX
 }
 
 export interface VerifyPaymentResponse {

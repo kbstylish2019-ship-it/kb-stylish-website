@@ -1,18 +1,34 @@
 // CRITICAL: Proper CORS configuration for cross-origin credentials
 // This allows the browser to send/receive cookies in cross-origin requests
 
+const denoEnv = (globalThis as { Deno?: { env: { get(key: string): string | undefined } } })
+  .Deno?.env;
+
 export function getCorsHeaders(origin: string | null): Record<string, string> {
-  // Allowed origins for development and production
-  const allowedOrigins = [
+  // Allowed origins for development and production (update defaults as needed)
+  const defaultAllowedOrigins = [
     'http://localhost:3000',
-    'http://localhost:3001', 
-    'https://kb-stylish.vercel.app',
-    // Add production domain when deployed
+    'http://localhost:3001',
+    'https://kb-stylish-website.vercel.app',
+    'https://kbstylish.com.np',
+    'https://www.kbstylish.com.np',
   ];
-  
-  // Use the request origin if it's allowed, otherwise use the first allowed origin
-  const responseOrigin = origin && allowedOrigins.includes(origin) 
-    ? origin 
+
+  const envOrigins = (denoEnv?.get('ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((value: string) => value.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = Array.from(
+    new Set([...defaultAllowedOrigins, ...envOrigins]),
+  );
+
+  const normalize = (value: string) => value.replace(/\/+$/, '');
+
+  const responseOrigin = origin && allowedOrigins.some(
+    (allowed) => normalize(allowed) === normalize(origin),
+  )
+    ? origin
     : allowedOrigins[0];
   
   return {
