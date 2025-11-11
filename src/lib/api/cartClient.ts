@@ -536,12 +536,20 @@ export class CartAPIClient {
    */
   async verifyPayment(request: VerifyPaymentRequest): Promise<VerifyPaymentResponse> {
     try {
+      // Get current session for auth token
+      let authHeader = '';
+      if (this.browserClient) {
+        const { data: { session } } = await this.browserClient.auth.getSession();
+        authHeader = session?.access_token ? `Bearer ${session.access_token}` : '';
+      }
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/verify-payment`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'apikey': this.anonKey,
+            ...(authHeader ? { 'Authorization': authHeader } : {}),
           },
           body: JSON.stringify(request),
         });

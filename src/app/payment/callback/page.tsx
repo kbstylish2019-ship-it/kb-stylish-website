@@ -138,6 +138,13 @@ function PaymentCallbackContent() {
       });
     }
 
+    // TEMPORARY: Handle case where NPX was configured with eSewa callback URLs by mistake
+    // If provider is 'esewa' but we have NPX transaction IDs, correct the provider
+    if (provider === 'esewa' && merchantTxnId && gatewayTxnId && !transactionUuid) {
+      console.log('[PaymentCallback] NPX transaction detected with esewa provider - correcting to npx');
+      provider = 'npx';
+    }
+
     // Handle eSewa v2 callback format where data is base64-encoded JSON
     if (data && !transactionUuid) {
       try {
