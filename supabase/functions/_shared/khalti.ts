@@ -114,7 +114,7 @@ export async function initiateKhaltiPayment(
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
 
   try {
-    const response = await fetch('https://a.khalti.com/api/v2/epayment/initiate/', {
+    const response = await fetch('https://dev.khalti.com/api/v2/epayment/initiate/', {
       method: 'POST',
       headers: {
         'Authorization': `Key ${secretKey}`,
@@ -245,7 +245,7 @@ export async function verifyKhaltiTransaction(
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
 
   try {
-    const response = await fetch('https://khalti.com/api/v2/epayment/lookup/', {
+    const response = await fetch('https://dev.khalti.com/api/v2/epayment/lookup/', {
       method: 'POST',
       headers: {
         'Authorization': `Key ${secretKey}`,
