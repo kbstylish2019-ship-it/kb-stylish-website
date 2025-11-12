@@ -91,6 +91,14 @@ function PaymentCallbackContent() {
     let gatewayTxnId = searchParams.get('GatewayTxnId'); // NPX
     let data = searchParams.get('data'); // eSewa v2 callback data (base64 JSON)
 
+    // CRITICAL: Detect NPX payments coming through eSewa callback URLs
+    // NPX team configured eSewa URLs in their dashboard, so NPX payments come with provider=esewa
+    // but have NPX-specific parameters (MerchantTxnId, GatewayTxnId)
+    if (provider === 'esewa' && merchantTxnId && gatewayTxnId) {
+      console.log('[PaymentCallback] Detected NPX payment via eSewa callback URL');
+      provider = 'npx'; // Override provider to handle as NPX payment
+    }
+
     console.log('[PaymentCallback] Raw received params:', {
       provider,
       transactionUuid,

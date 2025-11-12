@@ -251,7 +251,7 @@ Deno.serve(async (req)=>{
         amount: amountNPR,
         merchantTxnId,
         processId: processIdResult.processId,
-        responseUrl: `${baseUrl}/payment/callback?provider=npx`
+        responseUrl: `${baseUrl}/payment/callback?provider=esewa`
       });
       
       paymentIntentId = merchantTxnId; // Use same ID for consistency
