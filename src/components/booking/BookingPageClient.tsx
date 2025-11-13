@@ -2,8 +2,9 @@
 import * as React from "react";
 import StylistCard from "@/components/homepage/StylistCard";
 import StylistFilter from "@/components/booking/StylistFilter";
+import BranchFilter from "@/components/booking/BranchFilter";
 import BookingModal from "@/components/booking/BookingModal";
-import type { StylistWithServices } from "@/lib/apiClient";
+import type { StylistWithServices, KBBranch } from "@/lib/apiClient";
 
 interface SpecialtyType {
   id: string;
@@ -16,14 +17,17 @@ interface BookingPageClientProps {
   stylists: StylistWithServices[];
   categories: string[];
   specialtyTypes?: SpecialtyType[];
+  branches: KBBranch[];
 }
 
 export default function BookingPageClient({ 
   stylists, 
   categories,
-  specialtyTypes = [] 
+  specialtyTypes = [],
+  branches
 }: BookingPageClientProps) {
   const [filter, setFilter] = React.useState<string>("All");
+  const [selectedBranch, setSelectedBranch] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<StylistWithServices | null>(null);
   const [stylistSpecialties, setStylistSpecialties] = React.useState<Record<string, any[]>>({});
 
@@ -52,33 +56,51 @@ export default function BookingPageClient({
     fetchAllSpecialties();
   }, [stylists]);
 
-  // Filter stylists based on selected category or specialty
+  // Filter stylists based on selected branch, category, or specialty
   const filteredStylists = React.useMemo(() => {
-    if (filter === "All") return stylists;
+    let filtered = stylists;
     
-    // Check if filter is a specialty ID (only if specialtyTypes is provided)
-    const isSpecialtyFilter = specialtyTypes && specialtyTypes.length > 0 
-      ? specialtyTypes.some(st => st.id === filter) 
-      : false;
-    
-    if (isSpecialtyFilter) {
-      // Filter by specialty
-      return stylists.filter(stylist => {
-        const specs = stylistSpecialties[stylist.id] || [];
-        return specs.some((s: any) => s.specialty_id === filter);
-      });
-    } else {
-      // Filter by service category
-      return stylists.filter(stylist =>
-        stylist.services.some(service => service.category === filter)
-      );
+    // First filter by branch if selected
+    if (selectedBranch) {
+      filtered = filtered.filter(stylist => stylist.branch?.id === selectedBranch);
     }
-  }, [stylists, filter, stylistSpecialties, specialtyTypes]);
+    
+    // Then filter by category/specialty if not "All"
+    if (filter !== "All") {
+      // Check if filter is a specialty ID (only if specialtyTypes is provided)
+      const isSpecialtyFilter = specialtyTypes && specialtyTypes.length > 0 
+        ? specialtyTypes.some(st => st.id === filter) 
+        : false;
+      
+      if (isSpecialtyFilter) {
+        // Filter by specialty
+        filtered = filtered.filter(stylist => {
+          const specs = stylistSpecialties[stylist.id] || [];
+          return specs.some((s: any) => s.specialty_id === filter);
+        });
+      } else {
+        // Filter by service category
+        filtered = filtered.filter(stylist =>
+          stylist.services.some(service => service.category === filter)
+        );
+      }
+    }
+    
+    return filtered;
+  }, [stylists, selectedBranch, filter, stylistSpecialties, specialtyTypes]);
 
   return (
     <>
       {/* Filter bar */}
-      <div className="mt-6">
+      <div className="mt-6 space-y-4">
+        {/* Branch filter - Primary filter */}
+        <BranchFilter
+          branches={branches}
+          selectedBranch={selectedBranch}
+          onBranchChange={setSelectedBranch}
+        />
+        
+        {/* Category and specialty filters */}
         <StylistFilter 
           categories={categories}
           specialtyTypes={specialtyTypes}
@@ -102,6 +124,7 @@ export default function BookingPageClient({
             reviewCount: stylist.totalBookings || 0,
             availability: 'Available Today', // Could be calculated from actual availability
             isFeatured: stylist.isFeatured,
+            location: stylist.branch?.name, // Display branch name
             services: stylist.services.map(s => ({
               name: s.name,
               duration: `${s.durationMinutes} min`,

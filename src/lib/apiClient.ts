@@ -897,6 +897,18 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 // BOOKING ENGINE API FUNCTIONS
 // =====================================================================
 
+export interface KBBranch {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  managerName: string | null;
+  operatingHours: Record<string, any>;
+  isActive: boolean;
+  displayOrder: number;
+}
+
 export interface StylistWithServices {
   id: string;
   displayName: string;
@@ -910,6 +922,7 @@ export interface StylistWithServices {
   totalBookings: number;
   isFeatured: boolean;
   avatarUrl: string | null;
+  branch?: KBBranch | null;
   services: BookingService[];
 }
 
@@ -959,18 +972,18 @@ export interface BookingResponse {
 }
 
 /**
- * Fetch all active stylists with their services
- * Performs joins on stylist_profiles, stylist_services, and services
+ * Fetch all active stylists with their services and branch information
+ * Performs joins on stylist_profiles, stylist_services, services, and kb_branches
  */
-export async function fetchActiveStylistsWithServices(): Promise<StylistWithServices[]> {
+export async function fetchActiveStylistsWithServices(branchId?: string): Promise<StylistWithServices[]> {
   noStore(); // Disable Next.js caching for real-time data
   const startTime = Date.now();
 
   try {
     const supabase = await createClient();
 
-    // Fetch stylists with their services and avatar from user_profiles
-    const { data: stylists, error } = await supabase
+    // Build query with branch join and optional filtering
+    let query = supabase
       .from('stylist_profiles')
       .select(`
         user_id,
@@ -984,8 +997,20 @@ export async function fetchActiveStylistsWithServices(): Promise<StylistWithServ
         rating_average,
         total_bookings,
         is_featured,
+        branch_id,
         user_profiles!inner (
           avatar_url
+        ),
+        kb_branches (
+          id,
+          name,
+          address,
+          phone,
+          email,
+          manager_name,
+          operating_hours,
+          is_active,
+          display_order
         ),
         stylist_services!inner (
           service_id,
@@ -1007,8 +1032,14 @@ export async function fetchActiveStylistsWithServices(): Promise<StylistWithServ
       `)
       .eq('is_active', true)
       .eq('stylist_services.is_available', true)
-      .eq('stylist_services.services.is_active', true)
-      .order('display_name', { ascending: true });
+      .eq('stylist_services.services.is_active', true);
+
+    // Add branch filter if specified
+    if (branchId) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    const { data: stylists, error } = await query.order('display_name', { ascending: true });
 
     const latency = Date.now() - startTime;
     console.log(`[BOOKING API] Fetched stylists - Latency: ${latency}ms, Count: ${stylists?.length || 0}`);
@@ -1032,6 +1063,17 @@ export async function fetchActiveStylistsWithServices(): Promise<StylistWithServ
       totalBookings: stylist.total_bookings,
       isFeatured: stylist.is_featured || false,
       avatarUrl: stylist.user_profiles?.avatar_url || null,
+      branch: stylist.kb_branches ? {
+        id: stylist.kb_branches.id,
+        name: stylist.kb_branches.name,
+        address: stylist.kb_branches.address,
+        phone: stylist.kb_branches.phone,
+        email: stylist.kb_branches.email,
+        managerName: stylist.kb_branches.manager_name,
+        operatingHours: stylist.kb_branches.operating_hours || {},
+        isActive: stylist.kb_branches.is_active,
+        displayOrder: stylist.kb_branches.display_order || 0,
+      } : null,
       services: (stylist.stylist_services || []).map((ss: any) => ({
         id: ss.services.id,
         name: ss.services.name,
@@ -1048,6 +1090,60 @@ export async function fetchActiveStylistsWithServices(): Promise<StylistWithServ
 
   } catch (error) {
     console.error('fetchActiveStylistsWithServices error:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch all active KB Stylish branches for location filtering
+ * Used in booking page and admin onboarding
+ */
+export async function fetchActiveBranches(): Promise<KBBranch[]> {
+  noStore(); // Disable Next.js caching for real-time data
+  const startTime = Date.now();
+
+  try {
+    const supabase = await createClient();
+
+    const { data: branches, error } = await supabase
+      .from('kb_branches')
+      .select(`
+        id,
+        name,
+        address,
+        phone,
+        email,
+        manager_name,
+        operating_hours,
+        is_active,
+        display_order
+      `)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    const latency = Date.now() - startTime;
+    console.log(`[BRANCHES API] Fetched branches - Latency: ${latency}ms, Count: ${branches?.length || 0}`);
+
+    if (error) {
+      console.error('Error fetching branches:', error);
+      return [];
+    }
+
+    // Transform the data
+    return (branches || []).map((branch: any) => ({
+      id: branch.id,
+      name: branch.name,
+      address: branch.address,
+      phone: branch.phone,
+      email: branch.email,
+      managerName: branch.manager_name,
+      operatingHours: branch.operating_hours || {},
+      isActive: branch.is_active,
+      displayOrder: branch.display_order || 0,
+    }));
+
+  } catch (error) {
+    console.error('fetchActiveBranches error:', error);
     return [];
   }
 }
@@ -2403,4 +2499,265 @@ export async function fetchFeaturedStylists(limit: number = 6): Promise<Featured
     console.error('[Curation API] Error fetching featured stylists:', error);
     return [];
   }
+}
+
+// ============================================================================
+// SUPPORT SYSTEM API FUNCTIONS
+// ============================================================================
+
+export interface SupportCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed';
+  category?: string;
+  category_color?: string;
+  customer_name?: string;
+  customer_email?: string;
+  assigned_to?: string;
+  order_reference?: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at?: string;
+  closed_at?: string;
+  message_count?: number;
+  last_message_at?: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  message_text: string;
+  is_system: boolean;
+  created_at: string;
+  user_name?: string;
+  user_avatar?: string;
+}
+
+export interface CreateTicketRequest {
+  category_id?: string;
+  subject: string;
+  message: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  order_reference?: string;
+}
+
+export interface TicketListResponse {
+  tickets: SupportTicket[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface TicketDetailsResponse {
+  ticket: SupportTicket;
+  messages: SupportMessage[];
+}
+
+/**
+ * Create a new support ticket
+ */
+export async function createSupportTicket(
+  ticketData: CreateTicketRequest,
+  accessToken?: string
+): Promise<{ success: boolean; ticket_id?: string; error?: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Support API] Missing Supabase environment variables');
+    return { success: false, error: 'Configuration error' };
+  }
+  
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/support-ticket-manager/create`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken || anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ticketData),
+      }
+    );
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('[Support API] Create ticket failed:', data);
+      return { success: false, error: data.error || 'Failed to create ticket' };
+    }
+    
+    return {
+      success: true,
+      ticket_id: data.data?.ticket_id
+    };
+    
+  } catch (error) {
+    console.error('[Support API] Create ticket error:', error);
+    return { success: false, error: 'Network error' };
+  }
+}
+
+/**
+ * Get user's support tickets
+ */
+export async function getUserSupportTickets(
+  limit: number = 20,
+  offset: number = 0,
+  accessToken?: string
+): Promise<TicketListResponse | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Support API] Missing Supabase environment variables');
+    return null;
+  }
+  
+  try {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString()
+    });
+    
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/support-ticket-manager/tickets?${params}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken || anonKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('[Support API] Get tickets failed:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : null;
+    
+  } catch (error) {
+    console.error('[Support API] Get tickets error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get support ticket details with messages
+ */
+export async function getSupportTicketDetails(
+  ticketId: string,
+  accessToken?: string
+): Promise<TicketDetailsResponse | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Support API] Missing Supabase environment variables');
+    return null;
+  }
+  
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/support-ticket-manager/ticket/${ticketId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken || anonKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('[Support API] Get ticket details failed:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.success ? data.data : null;
+    
+  } catch (error) {
+    console.error('[Support API] Get ticket details error:', error);
+    return null;
+  }
+}
+
+/**
+ * Add message to support ticket
+ */
+export async function addSupportMessage(
+  ticketId: string,
+  message: string,
+  accessToken?: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !anonKey) {
+    console.error('[Support API] Missing Supabase environment variables');
+    return { success: false, error: 'Configuration error' };
+  }
+  
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/support-ticket-manager/message`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken || anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticket_id: ticketId,
+          message: message
+        }),
+      }
+    );
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('[Support API] Add message failed:', data);
+      return { success: false, error: data.error || 'Failed to add message' };
+    }
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('[Support API] Add message error:', error);
+    return { success: false, error: 'Network error' };
+  }
+}
+
+/**
+ * Get support categories
+ */
+export async function getSupportCategories(): Promise<SupportCategory[]> {
+  noStore();
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from('support_categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+  
+  if (error) {
+    console.error('[Support API] Get categories error:', error);
+    return [];
+  }
+  
+  return data || [];
 }

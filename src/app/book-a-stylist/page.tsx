@@ -1,4 +1,4 @@
-import { fetchActiveStylistsWithServices } from "@/lib/apiClient";
+import { fetchActiveStylistsWithServices, fetchActiveBranches } from "@/lib/apiClient";
 import BookingPageClient from "@/components/booking/BookingPageClient";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -28,8 +28,11 @@ async function createClient() {
 
 // Server Component that fetches live data
 export default async function BookAStylistPage() {
-  // Fetch real stylists with their services from the database
+  // Fetch real stylists with their services and branch data from the database
   const stylists = await fetchActiveStylistsWithServices();
+  
+  // Fetch active KB Stylish branches for location filtering
+  const branches = await fetchActiveBranches();
 
   // Get unique categories from all services
   const categoriesSet = new Set<string>();
@@ -67,6 +70,7 @@ export default async function BookAStylistPage() {
         stylists={stylists} 
         categories={categories}
         specialtyTypes={specialtyTypes || []}
+        branches={branches}
       />
     </div>
   );

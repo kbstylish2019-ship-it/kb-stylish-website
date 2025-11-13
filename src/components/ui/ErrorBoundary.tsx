@@ -68,7 +68,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
         aria-live="assertive"
         className="mx-auto my-10 max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-8 text-center ring-1 ring-white/10"
       >
-        <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-500/10 text-red-600 ring-1 ring-red-500/20 flex items-center justify-center">
+        <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-[var(--kb-accent-red)]/10 text-[var(--kb-accent-red)] ring-1 ring-[var(--kb-accent-red)]/20 flex items-center justify-center">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

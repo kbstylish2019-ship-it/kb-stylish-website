@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { Star, Award } from "lucide-react";
+import { Star, Award, MapPin } from "lucide-react";
 import type { Stylist } from "@/lib/types";
 
 /**
@@ -47,11 +47,17 @@ const StylistCard = React.memo(function StylistCard({
       </div>
       <div className="p-4">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-base font-semibold">{stylist.name}</p>
             <p className="text-sm text-foreground/70">{stylist.specialty}</p>
+            {stylist.location && (
+              <div className="flex items-center gap-1 mt-1">
+                <MapPin className="h-3 w-3 text-foreground/50" />
+                <p className="text-xs text-foreground/50 truncate">{stylist.location}</p>
+              </div>
+            )}
           </div>
-          <div className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1 text-xs ring-1 ring-white/10">
+          <div className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1 text-xs ring-1 ring-white/10 ml-2">
             <Star className="h-3.5 w-3.5 text-[var(--kb-accent-gold)]" />
             <span>{stylist.rating.toFixed(1)}</span>
           </div>

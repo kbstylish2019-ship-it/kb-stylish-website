@@ -60,11 +60,11 @@ interface Booking {
 type FilterType = 'all' | 'upcoming' | 'past' | 'cancelled';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-500/15 text-yellow-300 ring-yellow-500/30',
+  pending: 'bg-[var(--kb-accent-gold)]/15 text-[var(--kb-accent-gold)] ring-[var(--kb-accent-gold)]/30',
   confirmed: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
-  in_progress: 'bg-blue-500/15 text-blue-300 ring-blue-500/30',
+  in_progress: 'bg-[var(--kb-primary-brand)]/15 text-[var(--kb-primary-brand)] ring-[var(--kb-primary-brand)]/30',
   completed: 'bg-green-500/15 text-green-300 ring-green-500/30',
-  cancelled: 'bg-red-500/15 text-red-300 ring-red-500/30',
+  cancelled: 'bg-[var(--kb-accent-red)]/15 text-[var(--kb-accent-red)] ring-[var(--kb-accent-red)]/30',
   no_show: 'bg-gray-500/15 text-gray-300 ring-gray-500/30',
 };
 
@@ -569,7 +569,7 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
                     }}
                     variant="outline"
                     disabled={cancellingId === selectedBooking.id}
-                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    className="border-[var(--kb-accent-red)]/30 text-[var(--kb-accent-red)] hover:bg-[var(--kb-accent-red)]/10"
                   >
                     {cancellingId === selectedBooking.id ? (
                       <>

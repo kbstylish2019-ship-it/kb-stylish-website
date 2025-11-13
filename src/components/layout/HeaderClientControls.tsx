@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import useDecoupledCartStore from '@/lib/store/decoupledCartStore';
@@ -16,6 +17,7 @@ let LogOutIcon: React.ComponentType<any>;
 let UserIcon: React.ComponentType<any>;
 let ChevronDownIcon: React.ComponentType<any>;
 let ShoppingCartIcon: React.ComponentType<any>;
+let SearchIcon: React.ComponentType<any>;
 let AuthModal: React.ComponentType<any>;
 
 if (isTest) {
@@ -28,6 +30,7 @@ if (isTest) {
   UserIcon = icons.User;
   ChevronDownIcon = icons.ChevronDown;
   ShoppingCartIcon = icons.ShoppingCart;
+  SearchIcon = icons.Search;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const AM = require("@/components/features/AuthModal");
   AuthModal = (AM.default ?? AM) as React.ComponentType<any>;
@@ -40,6 +43,7 @@ if (isTest) {
   UserIcon = dynamic(() => import("lucide-react").then((m) => m.User), { ssr: false }) as any;
   ChevronDownIcon = dynamic(() => import("lucide-react").then((m) => m.ChevronDown), { ssr: false }) as any;
   ShoppingCartIcon = dynamic(() => import("lucide-react").then((m) => m.ShoppingCart), { ssr: false }) as any;
+  SearchIcon = dynamic(() => import("lucide-react").then((m) => m.Search), { ssr: false }) as any;
   // Lazy load AuthModal only when opened
   AuthModal = dynamic(() => import("@/components/features/AuthModal"), {
     loading: () => null,
@@ -61,9 +65,12 @@ export default function HeaderClientControls({
   profileNav: PrimaryNavItem[];
   showCart: boolean;
 }) {
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [authOpen, setAuthOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [showSearch, setShowSearch] = React.useState(false);
   // Avoid SSR/client markup mismatch: only show client-derived UI (badge) after mount
   const [hasHydrated, setHasHydrated] = React.useState(isTest);
   React.useEffect(() => {
@@ -72,9 +79,46 @@ export default function HeaderClientControls({
   // Use the new decoupled store - get total items (products + bookings)
   const cartCount = useDecoupledCartStore((state) => state.totalItems);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+      setShowSearch(false);
+      setSearchQuery("");
+    }
+  };
+
   return (
     <>
       <div className="flex items-center gap-3">
+        {/* Search */}
+        <div className="relative hidden md:block">
+          {showSearch ? (
+            <form onSubmit={handleSearch} className="flex items-center">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-64 rounded-full bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/60 ring-1 ring-white/20 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
+                autoFocus
+                onBlur={() => {
+                  if (!searchQuery.trim()) {
+                    setShowSearch(false);
+                  }
+                }}
+              />
+            </form>
+          ) : (
+            <button
+              onClick={() => setShowSearch(true)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-white/10 hover:bg-white/5"
+              aria-label="Search"
+            >
+              <SearchIcon className="h-5 w-5" />
+            </button>
+          )}
+        </div>
         {showCart && (
           <Link
             href="/checkout"
@@ -218,6 +262,23 @@ export default function HeaderClientControls({
             </div>
           </div>
         )}
+
+        {/* Mobile Search */}
+        <form onSubmit={(e) => {
+          handleSearch(e);
+          setMobileOpen(false);
+        }} className="mb-4">
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className="w-full rounded-lg bg-white/5 pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-foreground/60 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
+            />
+          </div>
+        </form>
 
         <nav className="flex flex-col gap-2">
           {primaryNav.map((item) => (

@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import type { UserCapability } from "@/lib/types";
@@ -64,35 +65,20 @@ export default async function Header({ }: HeaderProps) {
   const cartNavItem = utilityNav.find((item) => item.id === "cart");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      {/* Top accent bar */}
-      <div
-        className="h-[2px] bg-gradient-to-r from-[var(--kb-primary-brand)] via-[var(--kb-accent-gold)] to-[var(--kb-primary-brand)] opacity-70"
-        aria-hidden
-      />
-
+    <header className="sticky top-0 z-50 bg-[var(--kb-primary-brand)] text-white shadow-lg">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Brand */}
-          <Link href="/" className="group inline-flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--kb-primary-brand)]/15 ring-1 ring-[var(--kb-primary-brand)]/30 group-hover:ring-[var(--kb-primary-brand)]/50 transition">
-              <svg
-                className="h-5 w-5 text-[var(--kb-primary-brand)]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <circle cx="6" cy="6" r="3" />
-                <circle cx="6" cy="18" r="3" />
-                <line x1="20" y1="7" x2="8.12" y2="12.47" />
-                <line x1="8.12" y1="11.53" x2="20" y2="17" />
-                <line x1="14.47" y1="12" x2="20" y2="12" />
-              </svg>
-            </span>
+          <Link href="/" className="group inline-flex items-center gap-3">
+            <div className="relative h-10 w-10 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/30 group-hover:ring-white/50 transition">
+              <Image
+                src="/kbstylishlogo.png"
+                alt="KB Stylish Logo"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
             <span className="text-lg font-semibold tracking-tight">KB Stylish</span>
           </Link>
 
@@ -103,9 +89,9 @@ export default async function Header({ }: HeaderProps) {
                 key={item.id}
                 href={item.href}
                 className={cn(
-                  "text-sm font-medium text-foreground/80 hover:text-foreground transition-colors",
+                  "text-sm font-medium text-white/90 hover:text-white transition-colors",
                   item.emphasis === "cta" &&
-                    "relative text-foreground before:absolute before:inset-x-0 before:-bottom-1 before:h-[2px] before:bg-gradient-to-r before:from-[var(--kb-primary-brand)] before:via-[var(--kb-accent-gold)] before:to-[var(--kb-primary-brand)] before:opacity-70"
+                    "relative text-white before:absolute before:inset-x-0 before:-bottom-1 before:h-[2px] before:bg-[var(--kb-accent-gold)]"
                 )}
               >
                 {item.label}
@@ -122,6 +108,8 @@ export default async function Header({ }: HeaderProps) {
           />
         </div>
       </div>
+      {/* Strong bottom accent bar for separation */}
+      <div className="h-[4px] bg-[var(--kb-accent-gold)]" aria-hidden />
     </header>
   );
 }

@@ -64,6 +64,7 @@ export default function AdminSidebar() {
       id: "stylists",
       label: "Stylist Operations",
       items: [
+        { id: "branches", label: "Branch Locations", href: "/admin/branches" },
         { id: "services", label: "Services", href: "/admin/services" },
         { id: "onboard", label: "Onboard Stylist", href: "/admin/stylists/onboard" },
         { id: "schedules", label: "Manage Schedules", href: "/admin/schedules/manage" },
@@ -77,6 +78,13 @@ export default function AdminSidebar() {
         { id: "categories", label: "Categories", href: "/admin/categories" },
         { id: "finance", label: "Finance", href: "/admin/finance" },
         { id: "payouts", label: "Payouts", href: "/admin/payouts" },
+      ]
+    },
+    {
+      id: "support",
+      label: "Customer Support",
+      items: [
+        { id: "support-tickets", label: "Support Tickets", href: "/admin/support" },
       ]
     },
     {

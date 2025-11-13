@@ -52,6 +52,11 @@ export default function Footer() {
                   Cart
                 </Link>
               </li>
+              <li>
+                <Link href="/support" className="text-foreground/80 hover:text-foreground">
+                  Support
+                </Link>
+              </li>
             </ul>
           </div>
 

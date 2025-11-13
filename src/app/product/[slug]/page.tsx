@@ -5,15 +5,14 @@ import { fetchProductBySlug, fetchProductReviews, fetchProductRecommendations, t
 import CustomerReviews from "@/components/product/CustomerReviews";
 import CompleteTheLook from "@/components/product/CompleteTheLook";
 
+// Import loading skeleton
+import { ProductDetailSkeleton } from "@/components/ui/LoadingSpinner";
+
 // Lazy load product detail client for better performance
 const ProductDetailClient = dynamic(
   () => import("@/components/product/ProductDetailClient"),
   {
-    loading: () => (
-      <div className="mx-auto max-w-7xl px-4 py-10">
-        <div className="h-96 animate-pulse bg-white/5 rounded-xl" />
-      </div>
-    ),
+    loading: () => <ProductDetailSkeleton />,
   }
 );
 

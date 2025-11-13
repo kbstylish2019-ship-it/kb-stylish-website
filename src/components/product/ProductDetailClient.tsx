@@ -3,29 +3,62 @@ import React from "react";
 import type { ProductDetail, ProductVariant } from "@/lib/types";
 import dynamic from "next/dynamic";
 
+// Import premium loading spinner
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+
 // Lazy load non-critical product components
 const Breadcrumbs = dynamic(() => import("./Breadcrumbs"), {
-  loading: () => <div className="animate-pulse bg-white/5 rounded-xl" />,
+  loading: () => (
+    <div className="h-6 bg-white/10 rounded-lg w-64 mb-6 animate-pulse" />
+  ),
 });
 
 const ProductImageGallery = dynamic(() => import("./ProductImageGallery"), {
-  loading: () => <div className="aspect-square animate-pulse bg-white/5 rounded-xl" />,
+  loading: () => (
+    <div className="aspect-square bg-gradient-to-br from-white/10 to-white/5 rounded-xl relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 animate-shimmer" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <LoadingSpinner size="lg" variant="accent" />
+      </div>
+    </div>
+  ),
 });
 
 const ProductMeta = dynamic(() => import("./ProductMeta"), {
-  loading: () => <div className="h-24 animate-pulse bg-white/5 rounded-xl" />,
+  loading: () => (
+    <div className="space-y-3 animate-pulse">
+      <div className="h-8 bg-white/10 rounded-lg w-3/4" />
+      <div className="h-4 bg-white/5 rounded w-1/2" />
+    </div>
+  ),
 });
 
 const ProductPrice = dynamic(() => import("./ProductPrice"), {
-  loading: () => <div className="h-12 animate-pulse bg-white/5 rounded-xl" />,
+  loading: () => (
+    <div className="h-10 bg-white/10 rounded-lg w-32 animate-pulse" />
+  ),
 });
 
 const ProductOptions = dynamic(() => import("./ProductOptions"), {
-  loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-xl" />,
+  loading: () => (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-6 bg-white/10 rounded w-20" />
+      <div className="flex gap-2">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-10 w-20 bg-white/5 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  ),
 });
 
 const ProductActions = dynamic(() => import("./ProductActions"), {
-  loading: () => <div className="h-20 animate-pulse bg-white/5 rounded-xl" />,
+  loading: () => (
+    <div className="space-y-3 animate-pulse">
+      <div className="h-12 bg-[var(--kb-primary-brand)]/20 rounded-xl w-full" />
+      <div className="h-10 bg-white/5 rounded-lg w-40" />
+    </div>
+  ),
 });
 
 import PDPTrustBar from "@/components/product/PDPTrustBar";

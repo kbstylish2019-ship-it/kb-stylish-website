@@ -171,6 +171,7 @@ export interface Stylist {
   imageUrl?: string;
   availability?: string;
   isFeatured?: boolean;
+  location?: string; // Branch location name, e.g., "KB Stylish Pulchowk"
 }
 
 // Vendor domain models

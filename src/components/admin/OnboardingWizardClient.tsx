@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Check, AlertCircle, Loader2, ChevronRight, ChevronLeft, User, Shield, FileCheck, UserCheck, Scissors } from 'lucide-react';
+import { Search, Check, AlertCircle, Loader2, ChevronRight, ChevronLeft, User, Shield, FileCheck, UserCheck, Scissors, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Step4SpecialtySelection } from './OnboardingWizard_Step4_Specialties';
+import BranchSelection from './BranchSelection';
 import AvatarUpload from '@/components/upload/AvatarUpload';
 
 // ============================================================================
@@ -40,6 +41,7 @@ interface WizardState {
   profileData: ProfileData;
   selectedSpecialties: string[];
   selectedServices: string[];
+  selectedBranch: string | null;
   completed: boolean;
   stylistUserId: string | null;
 }
@@ -52,9 +54,10 @@ const STEPS = [
   { id: 1, name: 'Select User', icon: User },
   { id: 2, name: 'Verification', icon: Shield },
   { id: 3, name: 'Profile Setup', icon: FileCheck },
-  { id: 4, name: 'Specialties', icon: Shield },
-  { id: 5, name: 'Services', icon: Scissors },
-  { id: 6, name: 'Review & Complete', icon: UserCheck },
+  { id: 4, name: 'Branch Location', icon: MapPin },
+  { id: 5, name: 'Specialties', icon: Shield },
+  { id: 6, name: 'Services', icon: Scissors },
+  { id: 7, name: 'Review & Complete', icon: UserCheck },
 ];
 
 const INITIAL_STATE: WizardState = {
@@ -76,6 +79,7 @@ const INITIAL_STATE: WizardState = {
   },
   selectedSpecialties: [],
   selectedServices: [],
+  selectedBranch: null,
   completed: false,
   stylistUserId: null,
 };
@@ -265,6 +269,24 @@ export default function OnboardingWizardClient() {
         }
       }
 
+      // Assign stylist to selected branch if any
+      if (state.selectedBranch) {
+        const branchResponse = await fetch('/api/admin/stylist-branch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stylistUserId: data.stylistUserId,
+            branchId: state.selectedBranch,
+          }),
+        });
+
+        const branchData = await branchResponse.json();
+        if (!branchData.success) {
+          console.error('Failed to assign branch:', branchData.error);
+          // Don't fail the whole promotion, just log the error
+        }
+      }
+
       setState(prev => ({
         ...prev,
         completed: true,
@@ -324,6 +346,7 @@ export default function OnboardingWizardClient() {
       profileData: promotion.profileData || INITIAL_STATE.profileData,
       selectedSpecialties: promotion.selectedSpecialties || [],
       selectedServices: promotion.selectedServices || [],
+      selectedBranch: promotion.selectedBranch || null,
       completed: false,
       stylistUserId: null
     });
@@ -371,7 +394,7 @@ export default function OnboardingWizardClient() {
   };
 
   const handleNextStep = () => {
-    if (state.currentStep < 6) {
+    if (state.currentStep < 7) {
       setState(prev => ({ ...prev, currentStep: prev.currentStep + 1 }));
     }
   };
@@ -438,7 +461,7 @@ export default function OnboardingWizardClient() {
         </div>
         <div className="flex gap-3 justify-center">
           <button
-            onClick={() => window.location.href = `/admin/stylists/${state.stylistUserId}/schedule`}
+            onClick={() => window.location.href = `/admin/stylists/schedules/manage`}
             className="rounded-lg bg-[var(--kb-primary-brand)] px-6 py-2 font-medium text-white hover:opacity-90 transition-opacity"
           >
             Setup Schedule →
@@ -568,6 +591,15 @@ export default function OnboardingWizardClient() {
         )}
 
         {state.currentStep === 4 && (
+          <BranchSelection
+            selectedBranch={state.selectedBranch}
+            onBranchChange={(branchId) => {
+              setState(prev => ({ ...prev, selectedBranch: branchId }));
+            }}
+          />
+        )}
+
+        {state.currentStep === 5 && (
           <Step4SpecialtySelection
             selectedSpecialties={state.selectedSpecialties}
             onUpdateSpecialties={(specialties) => {
@@ -576,7 +608,7 @@ export default function OnboardingWizardClient() {
           />
         )}
 
-        {state.currentStep === 5 && (
+        {state.currentStep === 6 && (
           <Step5ServiceSelection
             selectedServices={state.selectedServices}
             onUpdateServices={(services) => {
@@ -585,7 +617,7 @@ export default function OnboardingWizardClient() {
           />
         )}
 
-        {state.currentStep === 6 && (
+        {state.currentStep === 7 && (
           <Step6ReviewComplete
             selectedUser={state.selectedUser}
             checkStatus={state.checkStatus}
@@ -607,15 +639,16 @@ export default function OnboardingWizardClient() {
           Previous
         </button>
 
-        {state.currentStep < 6 ? (
+        {state.currentStep < 7 ? (
           <button
             onClick={handleNextStep}
             disabled={
               (state.currentStep === 1 && !state.selectedUser) ||
               (state.currentStep === 2 && !canProceedToStep3()) ||
               (state.currentStep === 3 && state.profileData.display_name.trim() === '') ||
-              (state.currentStep === 4 && state.selectedSpecialties.length === 0) ||
-              (state.currentStep === 5 && state.selectedServices.length === 0) ||
+              (state.currentStep === 4 && !state.selectedBranch) ||
+              (state.currentStep === 5 && state.selectedSpecialties.length === 0) ||
+              (state.currentStep === 6 && state.selectedServices.length === 0) ||
               isLoading
             }
             className="flex items-center gap-2 rounded-lg bg-[var(--kb-primary-brand)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"

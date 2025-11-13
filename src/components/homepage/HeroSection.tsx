@@ -42,6 +42,7 @@ export default function HeroSection() {
             <div className="mt-6 flex items-center gap-6 text-sm text-foreground/70">
               <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[var(--kb-accent-gold)]" /> Verified brands</div>
               <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[var(--kb-primary-brand)]" /> Secure payments</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[var(--kb-accent-red)]" /> Premium quality</div>
             </div>
           </div>
 

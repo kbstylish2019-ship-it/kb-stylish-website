@@ -72,9 +72,9 @@ export default function ProductActions({
         <div className={cn(
           "text-sm",
           stock === 0 
-            ? "text-red-400 font-medium" 
+            ? "text-[var(--kb-accent-red)] font-medium" 
             : stock < 5 
-            ? "text-amber-400"
+            ? "text-[var(--kb-accent-gold)]"
             : "text-foreground/60"
         )}>
           {stock === 0 ? "Out of stock" : stock < 5 ? `Only ${stock} left!` : `${stock} in stock`}
@@ -115,7 +115,7 @@ export default function ProductActions({
         >
           {isAdding ? (
             <span className="flex items-center justify-center gap-2">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-[var(--kb-accent-gold)]" />
               Adding...
             </span>
           ) : justAdded ? (

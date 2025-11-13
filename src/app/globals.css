@@ -1,5 +1,25 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+/* Premium loading animations */
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(200%) skewX(-12deg); }
+}
+
+@keyframes reverse-spin {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-reverse-spin {
+  animation: reverse-spin 1s linear infinite;
+}
+
 @import "../styles/dropdown-theme.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -49,9 +69,10 @@
 :root {
   --radius: 0.625rem;
   /* Brand Variables */
-  --kb-primary-brand: #A162F7; /* Vibrant Purple */
-  --kb-accent-gold: #FDE047; /* Warm Gold */
+  --kb-primary-brand: #1976D2; /* KB Blue */
+  --kb-accent-gold: #FFD400; /* KB Yellow */
   --kb-accent-client-blue: #007BFF; /* Use sparingly */
+  --kb-accent-red: #E31B23; /* KB Red */
   --kb-background: #111827; /* Near Black */
   --kb-surface-dark: #1a1f2e; /* Dark surface for modals/cards */
   --kb-text-primary: #F9FAFB; /* Off-White */
@@ -72,7 +93,7 @@
   --muted-foreground: #6B7280;
   --accent: var(--kb-accent-gold);
   --accent-foreground: #1F2937;
-  --destructive: #EF4444;
+  --destructive: var(--kb-accent-red);
   --border: #E5E7EB;
   --input: #E5E7EB;
   --ring: var(--kb-primary-brand);
@@ -106,7 +127,7 @@
   --muted-foreground: var(--kb-text-secondary);
   --accent: var(--kb-accent-gold);
   --accent-foreground: #111827;
-  --destructive: #b91c1c;
+  --destructive: var(--kb-accent-red);
   --border: rgb(255 255 255 / 0.08);
   --input: rgb(255 255 255 / 0.12);
   --ring: var(--kb-primary-brand);

@@ -61,7 +61,10 @@ export default function TrendingProducts({ products }: TrendingProductsProps) {
               slug: p.slug,
               price: p.min_price,
               imageUrl: p.image_url,
-              badge: p.source === 'trending' ? 'Trending' : p.source === 'new' ? 'New' : undefined,
+              badge: p.source === 'trending' ? 'Trending' : 
+                     p.source === 'new' ? 'New' : 
+                     p.source === 'rated' ? 'Top Rated' : 
+                     undefined,
             }}
             onClick={() => handleProductClick(p.product_id)}
           />
