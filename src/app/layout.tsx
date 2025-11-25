@@ -30,6 +30,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "KB Stylish",
   description: "KB Stylish — Nepal's premier multi-vendor fashion and style marketplace.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+    ],
+  },
 };
 
 /**

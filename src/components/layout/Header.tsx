@@ -72,7 +72,7 @@ export default async function Header({ }: HeaderProps) {
           <Link href="/" className="group inline-flex items-center gap-3">
             <div className="relative h-10 w-10 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/30 group-hover:ring-white/50 transition">
               <Image
-                src="/kbstylishlogo.png"
+                src="/kbStylishlogo.png"
                 alt="KB Stylish Logo"
                 fill
                 className="object-cover"
