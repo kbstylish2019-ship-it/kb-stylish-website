@@ -205,7 +205,7 @@ export async function getProcessId(
 ): Promise<{ success: boolean; processId?: string; error?: string }> {
   const apiUrl = config.testMode
     ? 'https://apisandbox.nepalpayment.com/GetProcessId'
-    : 'https://api.nepalpayment.com/GetProcessId';
+    : 'https://apigateway.nepalpayment.com/GetProcessId';
   
   // Format amount to 2 decimal places
   const amountStr = amount.toFixed(2);
@@ -338,7 +338,7 @@ export function prepareNPXPaymentForm(
 } {
   const gatewayUrl = config.testMode
     ? 'https://gatewaysandbox.nepalpayment.com/Payment/Index'
-    : 'https://gateway.nepalpayment.com/Payment/Index';
+    : 'https://gateway.nepalpayment.com/payment/index';
   
   return {
     action: gatewayUrl,
@@ -391,7 +391,7 @@ export async function checkTransactionStatus(
 }> {
   const apiUrl = config.testMode
     ? 'https://apisandbox.nepalpayment.com/CheckTransactionStatus'
-    : 'https://api.nepalpayment.com/CheckTransactionStatus';
+    : 'https://apigateway.nepalpayment.com/CheckTransactionStatus';
   
   // Build payload for signature
   const payload = {

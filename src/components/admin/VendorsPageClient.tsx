@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Store, CheckCircle, XCircle, Ban, DollarSign, User } from "lucide-react";
+import { Search, Store, CheckCircle, XCircle, Ban, DollarSign, User, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminVendorsListResponse } from "@/lib/apiClient";
 import type { AdminVendor } from "@/lib/apiClientBrowser";
 import { approveVendor, rejectVendor, reactivateVendor, updateVendorCommission, suspendVendor, activateVendor } from "@/lib/apiClientBrowser";
+import VendorDetailsModal from "./VendorDetailsModal";
 
 interface VendorsPageClientProps {
   initialData: AdminVendorsListResponse;
@@ -17,6 +18,7 @@ export default function VendorsPageClient({ initialData }: VendorsPageClientProp
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [selectedVendor, setSelectedVendor] = useState<AdminVendor | null>(null);
   
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -494,6 +496,15 @@ export default function VendorsPageClient({ initialData }: VendorsPageClientProp
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
+                            {/* View Details Button - Always visible */}
+                            <button
+                              onClick={() => setSelectedVendor(vendor)}
+                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                              title="View Details & Documents"
+                            >
+                              <Eye className="h-4 w-4 text-[var(--kb-primary-brand)]" />
+                            </button>
+                            
                             {vendor.verification_status === 'pending' && (
                               <>
                                 <button
@@ -572,6 +583,28 @@ export default function VendorsPageClient({ initialData }: VendorsPageClientProp
           Showing {filteredVendors.length} of {vendors.length} vendors
         </div>
       </div>
+      
+      {/* Vendor Details Modal */}
+      {selectedVendor && (
+        <VendorDetailsModal
+          vendor={{
+            user_id: selectedVendor.user_id,
+            business_name: selectedVendor.business_name,
+            business_type: selectedVendor.business_type,
+            verification_status: selectedVendor.verification_status,
+            created_at: selectedVendor.created_at,
+          }}
+          onClose={() => setSelectedVendor(null)}
+          onApprove={() => {
+            handleApprove(selectedVendor);
+            setSelectedVendor(null);
+          }}
+          onReject={() => {
+            handleReject(selectedVendor);
+            setSelectedVendor(null);
+          }}
+        />
+      )}
     </>
   );
 }

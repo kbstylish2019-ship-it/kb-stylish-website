@@ -1,39 +1,63 @@
 import Image from "next/image";
+import { Target, Eye, Sparkles } from "lucide-react";
 
 export default function AboutMission() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:py-20">
       <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Our Mission</h2>
-          <p className="mt-4 text-foreground/80">
-            We are building Nepal&apos;s most trusted marketplace for style — where discerning
-            shoppers discover premium products and connect with vetted stylists. We fuse
-            world-class UX with a deep respect for local culture and craftsmanship.
-          </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-sm font-semibold">For Customers</p>
-              <p className="mt-1 text-sm text-foreground/70">
-                Curated products, honest pricing, and seamless bookings with top stylists.
-              </p>
+        <div className="space-y-8">
+          {/* Vision */}
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--kb-accent-gold)]/10 ring-1 ring-[var(--kb-accent-gold)]/20">
+                <Eye className="h-5 w-5 text-[var(--kb-accent-gold)]" />
+              </div>
+              <h3 className="text-lg font-semibold">Our Vision</h3>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-sm font-semibold">For Creators & Vendors</p>
-              <p className="mt-1 text-sm text-foreground/70">
-                A premium storefront, transparent payouts, and growth tools built-in.
-              </p>
+            <p className="text-foreground/80 leading-relaxed">
+              To serve beauty & salon services that enhances our clients&apos; physical appearance and mental relaxation.
+            </p>
+          </div>
+
+          {/* Mission */}
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--kb-primary-brand)]/10 ring-1 ring-[var(--kb-primary-brand)]/20">
+                <Target className="h-5 w-5 text-[var(--kb-primary-brand)]" />
+              </div>
+              <h3 className="text-lg font-semibold">Our Mission</h3>
             </div>
+            <p className="text-foreground/80 leading-relaxed italic">
+              &ldquo;KB Stylish is dedicated to helping every client look and feel their best. Our mission is to provide 
+              high-quality, individualized hair and beauty services in a friendly, hygienic, affordable space where 
+              beauty, comfort, price and connection matter.&rdquo;
+            </p>
+          </div>
+
+          {/* Company Summary */}
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
+                <Sparkles className="h-5 w-5 text-[var(--kb-accent-gold)]" />
+              </div>
+              <h3 className="text-lg font-semibold">What Sets Us Apart</h3>
+            </div>
+            <p className="text-foreground/80 leading-relaxed">
+              KB Stylish provides quality hair services along with top lines of beauty products. What sets us apart 
+              from the competition is our commitment to providing all of these services in one convenient location.
+            </p>
           </div>
         </div>
+
         <div className="relative aspect-[4/3] overflow-hidden rounded-3xl ring-1 ring-white/10">
           <Image
-            src="https://images.unsplash.com/photo-1519741497674-611481863552"
-            alt="Artful fashion editorial scene with warm tones"
+            src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e"
+            alt="Professional stylist providing personalized beauty service"
             fill
             className="object-cover"
             sizes="(max-width: 1024px) 100vw, 50vw"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
         </div>
       </div>
     </section>

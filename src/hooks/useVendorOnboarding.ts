@@ -144,7 +144,9 @@ export function useVendorOnboarding() {
     return errors;
   }, [state.payout]);
 
-  const validateStep3 = React.useCallback((): string[] => {
+  // Step 3 is now Documents (validated in ApplicationForm)
+  // Step 4 is Confirm with consent
+  const validateStep4 = React.useCallback((): string[] => {
     const errors: string[] = [];
     if (!state.consent) errors.push("You must agree to the terms and conditions.");
     return errors;
@@ -153,9 +155,10 @@ export function useVendorOnboarding() {
   const isStepValid = React.useCallback((step: number): boolean => {
     if (step === 1) return validateStep1().length === 0;
     if (step === 2) return validateStep2().length === 0;
-    if (step === 3) return validateStep3().length === 0;
+    if (step === 3) return true; // Documents validated in ApplicationForm
+    if (step === 4) return validateStep4().length === 0;
     return false;
-  }, [validateStep1, validateStep2, validateStep3]);
+  }, [validateStep1, validateStep2, validateStep4]);
 
   const goNext = React.useCallback(() => {
     const currentErrors = 
@@ -169,7 +172,7 @@ export function useVendorOnboarding() {
     
     setState((prev) => ({
       ...prev,
-      currentStep: Math.min(3, prev.currentStep + 1),
+      currentStep: Math.min(4, prev.currentStep + 1),
       errors: [],
     }));
   }, [state.currentStep, validateStep1, validateStep2]);
@@ -185,7 +188,7 @@ export function useVendorOnboarding() {
   const submitApplication = React.useCallback(async (
     onSubmit?: (app: VendorApplication) => void | Promise<void>
   ) => {
-    const finalErrors = validateStep3();
+    const finalErrors = validateStep4();
     if (finalErrors.length > 0) {
       setState((prev) => ({ ...prev, errors: finalErrors }));
       return;
@@ -218,7 +221,7 @@ export function useVendorOnboarding() {
         errors: ["Submission failed. Please try again."]
       }));
     }
-  }, [state.business, state.payout, state.consent, validateStep3]);
+  }, [state.business, state.payout, state.consent, validateStep4]);
 
   const resetForm = React.useCallback(() => {
     setState({

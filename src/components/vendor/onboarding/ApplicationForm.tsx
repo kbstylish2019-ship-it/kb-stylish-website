@@ -3,6 +3,7 @@ import * as React from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useVendorOnboarding } from "@/hooks/useVendorOnboarding";
 import { createClient } from "@/lib/supabase/client";
+import DocumentUploader from "./DocumentUploader";
 import type {
   VendorApplication,
   VendorBusinessInfo,
@@ -18,30 +19,39 @@ const BUSINESS_TYPES: VendorBusinessInfo["businessType"][] = [
 ];
 
 function StepIndicator({ step }: { step: number }) {
-  const labels = ["Business", "Payout", "Confirm"];
+  const labels = ["Business", "Payout", "Documents", "Confirm"];
   return (
-    <ol className="mb-4 grid grid-cols-3 gap-2 text-sm" aria-label="progress">
+    <ol className="mb-4 grid grid-cols-4 gap-2 text-sm" aria-label="progress">
       {labels.map((label, i) => {
         const idx = i + 1;
         const active = step === idx;
         const complete = step > idx;
         return (
-          <li key={label} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ring-1 ${
+          <li key={label} className={`flex items-center gap-2 rounded-lg border px-2 py-2 ring-1 ${
             active
               ? "border-[var(--kb-primary-brand)]/50 bg-[var(--kb-primary-brand)]/10 ring-[var(--kb-primary-brand)]/50"
               : complete
               ? "border-[var(--kb-accent-gold)]/40 bg-[var(--kb-accent-gold)]/10 ring-[var(--kb-accent-gold)]/40"
               : "border-white/10 bg-white/5 ring-white/10"
           }`}>
-            <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+            <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold flex-shrink-0 ${
               active ? "bg-[var(--kb-primary-brand)] text-white" : complete ? "bg-[var(--kb-accent-gold)] text-black" : "bg-white/10"
             }`}>{idx}</span>
-            <span>{label}</span>
+            <span className="text-xs sm:text-sm truncate">{label}</span>
           </li>
         );
       })}
     </ol>
   );
+}
+
+// Document type for uploaded files
+interface UploadedDoc {
+  id: string;
+  document_type: string;
+  file_name: string;
+  storage_path: string;
+  status: string;
 }
 
 export default function ApplicationForm({
@@ -65,8 +75,41 @@ export default function ApplicationForm({
     goPrev,
     submitApplication,
   } = useVendorOnboarding();
+  
+  // Documents state (new step)
+  const [uploadedDocuments, setUploadedDocuments] = React.useState<UploadedDoc[]>([]);
+  const [documentError, setDocumentError] = React.useState<string | null>(null);
+  
+  // Track actual step (1-4 now instead of 1-3)
+  const totalSteps = 4;
+  
+  // Custom navigation to handle 4 steps
+  const handleNext = React.useCallback(() => {
+    // Validate documents on step 3
+    if (currentStep === 3) {
+      const hasPan = uploadedDocuments.some(d => d.document_type === 'pan_certificate');
+      if (!hasPan) {
+        setDocumentError('PAN Certificate is required');
+        return;
+      }
+      setDocumentError(null);
+    }
+    goNext();
+  }, [currentStep, uploadedDocuments, goNext]);
+  
+  const handlePrev = React.useCallback(() => {
+    setDocumentError(null);
+    goPrev();
+  }, [goPrev]);
 
   const handleSubmit = React.useCallback(async () => {
+    // Validate documents before submission
+    const hasPan = uploadedDocuments.some(d => d.document_type === 'pan_certificate');
+    if (!hasPan) {
+      setDocumentError('PAN Certificate is required before submitting');
+      return;
+    }
+    
     // Call the actual submission function
     await submitApplication(async (application) => {
       try {
@@ -77,7 +120,6 @@ export default function ApplicationForm({
         console.log('[ApplicationForm] Checking authentication...');
         
         // CRITICAL FIX: Use getUser() which validates the JWT and refreshes if needed
-        // getSession() only returns cached session without validation
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         console.log('[ApplicationForm] User:', user ? user.email : 'NULL', 'Error:', userError);
@@ -97,6 +139,12 @@ export default function ApplicationForm({
           throw new Error('Session expired. Please refresh the page and try again.');
         }
         
+        // Mark documents as submitted in vendor_profiles
+        await supabase
+          .from('vendor_profiles')
+          .update({ documents_submitted: true })
+          .eq('user_id', user.id);
+        
         // Submit with retry logic using the validated session
         const result = await submitWithRetry(application, session.access_token);
         
@@ -114,7 +162,7 @@ export default function ApplicationForm({
         throw error;  // Re-throw to be caught by useVendorOnboarding
       }
     });
-  }, [submitApplication, onSubmit]);
+  }, [submitApplication, onSubmit, uploadedDocuments]);
   
   // Submit with retry logic (3 attempts with exponential backoff)
   const submitWithRetry = async (
@@ -375,30 +423,97 @@ export default function ApplicationForm({
         {currentStep === 3 && (
           <div className="space-y-4" data-testid="step-3">
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
-              <div className="text-sm font-medium">Review</div>
-              <div className="mt-2 grid gap-2 text-sm text-foreground/80 sm:grid-cols-2">
+              <h3 className="text-sm font-medium mb-2">Upload Business Documents</h3>
+              <p className="text-xs text-foreground/60 mb-4">
+                Please upload your business verification documents. PAN Certificate is required.
+                VAT Certificate is optional but recommended for VAT-registered businesses.
+              </p>
+              <DocumentUploader 
+                onChange={setUploadedDocuments}
+                required={['pan_certificate']}
+              />
+            </div>
+            {documentError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+                {documentError}
+              </div>
+            )}
+          </div>
+        )}
+
+        {currentStep === 4 && (
+          <div className="space-y-4" data-testid="step-4">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
+              <div className="text-sm font-medium">Review Your Application</div>
+              <div className="mt-3 grid gap-4 text-sm text-foreground/80 sm:grid-cols-2">
                 <div>
-                  <div className="text-foreground/60">Business</div>
+                  <div className="text-foreground/60 font-medium mb-1">Business Details</div>
                   <div>{business.businessName}</div>
-                  <div>{business.businessType}</div>
-                  <div>{business.contactName}</div>
-                  <div>{business.email}</div>
-                  <div>{business.phone}</div>
+                  <div className="text-xs text-foreground/50">{business.businessType}</div>
+                  <div className="mt-2">{business.contactName}</div>
+                  <div className="text-xs text-foreground/50">{business.email}</div>
+                  <div className="text-xs text-foreground/50">{business.phone}</div>
                 </div>
                 <div>
-                  <div className="text-foreground/60">Payout</div>
-                  <div>Method: {payout.method.toUpperCase()}</div>
+                  <div className="text-foreground/60 font-medium mb-1">Payout Method</div>
+                  <div>{payout.method.toUpperCase()}</div>
+                  
+                  <div className="text-foreground/60 font-medium mb-1 mt-3">Documents</div>
+                  <div className="text-xs">
+                    {uploadedDocuments.length > 0 ? (
+                      <ul className="space-y-1">
+                        {uploadedDocuments.map(doc => (
+                          <li key={doc.id} className="flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                            <span>{doc.file_name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-amber-400">No documents uploaded</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 text-sm">
+            <div className="flex items-start gap-2 text-sm">
               <input
                 id="consent"
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => updateConsent(e.target.checked)}
+                className="mt-1"
               />
-              <label htmlFor="consent">I agree to the platform terms and privacy policy.</label>
+              <label htmlFor="consent">
+                I agree to the{" "}
+                <a 
+                  href="/legal/vendor-terms" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[var(--kb-primary-brand)] hover:underline"
+                >
+                  Vendor Terms & Conditions
+                </a>
+                ,{" "}
+                <a 
+                  href="/legal/terms" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[var(--kb-primary-brand)] hover:underline"
+                >
+                  Terms of Service
+                </a>
+                , and{" "}
+                <a 
+                  href="/legal/privacy" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[var(--kb-primary-brand)] hover:underline"
+                >
+                  Privacy Policy
+                </a>
+                .
+              </label>
             </div>
           </div>
         )}
@@ -406,16 +521,16 @@ export default function ApplicationForm({
             <div className="mt-4 flex items-center justify-between">
               <button
                 type="button"
-                onClick={goPrev}
+                onClick={handlePrev}
                 disabled={currentStep === 1}
                 className="rounded-lg px-4 py-2 text-sm ring-1 ring-white/10 disabled:opacity-50"
               >
                 Back
               </button>
-              {currentStep < 3 ? (
+              {currentStep < totalSteps ? (
                 <button
                   type="button"
-                  onClick={goNext}
+                  onClick={handleNext}
                   className="rounded-lg bg-[var(--kb-primary-brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Next

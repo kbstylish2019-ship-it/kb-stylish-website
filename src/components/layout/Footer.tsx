@@ -10,11 +10,11 @@ export default function Footer() {
             <div className="inline-flex items-center gap-2">
               <span className="inline-block h-2 w-2 rounded-full bg-[var(--kb-accent-gold)]" />
               <h3 className="text-sm font-semibold tracking-wide text-foreground/90">
-                About Us
+                About KB Stylish
               </h3>
             </div>
             <p className="mt-3 max-w-md text-sm text-foreground/70">
-              KB Stylish is Nepal’s premium multi-vendor marketplace for fashion and self-care, built with a design-first ethos and an unwavering commitment to trust and quality.
+              KB Stylish is a full-service beauty salon dedicated to providing high client satisfaction through excellent service, quality products, and an enjoyable atmosphere. A friendly, hygienic, affordable space where beauty, comfort, price and connection matter.
             </p>
           </div>
 
@@ -33,7 +33,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/bookings" className="text-foreground/80 hover:text-foreground">
+                <Link href="/book-a-stylist" className="text-foreground/80 hover:text-foreground">
                   Book a Stylist
                 </Link>
               </li>
@@ -48,8 +48,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/cart" className="text-foreground/80 hover:text-foreground">
-                  Cart
+                <Link href="/about" className="text-foreground/80 hover:text-foreground">
+                  About Us
                 </Link>
               </li>
               <li>
@@ -90,7 +90,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-10 border-t border-white/10 pt-6 text-xs text-foreground/60 sm:flex sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} KB Stylish. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} KB Stylish. All rights reserved.</p>
           <p className="mt-2 sm:mt-0">
             Crafted by <span className="text-foreground">Divine Tech Innovation</span>
           </p>
