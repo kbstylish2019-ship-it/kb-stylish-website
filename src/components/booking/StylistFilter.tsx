@@ -45,8 +45,8 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
             className={cn(
               "rounded-full px-3 py-1.5 text-xs font-medium transition-colors shrink-0",
               value === category
-                ? "bg-[var(--kb-primary-brand)] text-white"
-                : "bg-white/5 text-foreground/70 hover:bg-white/10 hover:text-foreground"
+                ? "bg-[#1976D2] text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
             )}
           >
             {category === "All" ? "All" : category.charAt(0).toUpperCase() + category.slice(1)}
@@ -62,8 +62,8 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
             className={cn(
               "flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
               specialtyTypes.some(st => st.id === value)
-                ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                : "border-white/10 bg-white/5 text-foreground hover:bg-white/10"
+                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
             )}
           >
             <span>
@@ -87,7 +87,7 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
               />
               
               {/* Menu */}
-              <div className="absolute right-0 z-20 mt-2 w-64 max-h-96 overflow-y-auto rounded-lg border border-white/10 bg-[var(--kb-surface-dark)] shadow-xl">
+              <div className="absolute right-0 z-20 mt-2 w-64 max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl">
                 <div className="p-2">
                   {/* Clear filter */}
                   {specialtyTypes.some(st => st.id === value) && (
@@ -96,7 +96,7 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
                         onChange("All");
                         setIsSpecialtyOpen(false);
                       }}
-                      className="w-full rounded-md px-3 py-2 text-left text-sm text-foreground/70 hover:bg-white/5"
+                      className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50"
                     >
                       Clear specialty filter
                     </button>
@@ -109,7 +109,7 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
                     
                     return (
                       <div key={cat} className="mt-2">
-                        <p className="px-3 py-1 text-xs font-semibold uppercase text-foreground/50">
+                        <p className="px-3 py-1 text-xs font-semibold uppercase text-gray-400">
                           {cat}
                         </p>
                         {categorySpecialties.map((specialty) => (
@@ -122,8 +122,8 @@ export default function StylistFilter({ categories, specialtyTypes, value, onCha
                             className={cn(
                               "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
                               value === specialty.id
-                                ? "bg-emerald-500/20 text-emerald-400 font-medium"
-                                : "text-foreground hover:bg-white/5"
+                                ? "bg-emerald-50 text-emerald-700 font-medium"
+                                : "text-gray-700 hover:bg-gray-50"
                             )}
                           >
                             {specialty.name}

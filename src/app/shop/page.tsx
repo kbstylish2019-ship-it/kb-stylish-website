@@ -3,27 +3,32 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { fetchProducts, getProductCategories } from "@/lib/apiClient";
 import type { ProductFilters, ProductSort } from "@/lib/apiClient";
-import ProductGrid from "@/components/shared/ProductGrid";
+import { ChevronRight, SlidersHorizontal, X } from "lucide-react";
+import SortDropdown from "@/components/shop/SortDropdown";
+import RetryButton from "@/components/shop/RetryButton";
 
 // Use virtualized grid for better performance with large product lists
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-const VirtualizedProductGrid = dynamic(
-  () => import("@/components/shared/VirtualizedProductGrid"),
-  { 
-    loading: () => <div className="h-96 animate-pulse bg-white/5 rounded-xl" />,
+const MarketplaceProductGrid = dynamic(
+  () => import("@/components/shop/MarketplaceProductGrid"),
+  {
+    loading: () => <div className="h-96 animate-pulse bg-gray-100 rounded-lg" />,
+    ssr: true,
   }
 );
 
 // Dynamically import the filter sidebar to reduce initial bundle size
 const FilterSidebar = dynamic(() => import("@/components/shop/FilterSidebar"), {
-  loading: () => <div className="h-96 animate-pulse bg-white/5 rounded-xl" />,
+  loading: () => <div className="h-96 animate-pulse bg-white rounded-lg" />,
 });
 
 interface ShopPageProps {
   searchParams: Promise<{
     search?: string;
     categories?: string;
+    category?: string;
+    brand?: string;
     minPrice?: string;
     maxPrice?: string;
     sort?: string;
@@ -45,6 +50,10 @@ function mapSortParam(sortParam?: string): ProductSort {
       return { field: "price", order: "asc" };
     case "price_high":
       return { field: "price", order: "desc" };
+    case "best-selling":
+      return { field: "created_at", order: "desc" }; // Fallback to newest
+    case "trending":
+      return { field: "created_at", order: "desc" }; // Fallback to newest
     default:
       return { field: "name", order: "asc" };
   }
@@ -58,8 +67,11 @@ function parseFilters(searchParams: Record<string, string | undefined>): Product
     filters.search = searchParams.search;
   }
 
+  // Support both 'categories' (comma-separated) and 'category' (single)
   if (searchParams.categories) {
     filters.categories = searchParams.categories.split(",").filter(Boolean);
+  } else if (searchParams.category) {
+    filters.categories = [searchParams.category];
   }
 
   if (searchParams.minPrice) {
@@ -81,12 +93,12 @@ function parseFilters(searchParams: Record<string, string | undefined>): Product
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
-  
+
   // Parse URL parameters
   const filters = parseFilters(params);
   const sort = mapSortParam(params.sort);
   const cursor = params.cursor;
-  const limit = params.limit ? parseInt(params.limit) : 12;
+  const limit = params.limit ? parseInt(params.limit) : 24;
 
   // Fetch products server-side with filters applied
   let products: any[] = [];
@@ -102,7 +114,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
       sort,
       pagination: { cursor, limit },
     });
-    
+
     products = productResult.data;
     totalCount = productResult.totalCount;
     hasMore = productResult.hasMore;
@@ -113,7 +125,6 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   } catch (error) {
     console.error('Error loading shop data:', error);
     fetchError = 'Failed to load products. Please try again later.';
-    // Use empty arrays as fallback
     products = [];
     categories = [];
   }
@@ -123,9 +134,10 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     const usp = new URLSearchParams(params as any);
     remover(usp);
     usp.delete('cursor');
-    // Clean defaults
     if (!usp.get('search')) usp.delete('search');
     if (!usp.get('categories')) usp.delete('categories');
+    if (!usp.get('category')) usp.delete('category');
+    if (!usp.get('brand')) usp.delete('brand');
     if (!usp.get('minPrice')) usp.delete('minPrice');
     if (!usp.get('maxPrice')) usp.delete('maxPrice');
     if (!usp.get('sort') || usp.get('sort') === 'popularity') usp.delete('sort');
@@ -135,157 +147,216 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
 
   const hasActiveFilters = Boolean(
     (filters.categories && filters.categories.length) ||
-    filters.search || params.minPrice || params.maxPrice
+    filters.search || params.minPrice || params.maxPrice || params.brand
   );
 
+  // Get page title based on filters
+  const getPageTitle = () => {
+    if (params.category) {
+      return params.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+    if (params.brand) {
+      return params.brand.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+    if (params.search) {
+      return `Search: "${params.search}"`;
+    }
+    return 'All Products';
+  };
+
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10">
-      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <ErrorBoundary
-          fallback={
-            <div className="h-96 rounded-xl border border-white/10 bg-white/5 p-6 ring-1 ring-white/10">
-              <p className="text-sm font-medium">Filters are temporarily unavailable.</p>
-              <p className="mt-1 text-xs text-foreground/70">You can still browse products on the right.</p>
-            </div>
-          }
-        >
-          <Suspense fallback={<div className="h-96 animate-pulse bg-white/5 rounded-xl" />}>
-            <FilterSidebar
-              availableCategories={categories}
-              currentFilters={{
-                search: params.search || "",
-                selectedCategories: filters.categories || [],
-                minPrice: params.minPrice || "",
-                maxPrice: params.maxPrice || "",
-                sort: params.sort || "popularity",
-              }}
-            />
-          </Suspense>
-        </ErrorBoundary>
-        <section>
-          <div className="flex items-baseline justify-between">
-            <h1 className="text-2xl font-semibold">Shop</h1>
-            <p className="text-xs text-foreground/80">
-              {fetchError ? 'Error loading products' : `${products.length} of ${totalCount} products`}
-            </p>
-          </div>
+    <main className="min-h-screen bg-[#F5F5F5]">
+      {/* Breadcrumb */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <nav className="flex items-center gap-2 text-sm text-gray-500">
+            <Link href="/" className="hover:text-[#1976D2]">Home</Link>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-gray-800 font-medium">{getPageTitle()}</span>
+          </nav>
+        </div>
+      </div>
 
-          {/* Applied Filters Summary */}
-          {hasActiveFilters && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {/* Search chip */}
-              {filters.search && (
-                <Link
-                  href={buildUrl(u => u.delete('search'))}
-                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10"
-                >
-                  <span className="text-foreground/80">Search:</span>
-                  <span className="font-medium">"{filters.search}"</span>
-                  <span aria-hidden>×</span>
-                </Link>
-              )}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+          {/* Filter Sidebar */}
+          <aside className="hidden lg:block">
+            <ErrorBoundary
+              fallback={
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <p className="text-sm text-gray-500">Filters unavailable</p>
+                </div>
+              }
+            >
+              <Suspense fallback={<div className="h-96 animate-pulse bg-white rounded-lg" />}>
+                <FilterSidebar
+                  availableCategories={categories}
+                  currentFilters={{
+                    search: params.search || "",
+                    selectedCategories: filters.categories || [],
+                    minPrice: params.minPrice || "",
+                    maxPrice: params.maxPrice || "",
+                    sort: params.sort || "popularity",
+                  }}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          </aside>
 
-              {/* Category chips */}
-              {(filters.categories || []).map(cat => (
-                <Link
-                  key={`chip-${cat}`}
-                  href={buildUrl(u => {
-                    const list = (u.get('categories') || '')
-                      .split(',')
-                      .filter(Boolean)
-                      .filter(c => c !== cat);
-                    if (list.length) u.set('categories', list.join(','));
-                    else u.delete('categories');
-                  })}
-                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10 capitalize"
-                >
-                  {cat}
-                  <span aria-hidden>×</span>
-                </Link>
-              ))}
+          {/* Main Content */}
+          <section>
+            {/* Header with title and sort */}
+            <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="text-xl font-bold text-gray-800">{getPageTitle()}</h1>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {fetchError ? 'Error loading products' : `${totalCount} products found`}
+                  </p>
+                </div>
 
-              {/* Price chips */}
-              {params.minPrice && (
-                <Link
-                  href={buildUrl(u => u.delete('minPrice'))}
-                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10"
-                >
-                  Min NPR {params.minPrice}
-                  <span aria-hidden>×</span>
-                </Link>
-              )}
-              {params.maxPrice && (
-                <Link
-                  href={buildUrl(u => u.delete('maxPrice'))}
-                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs ring-1 ring-white/10 hover:bg-white/10"
-                >
-                  Max NPR {params.maxPrice}
-                  <span aria-hidden>×</span>
-                </Link>
-              )}
-
-              {/* Clear all */}
-              <Link
-                href="/shop"
-                className="ml-auto text-xs text-[var(--kb-primary-brand)] hover:underline"
-              >
-                Clear all
-              </Link>
-            </div>
-          )}
-          <div className="mt-6">
-            {fetchError ? (
-              <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center ring-1 ring-red-500/20">
-                <h3 className="text-base font-semibold text-red-400">Connection Error</h3>
-                <p className="mt-1 text-sm text-red-300/70">{fetchError}</p>
-                <button 
-                  onClick={() => window.location.reload()} 
-                  className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-red-500/20 text-red-300 text-sm font-medium hover:bg-red-500/30 transition-colors"
-                >
-                  Retry
-                </button>
+                {/* Sort Dropdown - Client Component */}
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-gray-600">Sort by:</label>
+                  <SortDropdown currentSort={params.sort || "popularity"} />
+                </div>
               </div>
-            ) : products.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center ring-1 ring-white/10">
-                <h3 className="text-base font-semibold">No products found</h3>
-                <p className="mt-1 text-sm text-foreground/70">
-                  {filters.search || filters.categories?.length ? 
-                    'Try adjusting your filters or search terms.' : 
-                    'Products will appear here once they are added to the store.'
-                  }
-                </p>
-              </div>
-            ) : (
-              <ErrorBoundary
-                fallback={
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center ring-1 ring-white/10">
-                    <h3 className="text-base font-semibold">We couldn&apos;t load products</h3>
-                    <p className="mt-1 text-sm text-foreground/70">Please refresh the page to try again.</p>
+
+              {/* Active Filters */}
+              {hasActiveFilters && (
+                <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-gray-500">Active filters:</span>
+                  
+                  {filters.search && (
+                    <Link
+                      href={buildUrl(u => u.delete('search'))}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-[#1976D2] text-sm rounded-full hover:bg-blue-100 transition-colors"
+                    >
+                      Search: &quot;{filters.search}&quot;
+                      <X className="h-3 w-3" />
+                    </Link>
+                  )}
+
+                  {(filters.categories || []).map(cat => (
+                    <Link
+                      key={`chip-${cat}`}
+                      href={buildUrl(u => {
+                        u.delete('category');
+                        const list = (u.get('categories') || '')
+                          .split(',')
+                          .filter(Boolean)
+                          .filter(c => c !== cat);
+                        if (list.length) u.set('categories', list.join(','));
+                        else u.delete('categories');
+                      })}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-[#1976D2] text-sm rounded-full hover:bg-blue-100 transition-colors capitalize"
+                    >
+                      {cat.replace(/-/g, ' ')}
+                      <X className="h-3 w-3" />
+                    </Link>
+                  ))}
+
+                  {params.brand && (
+                    <Link
+                      href={buildUrl(u => u.delete('brand'))}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-[#1976D2] text-sm rounded-full hover:bg-blue-100 transition-colors capitalize"
+                    >
+                      Brand: {params.brand.replace(/-/g, ' ')}
+                      <X className="h-3 w-3" />
+                    </Link>
+                  )}
+
+                  {params.minPrice && (
+                    <Link
+                      href={buildUrl(u => u.delete('minPrice'))}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-[#1976D2] text-sm rounded-full hover:bg-blue-100 transition-colors"
+                    >
+                      Min: Rs. {params.minPrice}
+                      <X className="h-3 w-3" />
+                    </Link>
+                  )}
+
+                  {params.maxPrice && (
+                    <Link
+                      href={buildUrl(u => u.delete('maxPrice'))}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-[#1976D2] text-sm rounded-full hover:bg-blue-100 transition-colors"
+                    >
+                      Max: Rs. {params.maxPrice}
+                      <X className="h-3 w-3" />
+                    </Link>
+                  )}
+
+                  <Link
+                    href="/shop"
+                    className="text-sm text-red-500 hover:text-red-600 ml-auto"
+                  >
+                    Clear all
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Products Grid */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              {fetchError ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <X className="h-8 w-8 text-red-500" />
                   </div>
-                }
-              >
-                {products.length <= 30 ? (
-                  <ProductGrid products={products} />
-                ) : (
-                  <VirtualizedProductGrid products={products} />
-                )}
-              </ErrorBoundary>
-            )}
-          </div>
-          {hasMore && !fetchError && (
-            <div className="mt-8 text-center">
-              <Link
-                href={`/shop?${new URLSearchParams({
-                  ...params,
-                  cursor: nextCursor || "",
-                }).toString()}`}
-                className="inline-flex items-center px-6 py-3 rounded-xl bg-[var(--kb-primary-brand)] text-white font-medium hover:bg-[var(--kb-primary-brand)]/90 transition-colors"
-              >
-                Load More Products
-              </Link>
+                  <h3 className="text-lg font-semibold text-gray-800">Connection Error</h3>
+                  <p className="text-sm text-gray-500 mt-1">{fetchError}</p>
+                  <RetryButton />
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <SlidersHorizontal className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">No products found</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {hasActiveFilters
+                      ? 'Try adjusting your filters or search terms.'
+                      : 'Products will appear here once they are added.'}
+                  </p>
+                  {hasActiveFilters && (
+                    <Link
+                      href="/shop"
+                      className="mt-4 inline-block px-6 py-2 bg-[#1976D2] text-white rounded-lg hover:bg-[#1565C0] transition-colors"
+                    >
+                      Clear Filters
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <ErrorBoundary
+                  fallback={
+                    <div className="text-center py-12">
+                      <h3 className="text-lg font-semibold text-gray-800">Couldn&apos;t load products</h3>
+                      <p className="text-sm text-gray-500 mt-1">Please refresh the page.</p>
+                    </div>
+                  }
+                >
+                  <MarketplaceProductGrid products={products} />
+                </ErrorBoundary>
+              )}
             </div>
-          )}
-        </section>
+
+            {/* Load More */}
+            {hasMore && !fetchError && (
+              <div className="mt-6 text-center">
+                <Link
+                  href={`/shop?${new URLSearchParams({
+                    ...params,
+                    cursor: nextCursor || "",
+                  }).toString()}`}
+                  className="inline-flex items-center px-8 py-3 bg-[#1976D2] text-white font-medium rounded-lg hover:bg-[#1565C0] transition-colors"
+                >
+                  Load More Products
+                </Link>
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </main>
   );

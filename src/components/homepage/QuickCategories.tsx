@@ -3,7 +3,7 @@ import Link from "next/link";
 // Icon mapping for categories
 const categoryIcons: Record<string, string> = {
   "women": "👗",
-  "men": "👔", 
+  "men": "👔",
   "beauty": "💄",
   "accessories": "👜",
   "formal": "🤵",
@@ -26,8 +26,8 @@ export default function QuickCategories({ categories }: QuickCategoriesProps) {
     <section className="mx-auto max-w-7xl px-4 py-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Shop by Category</h2>
-        <Link 
-          href="/shop" 
+        <Link
+          href="/shop"
           className="text-sm text-[var(--kb-primary-brand)] hover:underline"
         >
           View all →
@@ -38,7 +38,7 @@ export default function QuickCategories({ categories }: QuickCategoriesProps) {
           const categoryKey = category.toLowerCase();
           const icon = categoryIcons[categoryKey] || categoryIcons.default;
           const displayName = category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ');
-          
+
           return (
             <Link
               key={category}

@@ -1,14 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ChevronDown } from "lucide-react";
-
-const sortOptions = [
-  { id: "popularity", label: "Popularity" },
-  { id: "newest", label: "Newest" },
-  { id: "price_low", label: "Price: Low to High" },
-  { id: "price_high", label: "Price: High to Low" },
-];
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
 
 interface CurrentFilters {
   search: string;
@@ -29,51 +22,71 @@ export default function FilterSidebar({
 }: FilterSidebarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  
+
   // Local state for form inputs
   const [filters, setFilters] = useState<CurrentFilters>(currentFilters);
-  // Mobile collapsible sections
-  const [open, setOpen] = useState<{search:boolean;category:boolean;price:boolean;sort:boolean}>({
-    search: false,
-    category: false,
-    price: false,
-    sort: false,
+  
+  // Collapsible sections
+  const [openSections, setOpenSections] = useState({
+    category: true,
+    price: true,
   });
-  const toggle = (k: keyof typeof open) => setOpen((s) => ({ ...s, [k]: !s[k] }));
 
-  const categories = availableCategories.map(cat => ({
-    id: cat,
-    label: cat.charAt(0).toUpperCase() + cat.slice(1)
-  }));
+  const toggleSection = (section: keyof typeof openSections) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const categories = availableCategories.length > 0 
+    ? availableCategories.map(cat => ({
+        id: cat,
+        label: cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      }))
+    : [
+        { id: 'facial-kits', label: 'Facial Kits' },
+        { id: 'hair-care', label: 'Hair Care' },
+        { id: 'skin-care', label: 'Skin Care' },
+        { id: 'salon-equipment', label: 'Salon Equipment' },
+        { id: 'combos', label: 'Combo Deals' },
+        { id: 'herbal', label: 'Herbal Products' },
+        { id: 'makeup', label: 'Makeup' },
+      ];
 
   const handleApplyFilters = () => {
     const params = new URLSearchParams();
-    
+
     if (filters.search.trim()) {
       params.set('search', filters.search.trim());
     }
-    
+
     if (filters.selectedCategories.length > 0) {
       params.set('categories', filters.selectedCategories.join(','));
     }
-    
+
     if (filters.minPrice.trim()) {
       params.set('minPrice', filters.minPrice.trim());
     }
-    
+
     if (filters.maxPrice.trim()) {
       params.set('maxPrice', filters.maxPrice.trim());
     }
-    
-    if (filters.sort && filters.sort !== 'popularity') {
-      params.set('sort', filters.sort);
-    }
 
-    // Reset cursor when applying new filters
     params.delete('cursor');
-    
+
     startTransition(() => {
       router.push(`/shop?${params.toString()}`);
+    });
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      search: '',
+      selectedCategories: [],
+      minPrice: '',
+      maxPrice: '',
+      sort: 'popularity',
+    });
+    startTransition(() => {
+      router.push('/shop');
     });
   };
 
@@ -87,126 +100,155 @@ export default function FilterSidebar({
     }));
   const onMinPriceChange = (v: string) => setFilters(f => ({ ...f, minPrice: v }));
   const onMaxPriceChange = (v: string) => setFilters(f => ({ ...f, maxPrice: v }));
-  const onSortChange = (v: string) => setFilters(f => ({ ...f, sort: v }));
-  
+
+  const hasFilters = filters.search || filters.selectedCategories.length > 0 || filters.minPrice || filters.maxPrice;
+
   return (
-    <aside className="space-y-4">
+    <aside className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b bg-gray-50">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800">Filters</h2>
+          {hasFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="text-sm text-red-500 hover:text-red-600"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Search */}
-      <div>
-        <button
-          type="button"
-          onClick={() => toggle('search')}
-          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold lg:hidden"
-        >
-          <span>Search</span>
-          <ChevronDown className={`h-4 w-4 transition-transform ${open.search ? 'rotate-180' : ''}`} />
-        </button>
-        <div className={`lg:block ${open.search ? 'block' : 'hidden'}`}>
-          <label className="text-sm font-semibold hidden lg:block">Search</label>
+      <div className="p-4 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
             value={filters.search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search products"
-            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
+            placeholder="Search products..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1976D2] focus:border-transparent"
           />
         </div>
       </div>
 
-      {/* Category */}
-      <div>
+      {/* Categories */}
+      <div className="border-b">
         <button
-          type="button"
-          onClick={() => toggle('category')}
-          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold lg:hidden"
+          onClick={() => toggleSection('category')}
+          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
         >
-          <span>Category</span>
-          <ChevronDown className={`h-4 w-4 transition-transform ${open.category ? 'rotate-180' : ''}`} />
+          <span className="font-medium text-gray-800">Categories</span>
+          {openSections.category ? (
+            <ChevronUp className="h-4 w-4 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          )}
         </button>
-        <p className="text-sm font-semibold hidden lg:block">Category</p>
-        <div className={`mt-2 space-y-2 lg:block ${open.category ? 'block' : 'hidden'}`}>
-          {categories.map((c) => {
-            const isChecked = filters.selectedCategories.includes(c.id);
-            return (
-              <label key={c.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(e) => onToggleCategory(c.id, e.target.checked)}
-                  className="h-4 w-4 rounded border-white/20 bg-white/5 text-[var(--kb-primary-brand)] focus:ring-[var(--kb-primary-brand)]"
-                />
-                {c.label}
-              </label>
-            );
-          })}
-        </div>
+        {openSections.category && (
+          <div className="px-4 pb-4 space-y-2">
+            {categories.map((cat) => {
+              const isChecked = filters.selectedCategories.includes(cat.id);
+              return (
+                <label
+                  key={cat.id}
+                  className="flex items-center gap-3 py-1 cursor-pointer group"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => onToggleCategory(cat.id, e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-[#1976D2] focus:ring-[#1976D2]"
+                  />
+                  <span className={`text-sm ${isChecked ? 'text-[#1976D2] font-medium' : 'text-gray-600 group-hover:text-gray-800'}`}>
+                    {cat.label}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Price Range */}
-      <div>
+      <div className="border-b">
         <button
-          type="button"
-          onClick={() => toggle('price')}
-          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold lg:hidden"
+          onClick={() => toggleSection('price')}
+          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
         >
-          <span>Price Range (NPR)</span>
-          <ChevronDown className={`h-4 w-4 transition-transform ${open.price ? 'rotate-180' : ''}`} />
+          <span className="font-medium text-gray-800">Price Range</span>
+          {openSections.price ? (
+            <ChevronUp className="h-4 w-4 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          )}
         </button>
-        <p className="text-sm font-semibold hidden lg:block">Price Range (NPR)</p>
-        <div className={`mt-2 grid grid-cols-2 gap-2 lg:grid ${open.price ? 'grid' : 'hidden'}`}>
-          <input
-            type="number"
-            inputMode="numeric"
-            value={filters.minPrice}
-            onChange={(e) => onMinPriceChange(e.target.value)}
-            placeholder="Min"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
-          />
-          <input
-            type="number"
-            inputMode="numeric"
-            value={filters.maxPrice}
-            onChange={(e) => onMaxPriceChange(e.target.value)}
-            placeholder="Max"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]"
-          />
-        </div>
+        {openSections.price && (
+          <div className="px-4 pb-4">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-gray-500 mb-1 block">Min (Rs.)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={filters.minPrice}
+                  onChange={(e) => onMinPriceChange(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1976D2] focus:border-transparent"
+                />
+              </div>
+              <span className="text-gray-400 mt-5">-</span>
+              <div className="flex-1">
+                <label className="text-xs text-gray-500 mb-1 block">Max (Rs.)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={filters.maxPrice}
+                  onChange={(e) => onMaxPriceChange(e.target.value)}
+                  placeholder="50000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1976D2] focus:border-transparent"
+                />
+              </div>
+            </div>
+            {/* Quick price filters */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              {[
+                { label: 'Under Rs. 500', min: '', max: '500' },
+                { label: 'Rs. 500 - 1000', min: '500', max: '1000' },
+                { label: 'Rs. 1000 - 2000', min: '1000', max: '2000' },
+                { label: 'Above Rs. 2000', min: '2000', max: '' },
+              ].map((range) => (
+                <button
+                  key={range.label}
+                  onClick={() => {
+                    setFilters(f => ({ ...f, minPrice: range.min, maxPrice: range.max }));
+                  }}
+                  className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                    filters.minPrice === range.min && filters.maxPrice === range.max
+                      ? 'bg-[#1976D2] text-white border-[#1976D2]'
+                      : 'border-gray-300 text-gray-600 hover:border-[#1976D2] hover:text-[#1976D2]'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Sorting */}
-      <div>
+      {/* Apply Button */}
+      <div className="p-4">
         <button
-          type="button"
-          onClick={() => toggle('sort')}
-          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold lg:hidden"
+          onClick={handleApplyFilters}
+          disabled={isPending}
+          className="w-full py-3 bg-[#1976D2] text-white font-semibold rounded-lg hover:bg-[#1565C0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span>Sort by</span>
-          <ChevronDown className={`h-4 w-4 transition-transform ${open.sort ? 'rotate-180' : ''}`} />
+          {isPending ? "Applying..." : "Apply Filters"}
         </button>
-        <p className="text-sm font-semibold hidden lg:block">Sort by</p>
-        <div className={`lg:block ${open.sort ? 'block' : 'hidden'}`}>
-          <select
-            value={filters.sort}
-            onChange={(e) => onSortChange(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)] [&>option]:bg-[var(--kb-surface-dark)] [&>option]:text-foreground"
-          >
-            {sortOptions.map((o) => (
-              <option key={o.id} value={o.id} className="bg-[var(--kb-surface-dark)] text-foreground">
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
-
-      {/* Apply */}
-      <button
-        onClick={handleApplyFilters}
-        disabled={isPending}
-        className="w-full rounded-full bg-gradient-to-r from-[color-mix(in_oklab,var(--kb-primary-brand)_75%,black)] to-[var(--kb-primary-brand)] px-4 py-2 text-sm font-semibold text-foreground ring-1 ring-white/10 transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kb-accent-gold)] disabled:opacity-50"
-      >
-        {isPending ? "Applying..." : "Apply"}
-      </button>
     </aside>
   );
 }

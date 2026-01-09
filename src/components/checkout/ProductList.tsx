@@ -16,24 +16,24 @@ export default function ProductList({
 }) {
   if (items.length === 0) {
     return (
-      <section aria-labelledby="your-products" className="rounded-xl border border-white/10 bg-white/5 p-4">
-        <h2 id="your-products" className="mb-2 text-lg font-semibold tracking-tight">
+      <section aria-labelledby="your-products" className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 id="your-products" className="mb-2 text-lg font-semibold tracking-tight text-gray-900">
           Your Products
         </h2>
-        <p className="text-sm text-foreground/70">Your bag is empty.</p>
+        <p className="text-sm text-gray-500">Your bag is empty.</p>
       </section>
     );
   }
 
   return (
-    <section aria-labelledby="your-products" className="rounded-xl border border-white/10 bg-white/5 p-4">
-      <h2 id="your-products" className="mb-3 text-lg font-semibold tracking-tight">
+    <section aria-labelledby="your-products" className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <h2 id="your-products" className="mb-3 text-lg font-semibold tracking-tight text-gray-900">
         Your Products
       </h2>
-      <ul className="divide-y divide-white/10">
+      <ul className="divide-y divide-gray-100">
         {items.map((it) => (
-          <li key={it.id} className="flex gap-3 py-3"> {/* Use only it.id as key - MUST be unique cart_items.id */}
-            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/10">
+          <li key={it.id} className="flex gap-3 py-3">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
               {it.imageUrl ? (
                 <Image 
                   src={it.imageUrl} 
@@ -43,26 +43,25 @@ export default function ProductList({
                   sizes="80px"
                 />
               ) : (
-                <div className="flex size-full items-center justify-center text-xs text-foreground/60">No image</div>
+                <div className="flex size-full items-center justify-center text-xs text-gray-400">No image</div>
               )}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{it.name}</div>
+                  <div className="truncate text-sm font-medium text-gray-900">{it.name}</div>
                   
-                  {/* Enhanced variant display with badges and color swatches */}
                   {it.variantData && (it.variantData.size || it.variantData.color) ? (
                     <div className="flex items-center gap-2 mt-1.5">
                       {it.variantData.size && (
-                        <span key={`size-${it.id}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-white/10 text-foreground/80 font-medium border border-white/5">
+                        <span key={`size-${it.id}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 font-medium border border-gray-200">
                           {it.variantData.size}
                         </span>
                       )}
                       {it.variantData.color && (
-                        <span key={`color-${it.id}`} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-white/10 text-foreground/80 border border-white/5">
+                        <span key={`color-${it.id}`} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 border border-gray-200">
                           <span 
-                            className="w-3 h-3 rounded-full border border-white/30 shadow-sm" 
+                            className="w-3 h-3 rounded-full border border-gray-300 shadow-sm" 
                             style={{ backgroundColor: it.variantData.colorHex || '#666' }} 
                           />
                           {it.variantData.color}
@@ -70,18 +69,18 @@ export default function ProductList({
                       )}
                     </div>
                   ) : it.variant ? (
-                    <div className="text-xs text-foreground/70 mt-1">{it.variant}</div>
+                    <div className="text-xs text-gray-500 mt-1">{it.variant}</div>
                   ) : null}
                 </div>
-                <div className="text-sm font-medium whitespace-nowrap">{formatNPR(it.price)}</div>
+                <div className="text-sm font-medium text-gray-900 whitespace-nowrap">{formatNPR(it.price)}</div>
               </div>
               <div className="mt-2 flex items-center gap-3">
-                <div className="inline-flex items-center rounded-lg ring-1 ring-white/10">
+                <div className="inline-flex items-center rounded-lg border border-gray-300">
                   <button
                     type="button"
                     aria-label="Decrease quantity"
                     data-testid={`dec-${it.id}`}
-                    className="h-8 w-8 disabled:opacity-50"
+                    className="h-8 w-8 text-gray-600 hover:bg-gray-50 disabled:opacity-50 rounded-l-lg"
                     onClick={() => onQtyChange(it.id, Math.max(1, it.quantity - 1), it.variant)}
                     disabled={it.quantity <= 1}
                   >
@@ -94,13 +93,13 @@ export default function ProductList({
                     min={1}
                     value={it.quantity}
                     onChange={(e) => onQtyChange(it.id, Math.max(1, Number(e.target.value)), it.variant)}
-                    className="h-8 w-14 bg-transparent text-center text-sm"
+                    className="h-8 w-14 bg-transparent text-center text-sm text-gray-900 border-x border-gray-300"
                   />
                   <button
                     type="button"
                     aria-label="Increase quantity"
                     data-testid={`inc-${it.id}`}
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-gray-600 hover:bg-gray-50 rounded-r-lg"
                     onClick={() => onQtyChange(it.id, it.quantity + 1, it.variant)}
                   >
                     +
@@ -111,7 +110,7 @@ export default function ProductList({
                   onClick={() => onRemove(it.id, it.variant)}
                   aria-label={`Remove ${it.name}`}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs ring-1 ring-white/10 hover:bg-white/5",
+                    "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200",
                   )}
                 >
                   <Trash2 className="h-4 w-4" /> Remove

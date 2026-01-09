@@ -108,7 +108,7 @@ export default function AdminSidebar() {
             {/* Group Header */}
             <button
               onClick={() => toggleGroup(group.id)}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-foreground/60 hover:bg-white/5 hover:text-foreground/80"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 hover:bg-gray-100 hover:text-gray-700"
             >
               <span>{group.label}</span>
               {isExpanded ? (
@@ -120,12 +120,12 @@ export default function AdminSidebar() {
 
             {/* Group Items */}
             {isExpanded && (
-              <div className="ml-2 space-y-0.5 border-l border-white/10 pl-2">
+              <div className="ml-2 space-y-0.5 border-l border-gray-200 pl-2">
                 {group.items.map((item) => (
                   <Link
                     key={item.id}
                     href={item.href}
-                    className="block rounded-lg px-3 py-2 text-foreground/90 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                    className="block rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 ring-1 ring-transparent hover:ring-gray-200"
                   >
                     {item.label}
                   </Link>

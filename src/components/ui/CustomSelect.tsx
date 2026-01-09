@@ -80,16 +80,16 @@ export default function CustomSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 text-left flex items-center justify-between",
-          "focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          !selectedOption && "text-foreground/50"
+          "w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-left flex items-center justify-between",
+          "focus:outline-none focus:ring-2 focus:ring-[#1976D2] focus:border-[#1976D2]",
+          "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50",
+          !selectedOption ? "text-gray-400" : "text-gray-900"
         )}
       >
         <span>{selectedOption ? selectedOption.label : placeholder}</span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 transition-transform text-foreground/60",
+            "h-4 w-4 transition-transform text-gray-500",
             isOpen && "rotate-180"
           )}
         />
@@ -97,7 +97,7 @@ export default function CustomSelect({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl border border-white/10 bg-[#1f2937]/95 backdrop-blur-sm shadow-xl ring-1 ring-white/10 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+        <div className="absolute z-50 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg max-h-60 overflow-y-auto">
           {options.map((option) => (
             <button
               key={option.value}
@@ -105,15 +105,15 @@ export default function CustomSelect({
               onClick={() => handleSelect(option.value)}
               className={cn(
                 "w-full px-3 py-2 text-sm text-left flex items-center justify-between",
-                "hover:bg-white/10 transition-colors",
+                "hover:bg-gray-50 transition-colors",
                 option.value === value
-                  ? "bg-[var(--kb-primary-brand)]/20 text-foreground"
-                  : "text-foreground/80"
+                  ? "bg-blue-50 text-gray-900"
+                  : "text-gray-700"
               )}
             >
               <span>{option.label}</span>
               {option.value === value && (
-                <Check className="h-4 w-4 text-[var(--kb-primary-brand)]" />
+                <Check className="h-4 w-4 text-[#1976D2]" />
               )}
             </button>
           ))}

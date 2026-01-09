@@ -11,13 +11,13 @@ import type { UserCapability } from "@/lib/types";
 // Defer Header to reduce initial JS; render a lightweight skeleton during loading
 const Header = dynamic(() => import("@/components/layout/Header"), {
   loading: () => (
-    <div className="sticky top-0 z-50 border-b border-white/10 bg-background/80 h-16" aria-label="Loading header" />
+    <div className="sticky top-0 z-50 bg-[#1976D2] h-[120px]" aria-label="Loading header" />
   ),
 });
 
 // Lazy load Footer as it's below the fold
 const Footer = dynamic(() => import("@/components/layout/Footer"), {
-  loading: () => <div className="h-64 mt-10 animate-pulse bg-white/5" />,
+  loading: () => <div className="h-64 mt-10 animate-pulse bg-gray-100" />,
 });
 
 const inter = Inter({
@@ -47,7 +47,7 @@ export default async function RootLayout({
 }>) {
   // ============ Server-Side Cart Fetching ============
   const cookieStore = await cookies();
-  
+
   // Create Supabase server client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,35 +70,35 @@ export default async function RootLayout({
       },
     }
   );
-  
+
   // Get user session
   const { data: { session } } = await supabase.auth.getSession();
   const isAuthenticated = !!session?.user;
-  
+
   // RESTORATION: Build correct headers for Edge Function
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   };
-  
+
   // Add authentication header
   if (session?.access_token) {
     requestHeaders['Authorization'] = `Bearer ${session.access_token}`;
   } else {
     requestHeaders['Authorization'] = `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`;
   }
-  
+
   // CRITICAL FIX: Extract guest_token from cookies and send as x-guest-token header
   // Edge Function does NOT read cookies - it requires the x-guest-token header
   const guestToken = cookieStore.get('guest_token')?.value;
-  
+
   if (guestToken) {
     requestHeaders['x-guest-token'] = guestToken;
     console.log('[RootLayout] Setting x-guest-token header:', guestToken);
   } else if (!session) {
     console.log('[RootLayout] No guest token found in cookies for anonymous user');
   }
-  
+
   // Fetch initial cart from Edge Function
   let initialCart = null;
   try {
@@ -111,9 +111,9 @@ export default async function RootLayout({
         cache: 'no-store', // Always fetch fresh cart data
       }
     );
-    
+
     const data = await response.json();
-    
+
     if (data.success && data.cart) {
       initialCart = data.cart;
       console.log('[RootLayout] Server-fetched cart:', {
@@ -121,7 +121,7 @@ export default async function RootLayout({
         itemCount: (data.cart.item_count ?? data.cart.items?.length ?? data.cart.cart_items?.length ?? 0),
         isGuest: !data.cart.user_id,
       });
-      
+
       // Note: Edge Function no longer returns guest_token in response
       // Guest tokens are managed via cookies and adopted by client
     }
@@ -129,7 +129,7 @@ export default async function RootLayout({
     console.error('[RootLayout] Failed to fetch initial cart:', error);
     // Cart will be fetched client-side as fallback
   }
-  
+
   // TODO: Replace with real capability hydration from auth/session
   const guestCapabilities: UserCapability[] = [
     "view_shop",
@@ -137,24 +137,24 @@ export default async function RootLayout({
     "apply_vendor",
     "view_cart",
   ];
-  
+
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.variable} antialiased`}>
+    <html lang="en">
+      <body className={`${inter.variable} antialiased bg-[#F5F5F5]`}>
         {/* Initialize client-side cart store with server data */}
-        <CartInitializer 
-          initialCart={initialCart} 
-          isAuthenticated={isAuthenticated} 
+        <CartInitializer
+          initialCart={initialCart}
+          isAuthenticated={isAuthenticated}
         />
-        
+
         {/* CRITICAL: Manage auth session changes for cart */}
         <AuthSessionManager />
-        
+
         {/* Header now gets cart data from the store */}
-        <Header />
-        
+        <Header isAuthed={isAuthenticated} />
+
         {children}
-        
+
         <Footer />
       </body>
     </html>

@@ -251,14 +251,14 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
         />
       
       {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-white/10 bg-background shadow-xl ring-1 ring-white/10">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4 shrink-0">
-          <h2 id="add-product-title" className="text-xl font-semibold">Add Product/Service</h2>
+          <h2 id="add-product-title" className="text-xl font-semibold text-gray-900">Add Product/Service</h2>
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="rounded-full p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+            className="rounded-full p-2 hover:bg-gray-100 text-gray-500"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />
@@ -267,15 +267,15 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
         
         {/* Error Display */}
         {error && (
-          <div className="mx-6 mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
-            <p className="text-sm text-red-400">{error}</p>
+          <div className="mx-6 mb-4 rounded-xl border border-red-200 bg-red-50 p-3">
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
         
         {/* Success Display */}
         {successMessage && (
-          <div className="mx-6 mb-4 rounded-xl border border-green-500/20 bg-green-500/10 p-3">
-            <p className="text-sm text-green-400">{successMessage}</p>
+          <div className="mx-6 mb-4 rounded-xl border border-green-200 bg-green-50 p-3">
+            <p className="text-sm text-green-600">{successMessage}</p>
           </div>
         )}
 
@@ -288,19 +288,19 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-full ring-2 transition-colors",
                     idx <= currentStepIndex
-                      ? "bg-[var(--kb-primary-brand)] ring-[var(--kb-primary-brand)] text-white"
-                      : "bg-white/5 ring-white/20 text-foreground/60"
+                      ? "bg-[#1976D2] ring-[#1976D2] text-white"
+                      : "bg-gray-100 ring-gray-200 text-gray-400"
                   )}
                 >
                   {step.icon}
                 </div>
                 <div className="ml-3 hidden sm:block">
-                  <p className={cn("text-sm font-medium", idx <= currentStepIndex ? "text-foreground" : "text-foreground/60")}>
+                  <p className={cn("text-sm font-medium", idx <= currentStepIndex ? "text-gray-900" : "text-gray-400")}>
                     {step.label}
                   </p>
                 </div>
                 {idx < steps.length - 1 && (
-                  <div className={cn("mx-4 h-px w-12 transition-colors", idx < currentStepIndex ? "bg-[var(--kb-primary-brand)]" : "bg-white/20")} />
+                  <div className={cn("mx-4 h-px w-12 transition-colors", idx < currentStepIndex ? "bg-[#1976D2]" : "bg-gray-200")} />
                 )}
               </div>
             ))}
@@ -312,34 +312,34 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
           {currentStep === "basic" && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Product Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => updateField("name", e.target.value)}
                   placeholder="e.g., Premium Cotton Kurta"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1976D2] focus:border-[#1976D2]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => updateField("description", e.target.value)}
                   placeholder="Describe your product..."
                   rows={4}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1976D2] focus:border-[#1976D2]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Category *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                 {loadingCategories ? (
-                  <div className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-foreground/60">Loading categories...</span>
+                  <div className="w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2 text-sm flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                    <span className="text-gray-500">Loading categories...</span>
                   </div>
                 ) : categoryError ? (
-                  <div className="w-full rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                  <div className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
                     {categoryError}
                   </div>
                 ) : (
@@ -364,7 +364,7 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
                   onChange={setImages}
                 />
               ) : (
-                <div className="text-center py-8 text-white/60">
+                <div className="text-center py-8 text-gray-500">
                   Loading...
                 </div>
               )}
@@ -382,42 +382,42 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
 
           {currentStep === "review" && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Review Your Product</h3>
+              <h3 className="text-lg font-medium text-gray-900">Review Your Product</h3>
               
               {/* Basic Info */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h4 className="text-sm font-medium text-foreground/70 mb-3">Basic Information</h4>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <h4 className="text-sm font-medium text-gray-500 mb-3">Basic Information</h4>
                 <dl className="space-y-2">
                   <div className="flex justify-between">
-                    <dt className="text-sm text-foreground/60">Name:</dt>
-                    <dd className="text-sm font-medium">{formData.name || "—"}</dd>
+                    <dt className="text-sm text-gray-500">Name:</dt>
+                    <dd className="text-sm font-medium text-gray-900">{formData.name || "—"}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-sm text-foreground/60">Category:</dt>
-                    <dd className="text-sm font-medium">
+                    <dt className="text-sm text-gray-500">Category:</dt>
+                    <dd className="text-sm font-medium text-gray-900">
                       {formData.category 
                         ? categories.find(c => c.id === formData.category)?.name || "Unknown"
                         : "—"}
                     </dd>
                   </div>
                   {formData.description && (
-                    <div className="pt-2 border-t border-white/10">
-                      <dt className="text-sm text-foreground/60 mb-1">Description:</dt>
-                      <dd className="text-sm text-foreground/80">{formData.description}</dd>
+                    <div className="pt-2 border-t border-gray-200">
+                      <dt className="text-sm text-gray-500 mb-1">Description:</dt>
+                      <dd className="text-sm text-gray-700">{formData.description}</dd>
                     </div>
                   )}
                 </dl>
               </div>
               
               {/* Images */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h4 className="text-sm font-medium text-foreground/70 mb-3">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <h4 className="text-sm font-medium text-gray-500 mb-3">
                   Images ({images.length})
                 </h4>
                 {images.length > 0 ? (
                   <div className="grid grid-cols-4 gap-2">
                     {images.map((img, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-white/10">
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
                         <img src={img.image_url} alt={img.alt_text} className="w-full h-full object-cover" />
                         {img.is_primary && (
                           <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded">Primary</div>
@@ -426,34 +426,34 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-foreground/60">No images uploaded</p>
+                  <p className="text-sm text-gray-500">No images uploaded</p>
                 )}
               </div>
               
               {/* Variants */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h4 className="text-sm font-medium text-foreground/70 mb-3">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <h4 className="text-sm font-medium text-gray-500 mb-3">
                   Variants ({variants.length})
                 </h4>
                 {variants.length > 0 ? (
                   <div className="space-y-2">
                     {variants.slice(0, 5).map((variant, idx) => (
-                      <div key={idx} className="flex justify-between items-center py-2 border-b border-white/10 last:border-0">
-                        <span className="text-sm text-foreground/80">{variant.sku}</span>
+                      <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
+                        <span className="text-sm text-gray-700">{variant.sku}</span>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium">NPR {variant.price}</span>
-                          <span className="text-xs text-foreground/60">Stock: {variant.quantity}</span>
+                          <span className="text-sm font-medium text-gray-900">NPR {variant.price}</span>
+                          <span className="text-xs text-gray-500">Stock: {variant.quantity}</span>
                         </div>
                       </div>
                     ))}
                     {variants.length > 5 && (
-                      <p className="text-xs text-foreground/60 text-center pt-2">
+                      <p className="text-xs text-gray-500 text-center pt-2">
                         + {variants.length - 5} more variants
                       </p>
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-foreground/60">No variants configured</p>
+                  <p className="text-sm text-gray-500">No variants configured</p>
                 )}
               </div>
             </div>
@@ -461,15 +461,15 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 shrink-0">
           <button
             onClick={handlePrev}
             disabled={isFirstStep}
             className={cn(
               "rounded-full px-4 py-2 text-sm font-medium transition",
               isFirstStep
-                ? "cursor-not-allowed text-foreground/40"
-                : "text-foreground hover:bg-white/5"
+                ? "cursor-not-allowed text-gray-300"
+                : "text-gray-700 hover:bg-gray-100"
             )}
           >
             Previous
@@ -477,7 +477,7 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="rounded-full px-4 py-2 text-sm font-medium text-foreground hover:bg-white/5"
+              className="rounded-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
             >
               Cancel
             </button>
@@ -485,7 +485,7 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="rounded-full bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_80%,black)] px-4 py-2 text-sm font-semibold text-white transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="rounded-full bg-[#1976D2] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1565C0] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSubmitting ? 'Creating...' : 'Create Product'}
@@ -493,7 +493,7 @@ export default function AddProductModal({ open, onClose, userId, onSuccess }: Ad
             ) : (
               <button
                 onClick={handleNext}
-                className="rounded-full bg-gradient-to-r from-[var(--kb-primary-brand)] to-[color-mix(in_oklab,var(--kb-primary-brand)_80%,black)] px-4 py-2 text-sm font-semibold text-white transition hover:from-[var(--kb-primary-brand)] hover:to-[var(--kb-primary-brand)]"
+                className="rounded-full bg-[#1976D2] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1565C0]"
               >
                 Next
               </button>

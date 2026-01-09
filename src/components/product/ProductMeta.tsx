@@ -8,8 +8,8 @@ export default function ProductMeta({ product }: { product: ProductDetail }) {
     <div className="space-y-2">
       <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{product.name}</h1>
       <div className="flex flex-wrap items-center gap-3 text-sm text-foreground/70">
-        <Link 
-          href={`/vendor/${product.vendor.id}`} 
+        <Link
+          href={`/vendor/${product.vendor.id}`}
           className="hover:text-foreground transition-colors underline decoration-foreground/20 hover:decoration-foreground/60"
         >
           by {product.vendor.name}

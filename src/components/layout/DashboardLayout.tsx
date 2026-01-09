@@ -24,7 +24,7 @@ export default function DashboardLayout({
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
         {/* Sidebar */}
         <aside className="lg:sticky lg:top-24 self-start hidden lg:block">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             {sidebar}
           </div>
         </aside>
@@ -36,14 +36,14 @@ export default function DashboardLayout({
               {/* Mobile: sidebar toggle */}
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 p-2 text-foreground/80 ring-1 ring-white/10 hover:bg-white/10 lg:hidden"
+                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-600 shadow-sm hover:bg-gray-50 lg:hidden"
                 onClick={() => setSidebarOpen((v) => !v)}
                 aria-expanded={sidebarOpen}
                 aria-controls="admin-sidebar-mobile"
               >
                 {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
-              {title ? <h1 className="text-2xl font-semibold tracking-tight">{title}</h1> : null}
+              {title ? <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{title}</h1> : null}
             </div>
             {actions ? <div className="shrink-0">{actions}</div> : null}
           </div>
@@ -56,7 +56,7 @@ export default function DashboardLayout({
               sidebarOpen ? "block" : "hidden"
             )}
           >
-            <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               {sidebar}
             </div>
           </div>

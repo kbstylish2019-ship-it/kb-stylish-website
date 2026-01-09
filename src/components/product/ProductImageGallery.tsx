@@ -57,11 +57,11 @@ export default function ProductImageGallery({ images }: { images: Media[] }) {
             )}
           >
             <div className="relative h-full w-full">
-              <Image 
-                src={img.url} 
-                alt={img.alt} 
+              <Image
+                src={img.url}
+                alt={img.alt}
                 fill
-                className="object-cover" 
+                className="object-cover"
                 sizes="20vw"
                 onError={handleImgError}
               />

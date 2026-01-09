@@ -1,16 +1,16 @@
 /* Global Dropdown Theming for KB Stylish */
-/* Ensures all <select> dropdowns match the dark theme with proper transparency */
+/* Light mode styling for all dropdowns */
 
 select {
-  /* Base styling */
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--foreground);
+  /* Base styling - Light mode */
+  background-color: white;
+  border: 1px solid rgb(209 213 219); /* gray-300 */
+  color: rgb(17 24 39); /* gray-900 */
   
-  /* Option styling - dark background with proper contrast */
+  /* Option styling - light background */
   option {
-    background-color: #1a1a1a;
-    color: var(--foreground);
+    background-color: white;
+    color: rgb(17 24 39); /* gray-900 */
     padding: 0.5rem;
   }
   
@@ -22,14 +22,14 @@ select {
   
   /* Hover state for options */
   option:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgb(243 244 246); /* gray-100 */
   }
 }
 
 /* Specific styling for form selects */
 select.form-select,
 select[class*="rounded"] {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
   background-size: 1.5em 1.5em;
@@ -43,13 +43,14 @@ select[class*="rounded"] {
 select:focus {
   outline: none;
   border-color: var(--kb-primary-brand);
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
 }
 
 /* Disabled state */
 select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background-color: rgb(249 250 251); /* gray-50 */
 }
 
 /* Mobile optimization - prevent zoom on focus */
@@ -59,10 +60,10 @@ select:disabled {
   }
 }
 
-/* Thin scrollbars for all scrollable elements */
+/* Thin scrollbars for all scrollable elements - Light mode */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 /* Webkit browsers (Chrome, Safari, Edge) */
@@ -76,10 +77,10 @@ select:disabled {
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(0, 0, 0, 0.3);
 }

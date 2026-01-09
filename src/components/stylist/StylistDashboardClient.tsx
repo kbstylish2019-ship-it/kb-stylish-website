@@ -154,12 +154,12 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
 
   function getStatusBadge(status: string) {
     const variants: Record<string, string> = {
-      confirmed: 'bg-green-500/20 text-green-300 border-green-500/30',
-      pending: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-      completed: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      cancelled: 'bg-red-500/20 text-red-300 border-red-500/30'
+      confirmed: 'bg-green-50 text-green-700 border-green-200',
+      pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      completed: 'bg-blue-50 text-blue-700 border-blue-200',
+      cancelled: 'bg-red-50 text-red-700 border-red-200'
     };
-    return variants[status] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    return variants[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   }
 
   function openSafetyDetails(booking: Booking) {
@@ -199,10 +199,10 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
   
   if (error) {
     return (
-      <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <div className="flex items-center">
-          <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
-          <span className="text-red-300">{error}</span>
+          <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
+          <span className="text-red-700">{error}</span>
         </div>
         <Button 
           onClick={loadDashboardData} 
@@ -224,10 +224,10 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
     <div className="space-y-6">
       {/* New Booking Alert */}
       {newBookingAlert && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex items-center justify-between">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
           <div className="flex items-center">
-            <Bell className="w-5 h-5 text-blue-400 mr-2" />
-            <span className="text-blue-300 font-medium">New booking received!</span>
+            <Bell className="w-5 h-5 text-blue-600 mr-2" />
+            <span className="text-blue-700 font-medium">New booking received!</span>
           </div>
           <Button 
             variant="ghost" 
@@ -241,9 +241,9 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
 
       {/* Budget Tracker Widget */}
       {budget && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 overflow-hidden">
-          <div className="p-4 border-b border-white/10">
-            <h3 className="text-lg font-semibold text-foreground flex items-center">
+        <div className="rounded-2xl border border-gray-200 bg-white ring-1 ring-gray-100 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <TrendingUp className="w-5 h-5 mr-2" />
               Override Budget
             </h3>
@@ -251,8 +251,8 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
           <div className="p-4 space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-foreground/70">Monthly Overrides</span>
-                <span className="font-medium text-foreground">
+                <span className="text-gray-600">Monthly Overrides</span>
+                <span className="font-medium text-gray-900">
                   {budget.monthlyUsed} / {budget.monthlyLimit} used
                 </span>
               </div>
@@ -260,19 +260,19 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
                 value={(budget.monthlyUsed / budget.monthlyLimit) * 100} 
                 className="h-2"
               />
-              <p className="text-xs text-foreground/50 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Resets: {formatDate(budget.resetsAt)}
               </p>
             </div>
             
-            <div className="pt-3 border-t border-white/10">
+            <div className="pt-3 border-t border-gray-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground/70">Emergency Overrides</span>
-                <Badge variant="outline" className="font-medium bg-orange-500/20 text-orange-300 border-orange-500/30">
+                <span className="text-sm text-gray-600">Emergency Overrides</span>
+                <Badge variant="outline" className="font-medium bg-orange-50 text-orange-700 border-orange-200">
                   {budget.emergencyRemaining} remaining
                 </Badge>
               </div>
-              <p className="text-xs text-foreground/50 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 ⚠️ Use for urgent requests only
               </p>
             </div>
@@ -282,30 +282,30 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
 
       {/* Bookings List */}
       <div>
-        <h2 className="text-xl font-semibold text-foreground mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Upcoming Appointments ({bookings.length})
         </h2>
 
         {bookings.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 py-12 text-center">
-            <Calendar className="w-12 h-12 text-foreground/20 mx-auto mb-3" />
-            <p className="text-foreground/70">No upcoming appointments</p>
-            <p className="text-sm text-foreground/50 mt-1">
+          <div className="rounded-2xl border border-gray-200 bg-white ring-1 ring-gray-100 py-12 text-center shadow-sm">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-600">No upcoming appointments</p>
+            <p className="text-sm text-gray-500 mt-1">
               Your schedule is clear for the next 30 days
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 p-4 sm:p-6 hover:bg-white/10 transition-all">
+              <div key={booking.id} className="rounded-2xl border border-gray-200 bg-white ring-1 ring-gray-100 p-4 sm:p-6 hover:bg-gray-50 transition-all shadow-sm">
                 {/* Time & Service */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <div className="text-lg font-semibold text-foreground flex items-center">
-                      <Clock className="w-4 h-4 mr-2 text-foreground/60" />
+                    <div className="text-lg font-semibold text-gray-900 flex items-center">
+                      <Clock className="w-4 h-4 mr-2 text-gray-500" />
                       {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
                     </div>
-                    <div className="text-sm text-foreground/70 mt-1">
+                    <div className="text-sm text-gray-600 mt-1">
                       {booking.serviceName} • {booking.serviceDuration} mins
                     </div>
                   </div>
@@ -315,25 +315,25 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
                 </div>
 
                 {/* Customer Info with History */}
-                <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <Avatar>
-                        <AvatarFallback className="bg-blue-500/20 text-blue-300">
+                        <AvatarFallback className="bg-blue-100 text-blue-700">
                           {booking.customerName[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-foreground flex items-center gap-2 flex-wrap">
+                        <div className="font-medium text-gray-900 flex items-center gap-2 flex-wrap">
                           <span className="truncate">{booking.customerName}</span>
                           {booking.isRepeatCustomer && (
-                            <Badge variant="secondary" className="text-xs bg-purple-500/20 text-purple-300 border-purple-500/30 shrink-0">
+                            <Badge variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200 shrink-0">
                               <Star className="w-3 h-3 mr-1" />
                               Repeat Customer
                             </Badge>
                           )}
                         </div>
                         {booking.customerPhone && (
-                          <div className="text-sm text-foreground/70">
+                          <div className="text-sm text-gray-600">
                             {booking.customerPhone}
                           </div>
                         )}
@@ -342,21 +342,21 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
 
                     {/* Customer History */}
                     {booking.history.totalBookings > 0 && (
-                      <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-                        <div className="text-xs font-medium text-foreground/60 uppercase">
+                      <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 uppercase">
                           Previous Visits
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                           <div>
-                            <span className="text-foreground/70">Total visits:</span>
-                            <span className="font-medium text-foreground ml-2">
+                            <span className="text-gray-600">Total visits:</span>
+                            <span className="font-medium text-gray-900 ml-2">
                               {booking.history.totalBookings}
                             </span>
                           </div>
                           {booking.history.lastVisit && (
                             <div>
-                              <span className="text-foreground/70">Last visit:</span>
-                              <span className="font-medium text-foreground ml-2">
+                              <span className="text-gray-600">Last visit:</span>
+                              <span className="font-medium text-gray-900 ml-2">
                                 {formatDate(booking.history.lastVisit)}
                               </span>
                             </div>
@@ -365,18 +365,18 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
                         
                         {/* Safety Information (Privacy-by-Design) */}
                         {booking.history.hasAllergies && (
-                          <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded">
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded">
                             <div className="flex items-start justify-between">
                               <div className="flex items-start">
-                                <AlertTriangle className="w-4 h-4 text-amber-400 mr-2 mt-0.5" />
+                                <AlertTriangle className="w-4 h-4 text-amber-600 mr-2 mt-0.5" />
                                 <div>
-                                  <p className="text-sm font-medium text-amber-300">
+                                  <p className="text-sm font-medium text-amber-700">
                                     {booking.history.allergySummary}
                                   </p>
                                   <Button
                                     variant="link"
                                     size="sm"
-                                    className="text-xs p-0 h-auto text-amber-400 hover:text-amber-300"
+                                    className="text-xs p-0 h-auto text-amber-600 hover:text-amber-700"
                                     onClick={() => openSafetyDetails(booking)}
                                   >
                                     <Shield className="w-3 h-3 mr-1" />
@@ -392,9 +392,9 @@ export default function StylistDashboardClient({ userId }: StylistDashboardClien
 
                     {/* Customer Notes */}
                     {booking.customerNotes && (
-                      <div className="mt-3 pt-3 border-t border-white/10">
-                        <p className="text-xs text-foreground/60 uppercase mb-1">Notes</p>
-                        <p className="text-sm text-foreground/90">{booking.customerNotes}</p>
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-500 uppercase mb-1">Notes</p>
+                        <p className="text-sm text-gray-700">{booking.customerNotes}</p>
                       </div>
                     )}
                   </div>

@@ -40,13 +40,13 @@ if (isTest) {
   DashboardLayout = dynamic(() => import("@/components/layout/DashboardLayout"));
   AdminStatCard = dynamic(() => import("@/components/admin/AdminStatCard"));
   UsersTable = dynamic(() => import("@/components/admin/UsersTable"), {
-    loading: () => <div className="h-96 animate-pulse rounded-lg bg-white/5" />
+    loading: () => <div className="h-96 animate-pulse rounded-lg bg-gray-100" />
   });
   RevenueChart = dynamic(() => import("@/components/admin/RevenueChart"), {
-    loading: () => <div className="h-64 animate-pulse rounded-lg bg-white/5" />
+    loading: () => <div className="h-64 animate-pulse rounded-lg bg-gray-100" />
   });
   UserStatusDonut = dynamic(() => import("@/components/admin/UserStatusDonut"), {
-    loading: () => <div className="h-64 animate-pulse rounded-lg bg-white/5" />
+    loading: () => <div className="h-64 animate-pulse rounded-lg bg-gray-100" />
   });
 }
 
@@ -112,9 +112,9 @@ export default async function AdminDashboardPage() {
   if (!stats) {
     return (
       <DashboardLayout title="Admin Control Panel" sidebar={<AdminSidebar />}>
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
-          <h2 className="text-lg font-semibold text-red-500">Failed to Load Dashboard</h2>
-          <p className="mt-2 text-sm text-red-400">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h2 className="text-lg font-semibold text-red-700">Failed to Load Dashboard</h2>
+          <p className="mt-2 text-sm text-red-600">
             Unable to fetch platform metrics. Please refresh the page or try again later.
           </p>
         </div>
@@ -167,8 +167,8 @@ export default async function AdminDashboardPage() {
 
       {/* Platform Metrics Summary */}
       <div className="mt-6 grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10 lg:col-span-2">
-          <h2 className="text-lg font-semibold mb-3">Platform Overview (30 Days)</h2>
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 lg:col-span-2 shadow-sm">
+          <h2 className="text-lg font-semibold mb-3 text-gray-900">Platform Overview (30 Days)</h2>
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <AdminStatCard
               title="Total GMV"
@@ -192,18 +192,18 @@ export default async function AdminDashboardPage() {
             />
           </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
-          <h2 className="text-lg font-semibold">Today's Activity</h2>
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">Today's Activity</h2>
           <div className="mt-3 space-y-3 text-sm">
             <div>
-              <div className="text-foreground/60">Orders</div>
-              <div className="text-2xl font-bold">{todayOrders}</div>
+              <div className="text-gray-500">Orders</div>
+              <div className="text-2xl font-bold text-gray-900">{todayOrders}</div>
             </div>
             <div>
-              <div className="text-foreground/60">Revenue</div>
-              <div className="text-xl font-semibold">NPR {todayRevenue}</div>
+              <div className="text-gray-500">Revenue</div>
+              <div className="text-xl font-semibold text-gray-900">NPR {todayRevenue}</div>
             </div>
-            <div className="text-xs text-foreground/50">
+            <div className="text-xs text-gray-500">
               Last updated: {new Date(stats.generated_at).toLocaleTimeString()}
             </div>
           </div>
@@ -213,9 +213,9 @@ export default async function AdminDashboardPage() {
       {/* Users Management - Removed for now, can be re-added as Client Component */}
       <div className="mt-8">
         <div className="mb-3">
-          <h2 className="text-lg font-semibold">User Management</h2>
-          <p className="text-sm text-foreground/60 mt-1">
-            Navigate to <Link href="/admin/users" className="text-[var(--kb-accent-gold)] hover:underline">Users</Link> page for full management
+          <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Navigate to <Link href="/admin/users" className="text-[#1976D2] hover:underline">Users</Link> page for full management
           </p>
         </div>
       </div>

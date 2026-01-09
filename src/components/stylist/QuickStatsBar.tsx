@@ -47,65 +47,65 @@ export default function QuickStatsBar({ stats, loading }: QuickStatsBarProps) {
       aria-label="Booking statistics"
     >
       {/* Today's Completed */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-foreground/70">Today</span>
-          <Calendar className="w-4 h-4 text-green-400" />
+          <span className="text-xs font-medium text-gray-500">Today</span>
+          <Calendar className="w-4 h-4 text-green-600" />
         </div>
         <div className="space-y-1">
-          <p className="text-2xl font-semibold" aria-label={`${stats.todayCompleted} bookings completed today`}>
+          <p className="text-2xl font-semibold text-gray-900" aria-label={`${stats.todayCompleted} bookings completed today`}>
             {stats.todayCompleted}
           </p>
-          <p className="text-xs font-medium text-green-400">
+          <p className="text-xs font-medium text-green-600">
             {formatCurrency(stats.todayRevenue)}
           </p>
         </div>
       </div>
 
       {/* This Week */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-foreground/70">This Week</span>
-          <TrendingUp className="w-4 h-4 text-blue-400" />
+          <span className="text-xs font-medium text-gray-500">This Week</span>
+          <TrendingUp className="w-4 h-4 text-blue-600" />
         </div>
         <div className="space-y-1">
-          <p className="text-2xl font-semibold" aria-label={`${stats.weeklyCompleted} bookings this week`}>
+          <p className="text-2xl font-semibold text-gray-900" aria-label={`${stats.weeklyCompleted} bookings this week`}>
             {stats.weeklyCompleted}
           </p>
-          <p className="text-xs text-foreground/70">
+          <p className="text-xs text-gray-500">
             Avg {(stats.weeklyCompleted / 7).toFixed(1)}/day
           </p>
         </div>
       </div>
 
       {/* Upcoming */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-foreground/70">Upcoming</span>
-          <Clock className="w-4 h-4 text-purple-400" />
+          <span className="text-xs font-medium text-gray-500">Upcoming</span>
+          <Clock className="w-4 h-4 text-purple-600" />
         </div>
         <div className="space-y-1">
-          <p className="text-2xl font-semibold" aria-label={`${stats.upcomingCount} upcoming bookings`}>
+          <p className="text-2xl font-semibold text-gray-900" aria-label={`${stats.upcomingCount} upcoming bookings`}>
             {stats.upcomingCount}
           </p>
-          <p className="text-xs text-foreground/70">Next 7 days</p>
+          <p className="text-xs text-gray-500">Next 7 days</p>
         </div>
       </div>
 
       {/* No-Show Rate */}
-      <div className={`rounded-2xl border ${stats.noShowRate > 5 ? 'border-orange-500/50' : 'border-white/10'} bg-white/5 p-4 ring-1 ring-white/10`}>
+      <div className={`rounded-2xl border ${stats.noShowRate > 5 ? 'border-orange-300' : 'border-gray-200'} bg-white p-4 ring-1 ring-gray-100 shadow-sm`}>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-foreground/70">No-Show Rate</span>
-          <AlertTriangle className={`w-4 h-4 ${stats.noShowRate > 5 ? 'text-orange-400' : 'text-foreground/70'}`} />
+          <span className="text-xs font-medium text-gray-500">No-Show Rate</span>
+          <AlertTriangle className={`w-4 h-4 ${stats.noShowRate > 5 ? 'text-orange-600' : 'text-gray-400'}`} />
         </div>
         <div className="space-y-1">
           <p 
-            className={`text-2xl font-semibold ${stats.noShowRate > 5 ? 'text-orange-400' : ''}`}
+            className={`text-2xl font-semibold ${stats.noShowRate > 5 ? 'text-orange-600' : 'text-gray-900'}`}
             aria-label={`${stats.noShowRate}% no-show rate`}
           >
             {stats.noShowRate.toFixed(1)}%
           </p>
-          <p className="text-xs text-foreground/70">
+          <p className="text-xs text-gray-500">
             {stats.noShowRate > 5 ? 'Above average' : 'Excellent'}
           </p>
         </div>

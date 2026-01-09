@@ -67,9 +67,9 @@ export default async function AdminUsersPage() {
   if (!usersData) {
     return (
       <DashboardLayout title="Users" sidebar={<AdminSidebar />}>
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
-          <h2 className="text-lg font-semibold text-red-500">Failed to Load Users</h2>
-          <p className="mt-2 text-sm text-red-400">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h2 className="text-lg font-semibold text-red-700">Failed to Load Users</h2>
+          <p className="mt-2 text-sm text-red-600">
             Unable to fetch user list. Please refresh the page or try again later.
           </p>
         </div>

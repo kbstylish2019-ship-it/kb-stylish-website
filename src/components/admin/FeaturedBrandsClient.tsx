@@ -68,30 +68,30 @@ export default function FeaturedBrandsClient({ brands: initialBrands }: Featured
     <div className="space-y-4">
       {/* Status messages */}
       {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
-          <p className="text-sm text-red-500">{error}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
       
       {success && (
-        <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4">
-          <p className="text-sm text-green-500">{success}</p>
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <p className="text-sm text-green-700">{success}</p>
         </div>
       )}
       
       {/* Brands table */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/10">
-              <th className="px-6 py-4 text-left text-sm font-semibold">Brand Name</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold">Slug</th>
-              <th className="px-6 py-4 text-center text-sm font-semibold">Featured</th>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Brand Name</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Slug</th>
+              <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Featured</th>
             </tr>
           </thead>
           <tbody>
             {brands.map((brand) => (
-              <tr key={brand.id} className="border-b border-white/5 last:border-0">
+              <tr key={brand.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {brand.logo_url && (
@@ -101,20 +101,20 @@ export default function FeaturedBrandsClient({ brands: initialBrands }: Featured
                         className="h-8 w-8 rounded object-contain"
                       />
                     )}
-                    <span className="font-medium">{brand.name}</span>
+                    <span className="font-medium text-gray-900">{brand.name}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-foreground/70">{brand.slug}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{brand.slug}</td>
                 <td className="px-6 py-4 text-center">
                   <button
                     onClick={() => handleToggle(brand.id, brand.is_featured)}
                     disabled={loading === brand.id}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      brand.is_featured ? 'bg-green-500' : 'bg-white/20'
+                      brand.is_featured ? 'bg-green-500' : 'bg-gray-300'
                     } ${loading === brand.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                         brand.is_featured ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
@@ -127,8 +127,8 @@ export default function FeaturedBrandsClient({ brands: initialBrands }: Featured
       </div>
       
       {brands.length === 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-          <p className="text-foreground/70">No brands found</p>
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-gray-600">No brands found</p>
         </div>
       )}
     </div>

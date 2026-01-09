@@ -42,7 +42,7 @@ function VendorSidebar() {
         <Link
           key={i.id}
           href={i.href}
-          className="rounded-lg px-3 py-2 text-foreground/90 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+          className="rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50 border border-transparent hover:border-gray-200"
         >
           {i.label}
         </Link>
@@ -148,9 +148,9 @@ export default async function VendorDashboardPage() {
     return (
       <DashboardLayout title="Vendor Dashboard" sidebar={<VendorSidebar />}>
         <OnboardingWizardWrapper />
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
-          <h2 className="text-lg font-semibold text-red-500">Failed to Load Dashboard</h2>
-          <p className="mt-2 text-sm text-red-400">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h2 className="text-lg font-semibold text-red-700">Failed to Load Dashboard</h2>
+          <p className="mt-2 text-sm text-red-600">
             Unable to fetch your dashboard metrics. Please refresh the page or try again later.
           </p>
         </div>
@@ -215,22 +215,22 @@ export default async function VendorDashboardPage() {
         
         {/* Refunds Section - Only show if there are refunds */}
         {(stats.today.refunds_cents > 0 || stats.last_30_days.refunds_cents > 0) && (
-          <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 ring-1 ring-amber-500/10">
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-amber-300">Refunds & Cancellations</h3>
+                <h3 className="text-sm font-medium text-amber-800">Refunds & Cancellations</h3>
                 <div className="mt-1 flex items-baseline gap-4">
                   <div>
-                    <span className="text-xs text-foreground/50">Today: </span>
-                    <span className="text-lg font-semibold text-amber-200">NPR {todayRefunds}</span>
+                    <span className="text-xs text-gray-500">Today: </span>
+                    <span className="text-lg font-semibold text-amber-700">NPR {todayRefunds}</span>
                   </div>
                   <div>
-                    <span className="text-xs text-foreground/50">Last 30 days: </span>
-                    <span className="text-lg font-semibold text-amber-200">NPR {monthlyRefunds}</span>
+                    <span className="text-xs text-gray-500">Last 30 days: </span>
+                    <span className="text-lg font-semibold text-amber-700">NPR {monthlyRefunds}</span>
                   </div>
                 </div>
               </div>
-              <div className="text-xs text-foreground/50">
+              <div className="text-xs text-gray-500">
                 From cancelled orders
               </div>
             </div>
@@ -239,10 +239,10 @@ export default async function VendorDashboardPage() {
 
         {/* Payouts Snapshot */}
         <div className="mt-6 grid gap-4 grid-cols-1 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10 lg:col-span-2">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-2">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Payouts Snapshot (30 Days)</h2>
-              <Link className="text-sm text-[var(--kb-accent-gold)] hover:underline" href="/vendor/payouts">View all</Link>
+              <h2 className="text-lg font-semibold text-gray-900">Payouts Snapshot (30 Days)</h2>
+              <Link className="text-sm text-[#1976D2] hover:underline" href="/vendor/payouts">View all</Link>
             </div>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard 
@@ -267,22 +267,22 @@ export default async function VendorDashboardPage() {
               />
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
-            <h2 className="text-lg font-semibold">Quick Stats</h2>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">Quick Stats</h2>
             <div className="mt-3 space-y-3 text-sm">
               <div>
-                <div className="text-foreground/60">30-Day Orders</div>
-                <div className="text-2xl font-bold">{stats.last_30_days.orders}</div>
+                <div className="text-gray-500">30-Day Orders</div>
+                <div className="text-2xl font-bold text-gray-900">{stats.last_30_days.orders}</div>
               </div>
               <div>
-                <div className="text-foreground/60">Avg Order Value</div>
-                <div className="text-xl font-semibold">
+                <div className="text-gray-500">Avg Order Value</div>
+                <div className="text-xl font-semibold text-gray-900">
                   NPR {stats.last_30_days.orders > 0 
                     ? ((stats.last_30_days.gmv_cents / stats.last_30_days.orders) / 100).toFixed(2)
                     : '0'}
                 </div>
               </div>
-              <div className="text-xs text-foreground/50">
+              <div className="text-xs text-gray-400">
                 Last updated: {new Date(stats.generated_at).toLocaleTimeString()}
               </div>
             </div>
@@ -292,50 +292,50 @@ export default async function VendorDashboardPage() {
         {/* Recent Orders - Real Data */}
         <div className="mt-8">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recent Orders</h2>
-            <Link className="text-sm text-[var(--kb-accent-gold)] hover:underline" href="/vendor/orders">View all</Link>
+            <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
+            <Link className="text-sm text-[#1976D2] hover:underline" href="/vendor/orders">View all</Link>
           </div>
           
-          <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden ring-1 ring-white/10">
+          <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
             {recentOrders && recentOrders.length > 0 ? (
               <div className="overflow-x-auto w-full">
                 <table className="min-w-[900px] text-sm">
-                  <thead className="bg-white/5">
-                    <tr className="border-b border-white/10">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Order #</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Customer</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Items</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Total</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-foreground/70 uppercase">Status</th>
+                  <thead className="bg-gray-50">
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-gray-100">
                     {recentOrders.map((order: any) => {
                       const itemsArray = Array.isArray(order.order_items) ? order.order_items : [order.order_items];
                       const itemsCount = itemsArray.length;
                       const firstItemStatus = itemsArray[0]?.fulfillment_status || 'pending';
                       
                       return (
-                        <tr key={order.id} className="hover:bg-white/[0.02]">
-                          <td className="px-4 py-3 font-mono text-xs">{order.order_number}</td>
-                          <td className="px-4 py-3 text-foreground/70">
+                        <tr key={order.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-mono text-xs text-gray-900">{order.order_number}</td>
+                          <td className="px-4 py-3 text-gray-600">
                             {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </td>
-                          <td className="px-4 py-3">{order.shipping_name}</td>
-                          <td className="px-4 py-3 text-foreground/70">{itemsCount} item{itemsCount > 1 ? 's' : ''}</td>
-                          <td className="px-4 py-3 font-semibold">NPR {(order.total_cents / 100).toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3 text-gray-900">{order.shipping_name}</td>
+                          <td className="px-4 py-3 text-gray-600">{itemsCount} item{itemsCount > 1 ? 's' : ''}</td>
+                          <td className="px-4 py-3 font-semibold text-gray-900">NPR {(order.total_cents / 100).toLocaleString('en-IN')}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs capitalize ring-1 ${
                               firstItemStatus === 'delivered'
-                                ? 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30'
+                                ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                                 : firstItemStatus === 'shipped'
-                                ? 'bg-blue-500/15 text-blue-300 ring-blue-500/30'
+                                ? 'bg-blue-50 text-blue-700 ring-blue-200'
                                 : firstItemStatus === 'processing'
-                                ? 'bg-amber-500/15 text-amber-300 ring-amber-500/30'
+                                ? 'bg-amber-50 text-amber-700 ring-amber-200'
                                 : firstItemStatus === 'cancelled'
-                                ? 'bg-red-500/15 text-red-300 ring-red-500/30'
-                                : 'bg-gray-500/15 text-gray-300 ring-gray-500/30'
+                                ? 'bg-red-50 text-red-700 ring-red-200'
+                                : 'bg-gray-50 text-gray-700 ring-gray-200'
                             }`}>
                               {firstItemStatus}
                             </span>
@@ -348,8 +348,8 @@ export default async function VendorDashboardPage() {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className="text-foreground/40 mb-2">No recent orders</div>
-                <p className="text-sm text-foreground/60">Your orders will appear here</p>
+                <div className="text-gray-400 mb-2">No recent orders</div>
+                <p className="text-sm text-gray-500">Your orders will appear here</p>
               </div>
             )}
           </div>

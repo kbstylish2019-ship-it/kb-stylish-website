@@ -69,8 +69,8 @@ export default async function StylistDashboardPage() {
     <DashboardLayout sidebar={<StylistSidebar />}>
       <div className="p-3 sm:p-4">
         <div className="mb-3 sm:mb-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-xs sm:text-sm text-foreground/70 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             View your upcoming appointments and manage your schedule
           </p>
         </div>

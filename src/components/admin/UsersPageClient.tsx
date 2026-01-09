@@ -161,8 +161,8 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
             className={cn(
               "fixed top-4 right-4 z-50 rounded-xl border px-4 py-3 shadow-lg",
               toast.type === 'success' 
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-                : "border-red-500/20 bg-red-500/10 text-red-300"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-red-200 bg-red-50 text-red-700"
             )}
           >
             {toast.message}
@@ -173,13 +173,13 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-[200px] max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search users..."
-                className="w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 py-2 text-sm ring-1 ring-white/10 placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
+                className="w-full rounded-xl border border-gray-300 bg-white pl-10 pr-3 py-2 text-sm ring-1 ring-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
               />
             </div>
           </div>
@@ -187,7 +187,7 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
+            className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm ring-1 ring-gray-100 focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
           >
             <option value="all">All Roles</option>
             <option value="admin">Admin</option>
@@ -199,7 +199,7 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
+            className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm ring-1 ring-gray-100 focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -211,36 +211,36 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
         
         {/* Stats Cards */}
         <div className="grid gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
-            <p className="text-xs font-medium text-foreground/70">Total Users</p>
-            <div className="mt-2 text-2xl font-semibold">{totalUsers}</div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
+            <p className="text-xs font-medium text-gray-500">Total Users</p>
+            <div className="mt-2 text-2xl font-semibold text-gray-900">{totalUsers}</div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
-            <p className="text-xs font-medium text-foreground/70">Active (Current Page)</p>
-            <div className="mt-2 text-2xl font-semibold text-emerald-400">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
+            <p className="text-xs font-medium text-gray-500">Active (Current Page)</p>
+            <div className="mt-2 text-2xl font-semibold text-emerald-600">
               {users.filter(u => u.status === 'active').length}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
-            <p className="text-xs font-medium text-foreground/70">Banned (Current Page)</p>
-            <div className="mt-2 text-2xl font-semibold text-red-400">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
+            <p className="text-xs font-medium text-gray-500">Banned (Current Page)</p>
+            <div className="mt-2 text-2xl font-semibold text-red-600">
               {users.filter(u => u.status === 'banned').length}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 ring-1 ring-white/10">
-            <p className="text-xs font-medium text-foreground/70">Pending (Current Page)</p>
-            <div className="mt-2 text-2xl font-semibold text-amber-400">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 ring-1 ring-gray-100 shadow-sm">
+            <p className="text-xs font-medium text-gray-500">Pending (Current Page)</p>
+            <div className="mt-2 text-2xl font-semibold text-amber-600">
               {users.filter(u => u.status === 'pending').length}
             </div>
           </div>
         </div>
         
         {/* Users Table */}
-        <div className="overflow-hidden rounded-2xl border border-white/10 ring-1 ring-white/10">
+        <div className="overflow-hidden rounded-2xl border border-gray-200 ring-1 ring-gray-100 shadow-sm">
           <div className="max-w-full overflow-x-auto">
             <table className="min-w-[1024px] text-sm">
               <thead>
-                <tr className="bg-white/5 text-left text-xs uppercase tracking-wide text-foreground/70">
+                <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                   <th className="px-4 py-3 w-12"></th>
                   <th className="px-4 py-3">User</th>
                   <th className="px-4 py-3">Email</th>
@@ -253,7 +253,7 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-foreground/60">
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                       Loading...
                     </td>
                   </tr>
@@ -261,11 +261,11 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-3">
-                        <div className="rounded-full bg-white/5 p-4">
-                          <User className="h-8 w-8 text-foreground/40" />
+                        <div className="rounded-full bg-gray-100 p-4">
+                          <User className="h-8 w-8 text-gray-400" />
                         </div>
                         <div>
-                          <p className="text-foreground/80 font-medium">
+                          <p className="text-gray-700 font-medium">
                             {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
                               ? `No users found`
                               : 'No users yet'}
@@ -278,35 +278,35 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                   filteredUsers.map((user, idx) => (
                     <tr 
                       key={user.id} 
-                      className={cn(idx % 2 === 1 ? "bg-white/[0.02]" : undefined)}
+                      className={cn(idx % 2 === 1 ? "bg-gray-50" : "bg-white")}
                     >
                       <td className="px-4 py-3">
                         {user.avatar_url ? (
                           <img 
                             src={user.avatar_url} 
                             alt={user.display_name}
-                            className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10"
+                            className="h-10 w-10 rounded-full object-cover ring-1 ring-gray-200"
                           />
                         ) : (
-                          <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center ring-1 ring-white/10">
-                            <User className="h-5 w-5 text-foreground/40" />
+                          <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
+                            <User className="h-5 w-5 text-gray-400" />
                           </div>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <div>
-                          <div className="font-medium flex items-center gap-2">
+                          <div className="font-medium text-gray-900 flex items-center gap-2">
                             {user.display_name || 'No Name'}
                             {user.is_verified && (
                               <span title="Email Verified" className="inline-flex">
-                                <CheckCircle className="h-4 w-4 text-[var(--kb-primary-brand)]" />
+                                <CheckCircle className="h-4 w-4 text-[#1976D2]" />
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-foreground/60">@{user.username || 'no-username'}</div>
+                          <div className="text-xs text-gray-500">@{user.username || 'no-username'}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-foreground/80">
+                      <td className="px-4 py-3 text-gray-700">
                         {user.email}
                       </td>
                       <td className="px-4 py-3">
@@ -317,17 +317,17 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                               className={cn(
                                 "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1",
                                 role.role_name === 'admin'
-                                  ? "bg-purple-500/15 text-purple-300 ring-purple-500/30"
+                                  ? "bg-purple-50 text-purple-700 ring-purple-200"
                                   : role.role_name === 'vendor'
-                                  ? "bg-blue-500/15 text-blue-300 ring-blue-500/30"
-                                  : "bg-white/10 text-foreground/80 ring-white/10"
+                                  ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                  : "bg-gray-100 text-gray-700 ring-gray-200"
                               )}
                             >
                               {role.role_name}
                             </span>
                           ))}
                           {user.roles.filter(r => r.is_active).length === 0 && (
-                            <span className="text-foreground/60 text-xs">No roles</span>
+                            <span className="text-gray-500 text-xs">No roles</span>
                           )}
                         </div>
                       </td>
@@ -335,17 +335,17 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                         <span className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1",
                           user.status === 'active'
-                            ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
                             : user.status === 'banned'
-                            ? "bg-red-500/15 text-red-300 ring-red-500/30"
+                            ? "bg-red-50 text-red-700 ring-red-200"
                             : user.status === 'pending'
-                            ? "bg-amber-500/15 text-amber-300 ring-amber-500/30"
-                            : "bg-white/10 text-foreground/80 ring-white/10"
+                            ? "bg-amber-50 text-amber-700 ring-amber-200"
+                            : "bg-gray-100 text-gray-700 ring-gray-200"
                         )}>
                           {user.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-foreground/60 text-xs">
+                      <td className="px-4 py-3 text-gray-500 text-xs">
                         {user.last_sign_in_at 
                           ? new Date(user.last_sign_in_at).toLocaleDateString()
                           : 'Never'}
@@ -354,29 +354,29 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleOpenRoleModal(user)}
-                            className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                            className="rounded-lg p-2 hover:bg-gray-100 ring-1 ring-transparent hover:ring-gray-200"
                             title="Manage Roles"
                             disabled={user.id === currentUserId}
                           >
-                            <Shield className="h-4 w-4 text-purple-400" />
+                            <Shield className="h-4 w-4 text-purple-600" />
                           </button>
                           
                           {user.status === 'banned' ? (
                             <button
                               onClick={() => handleActivate(user)}
-                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                              className="rounded-lg p-2 hover:bg-gray-100 ring-1 ring-transparent hover:ring-gray-200"
                               title="Activate User"
                             >
-                              <CheckCircle className="h-4 w-4 text-emerald-400" />
+                              <CheckCircle className="h-4 w-4 text-emerald-600" />
                             </button>
                           ) : (
                             <button
                               onClick={() => handleSuspend(user)}
-                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                              className="rounded-lg p-2 hover:bg-gray-100 ring-1 ring-transparent hover:ring-gray-200"
                               title="Suspend User"
                               disabled={user.id === currentUserId}
                             >
-                              <Ban className="h-4 w-4 text-red-400" />
+                              <Ban className="h-4 w-4 text-red-600" />
                             </button>
                           )}
                         </div>
@@ -391,9 +391,9 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
         
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
             {/* Page Info */}
-            <div className="text-sm text-foreground/60">
+            <div className="text-sm text-gray-500">
               Showing {(currentPage - 1) * 20 + 1} to {Math.min(currentPage * 20, totalUsers)} of {totalUsers} users
             </div>
             
@@ -405,8 +405,8 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   currentPage === 1 || isLoading
-                    ? "bg-white/5 text-foreground/40 cursor-not-allowed"
-                    : "bg-white/10 text-foreground hover:bg-white/15 ring-1 ring-white/10"
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-100 ring-1 ring-gray-200"
                 )}
               >
                 Previous
@@ -434,8 +434,8 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                       className={cn(
                         "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                         currentPage === pageNum
-                          ? "bg-[var(--kb-primary-brand)] text-white"
-                          : "bg-white/10 text-foreground hover:bg-white/15 ring-1 ring-white/10"
+                          ? "bg-[#1976D2] text-white"
+                          : "bg-white text-gray-700 hover:bg-gray-100 ring-1 ring-gray-200"
                       )}
                     >
                       {pageNum}
@@ -450,8 +450,8 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   currentPage >= totalPages || isLoading
-                    ? "bg-white/5 text-foreground/40 cursor-not-allowed"
-                    : "bg-white/10 text-foreground hover:bg-white/15 ring-1 ring-white/10"
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-100 ring-1 ring-gray-200"
                 )}
               >
                 Next

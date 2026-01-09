@@ -184,7 +184,7 @@ const MOCK_PRODUCTS: Product[] = [
 export async function fetchProducts(params: FetchProductsParams = {}): Promise<ProductsResponse> {
   noStore(); // Disable Next.js cache for real-time data
   const startTime = Date.now();
-  
+
   try {
     const supabase = await createClient();
     const { filters = {}, sort = { field: "name", order: "asc" }, pagination = {} } = params;
@@ -239,7 +239,7 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
         .from('categories')
         .select('id')
         .in('slug', filters.categories);
-      
+
       if (categoryData && categoryData.length > 0) {
         const categoryIds = categoryData.map((c: any) => c.id);
         query = query.in('category_id', categoryIds);
@@ -252,7 +252,7 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
     // Apply sorting
     let orderField = 'name';
     let ascending = sort.order === 'asc';
-    
+
     switch (sort.field) {
       case 'created_at':
         orderField = 'created_at';
@@ -267,14 +267,14 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
       default:
         orderField = 'name';
     }
-    
+
     query = query.order(orderField, { ascending });
 
     // Apply pagination
     if (cursor) {
       query = query.gt('id', cursor);
     }
-    
+
     // Fetch more than needed to account for price filtering
     const fetchLimit = Math.min(limit * 2, 50);
     query = query.limit(fetchLimit);
@@ -289,7 +289,7 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
 
     const latency = Date.now() - startTime;
     console.log(`[CACHE L2/L3] Supabase Query - Latency: ${latency}ms, Records: ${data?.length || 0}`);
-    
+
     // Debug: Log the raw data to see what's being returned
     if (data && data.length > 0) {
       console.log('[DEBUG] First product raw data:', JSON.stringify(data[0], null, 2));
@@ -320,7 +320,7 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
       }, 0) || 0;
 
       // Get primary image
-      const sortedImages = rawProduct.product_images?.sort((a: any, b: any) => 
+      const sortedImages = rawProduct.product_images?.sort((a: any, b: any) =>
         (a.sort_order || 0) - (b.sort_order || 0)
       ) || [];
       const primaryImage = sortedImages[0]?.image_url || '/placeholder-product.jpg';
@@ -429,7 +429,7 @@ async function fetchProductsMock(params: FetchProductsParams = {}): Promise<Prod
   // Apply sorting
   filteredProducts.sort((a, b) => {
     let comparison = 0;
-    
+
     switch (sort.field) {
       case "name":
         comparison = a.name.localeCompare(b.name);
@@ -455,8 +455,8 @@ async function fetchProductsMock(params: FetchProductsParams = {}): Promise<Prod
 
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + limit);
   const hasMore = startIndex + limit < filteredProducts.length;
-  const nextCursor = hasMore && paginatedProducts.length > 0 
-    ? paginatedProducts[paginatedProducts.length - 1].id 
+  const nextCursor = hasMore && paginatedProducts.length > 0
+    ? paginatedProducts[paginatedProducts.length - 1].id
     : undefined;
 
   return {
@@ -473,9 +473,9 @@ async function fetchProductsMock(params: FetchProductsParams = {}): Promise<Prod
  */
 export async function getProductCategories(): Promise<string[]> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase
       .from('categories')
@@ -483,12 +483,12 @@ export async function getProductCategories(): Promise<string[]> {
       .eq('is_active', true)
       .order('sort_order')
       .order('name');
-    
+
     if (error) {
       console.error('Error fetching categories:', error);
       return [];
     }
-    
+
     return data?.map(c => c.slug) || [];
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -502,7 +502,7 @@ export async function getProductCategories(): Promise<string[]> {
  */
 export async function getPriceRange(): Promise<{ min: number; max: number }> {
   await new Promise(resolve => setTimeout(resolve, 50));
-  
+
   const prices = MOCK_PRODUCTS.map(product => product.price);
   return {
     min: Math.min(...prices),
@@ -522,7 +522,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
   noStore();
   const startTime = Date.now();
   const cacheKey = `${CACHE_PREFIX.PRODUCT}${slug}`;
-  
+
   try {
     // L1: Check Vercel KV Cache
     const supabase = await createClient();
@@ -532,7 +532,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
         const latency = Date.now() - startTime;
         cacheMetrics.hits++;
         console.log(`[CACHE HIT] L1 Vercel KV - Key: ${cacheKey} - Latency: ${latency}ms`);
-        
+
         // CRITICAL: Even on cache hit, fetch fresh review stats (volatile data)
         try {
           const { data: freshStats } = await supabase
@@ -540,7 +540,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
             .select('average_rating, review_count, rating_distribution')
             .eq('id', cached.product.id)
             .single();
-          
+
           if (freshStats) {
             cached.product.average_rating = freshStats.average_rating;
             cached.product.review_count = freshStats.review_count;
@@ -549,7 +549,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
         } catch (statsError) {
           console.warn('Failed to fetch fresh stats on cache hit:', statsError);
         }
-        
+
         return cached;
       }
     } catch (kvError) {
@@ -560,7 +560,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
     // L2: Cache miss - fetch from PostgreSQL function
     cacheMetrics.misses++;
     console.log(`[CACHE MISS] L1 - Fetching from database for: ${cacheKey}`);
-    
+
     const { data, error } = await supabase
       .rpc('get_product_with_variants', { product_slug: slug })
       .single<{
@@ -595,7 +595,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
         .select('average_rating, review_count, rating_distribution')
         .eq('id', productData.product.id)
         .single();
-      
+
       if (freshStats) {
         productData.product.average_rating = freshStats.average_rating;
         productData.product.review_count = freshStats.review_count;
@@ -634,7 +634,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
  */
 export async function invalidateProductCache(slug: string): Promise<void> {
   const cacheKey = `${CACHE_PREFIX.PRODUCT}${slug}`;
-  
+
   try {
     await redis.del(cacheKey);
     console.log(`[CACHE INVALIDATE] Deleted key: ${cacheKey}`);
@@ -653,7 +653,7 @@ export function getCacheMetrics(): CacheMetrics {
 // Create Supabase server client
 async function createClient() {
   const cookieStore = await cookies()
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -699,13 +699,13 @@ export async function fetchVendorProducts(
   const { cursor, limit = 12 } = pagination;
 
   const cacheKey = `vendor_products:${vendorId}:${sort.field}_${sort.order}:${cursor || 'first'}:${limit}`;
-  
+
   console.log(`[CACHE L2/L3] Fetching vendor products for: ${vendorId}`);
   const startTime = Date.now();
 
   try {
     const supabase = await createClient();
-    
+
     // Query products for specific vendor with all related data
     let query = supabase
       .from('products')
@@ -745,7 +745,7 @@ export async function fetchVendorProducts(
     // Apply sorting
     let orderField = 'name';
     let ascending = sort.order === 'asc';
-    
+
     switch (sort.field) {
       case 'created_at':
         orderField = 'created_at';
@@ -767,7 +767,7 @@ export async function fetchVendorProducts(
     if (cursor) {
       query = query.gt('created_at', cursor);
     }
-    
+
     query = query.limit(limit + 1); // Get one extra to check if there are more
 
     const { data: rawProducts, error, count } = await query;
@@ -799,7 +799,7 @@ export async function fetchVendorProducts(
       }, 0) || 0;
 
       // Get primary image
-      const sortedImages = rawProduct.product_images?.sort((a: any, b: any) => 
+      const sortedImages = rawProduct.product_images?.sort((a: any, b: any) =>
         (a.sort_order || 0) - (b.sort_order || 0)
       ) || [];
       const primaryImage = sortedImages[0]?.image_url || '/placeholder-product.jpg';
@@ -834,7 +834,7 @@ export async function fetchVendorProducts(
         updatedAt: rawProduct.updated_at
       };
     });
-    
+
     // Handle pagination
     const hasMore = products.length > limit;
     const returnProducts = hasMore ? products.slice(0, limit) : products;
@@ -865,10 +865,10 @@ export async function fetchVendorProducts(
 export async function getUserProfile(): Promise<UserProfile | null> {
   try {
     const supabase = await createClient()
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
+
     if (userError || !user) {
       console.error('Error getting user:', userError)
       return null
@@ -1212,10 +1212,10 @@ export async function createBooking(params: BookingParams): Promise<BookingRespo
 
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return {
         success: false,
@@ -1291,7 +1291,7 @@ export async function fetchProductReviews(
   error?: string;
 }> {
   noStore(); // Disable caching for fresh reviews
-  
+
   try {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -1305,7 +1305,7 @@ export async function fetchProductReviews(
         }
       }
     );
-    
+
     // Build query with proper joins for user profiles and vendor replies
     let query = supabase
       .from('reviews')
@@ -1318,17 +1318,17 @@ export async function fetchProductReviews(
       .eq('is_approved', true)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
-    
+
     // Apply pagination
     if (options?.cursor) {
       query = query.lt('created_at', options.cursor);
     }
-    
+
     const limit = options?.limit || 20;
     query = query.limit(limit);
-    
+
     const { data: reviews, error: reviewError } = await query;
-    
+
     if (reviewError) {
       console.error('[fetchProductReviews] Query error:', reviewError);
       return {
@@ -1336,7 +1336,7 @@ export async function fetchProductReviews(
         error: 'Failed to fetch reviews'
       };
     }
-    
+
     // Fetch product stats if requested
     let stats = null;
     if (options?.includeStats && productId) {
@@ -1345,7 +1345,7 @@ export async function fetchProductReviews(
         .select('average_rating, review_count, rating_distribution')
         .eq('id', productId)
         .single();
-      
+
       if (!statsError && product) {
         stats = {
           average: product.average_rating || 0,
@@ -1354,7 +1354,7 @@ export async function fetchProductReviews(
         };
       }
     }
-    
+
     // Transform reviews to match expected format
     const transformedReviews = (reviews || []).map(review => ({
       id: review.id,
@@ -1373,14 +1373,14 @@ export async function fetchProductReviews(
       user: review.user || { display_name: 'Anonymous', avatar_url: null },
       vendor_reply: review.vendor_reply?.[0] || null
     }));
-    
+
     // Determine next cursor for pagination
-    const nextCursor = transformedReviews.length === limit 
-      ? transformedReviews[transformedReviews.length - 1].created_at 
+    const nextCursor = transformedReviews.length === limit
+      ? transformedReviews[transformedReviews.length - 1].created_at
       : undefined;
-    
+
     console.log(`[fetchProductReviews] Fetched ${transformedReviews.length} reviews for product ${productId}`);
-    
+
     return {
       reviews: transformedReviews,
       stats,
@@ -1453,18 +1453,18 @@ export async function fetchVendorDashboardStats(
 ): Promise<VendorDashboardStats | null> {
   noStore(); // Disable Next.js cache for real-time data
   const startTime = Date.now();
-  
+
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!baseUrl) {
       console.error('[fetchVendorDashboardStats] NEXT_PUBLIC_SUPABASE_URL not configured');
       return null;
     }
-    
-    const url = vendorId 
+
+    const url = vendorId
       ? `${baseUrl}/functions/v1/vendor-dashboard?vendor_id=${vendorId}`
       : `${baseUrl}/functions/v1/vendor-dashboard`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -1473,19 +1473,19 @@ export async function fetchVendorDashboardStats(
       },
       cache: 'no-store', // Always fetch fresh data
     });
-    
+
     const latency = Date.now() - startTime;
     console.log(`[DASHBOARD API] Vendor stats fetched - Latency: ${latency}ms, Status: ${response.status}`);
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       console.error('[fetchVendorDashboardStats] Error response:', error);
       return null;
     }
-    
+
     const result = await response.json();
     return result.data || null;
-    
+
   } catch (error) {
     console.error('[fetchVendorDashboardStats] Exception:', error);
     return null;
@@ -1504,16 +1504,16 @@ export async function fetchAdminDashboardStats(
 ): Promise<AdminDashboardStats | null> {
   noStore(); // Disable Next.js cache for real-time data
   const startTime = Date.now();
-  
+
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!baseUrl) {
       console.error('[fetchAdminDashboardStats] NEXT_PUBLIC_SUPABASE_URL not configured');
       return null;
     }
-    
+
     const url = `${baseUrl}/functions/v1/admin-dashboard`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -1522,19 +1522,19 @@ export async function fetchAdminDashboardStats(
       },
       cache: 'no-store', // Always fetch fresh data
     });
-    
+
     const latency = Date.now() - startTime;
     console.log(`[DASHBOARD API] Admin stats fetched - Latency: ${latency}ms, Status: ${response.status}`);
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       console.error('[fetchAdminDashboardStats] Error response:', error);
       return null;
     }
-    
+
     const result = await response.json();
     return result.data || null;
-    
+
   } catch (error) {
     console.error('[fetchAdminDashboardStats] Exception:', error);
     return null;
@@ -1598,22 +1598,22 @@ export async function fetchVendorProductsList(params: {
   is_active?: boolean;
 }): Promise<VendorProductsResponse | null> {
   noStore();
-  
+
   try {
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase.rpc('get_vendor_products_list', {
       p_page: params.page || 1,
       p_per_page: params.per_page || 20,
       p_search: params.search || null,
       p_is_active: params.is_active === undefined ? null : params.is_active
     });
-    
+
     if (error) {
       console.error('Error fetching vendor products:', error);
       return null;
     }
-    
+
     return data as VendorProductsResponse;
   } catch (error) {
     console.error('fetchVendorProductsList error:', error);
@@ -1632,14 +1632,14 @@ export async function createVendorProduct(productData: any): Promise<{
   message?: string;
 } | null> {
   noStore();
-  
+
   try {
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase.rpc('create_vendor_product', {
       p_product_data: productData
     });
-    
+
     if (error) {
       console.error('Error creating product:', error);
       return {
@@ -1647,7 +1647,7 @@ export async function createVendorProduct(productData: any): Promise<{
         message: error.message || 'Failed to create product'
       };
     }
-    
+
     return data;
   } catch (error: any) {
     console.error('createVendorProduct error:', error);
@@ -1665,17 +1665,17 @@ export async function createVendorProduct(productData: any): Promise<{
 export async function updateVendorProduct(
   productId: string,
   productData: any
-): Promise<{success: boolean; message?: string} | null> {
+): Promise<{ success: boolean; message?: string } | null> {
   noStore();
-  
+
   try {
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase.rpc('update_vendor_product', {
       p_product_id: productId,
       p_product_data: productData
     });
-    
+
     if (error) {
       console.error('Error updating product:', error);
       return {
@@ -1683,7 +1683,7 @@ export async function updateVendorProduct(
         message: error.message || 'Failed to update product'
       };
     }
-    
+
     return data;
   } catch (error: any) {
     console.error('updateVendorProduct error:', error);
@@ -1700,16 +1700,16 @@ export async function updateVendorProduct(
  */
 export async function deleteVendorProduct(
   productId: string
-): Promise<{success: boolean; message?: string} | null> {
+): Promise<{ success: boolean; message?: string } | null> {
   noStore();
-  
+
   try {
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase.rpc('delete_vendor_product', {
       p_product_id: productId
     });
-    
+
     if (error) {
       console.error('Error deleting product:', error);
       return {
@@ -1717,7 +1717,7 @@ export async function deleteVendorProduct(
         message: error.message || 'Failed to delete product'
       };
     }
-    
+
     return data;
   } catch (error: any) {
     console.error('deleteVendorProduct error:', error);
@@ -1734,16 +1734,16 @@ export async function deleteVendorProduct(
  */
 export async function toggleProductActive(
   productId: string
-): Promise<{success: boolean; is_active?: boolean; message?: string} | null> {
+): Promise<{ success: boolean; is_active?: boolean; message?: string } | null> {
   noStore();
-  
+
   try {
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase.rpc('toggle_product_active', {
       p_product_id: productId
     });
-    
+
     if (error) {
       console.error('Error toggling product status:', error);
       return {
@@ -1751,7 +1751,7 @@ export async function toggleProductActive(
         message: error.message || 'Failed to toggle product status'
       };
     }
-    
+
     return data;
   } catch (error: any) {
     console.error('toggleProductActive error:', error);
@@ -1770,32 +1770,32 @@ export async function uploadProductImage(
   vendorId: string,
   productId: string,
   file: File
-): Promise<{url: string; path: string} | null> {
+): Promise<{ url: string; path: string } | null> {
   try {
     const supabase = await createClient();
-    
+
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `${vendorId}/${productId}/${fileName}`;
-    
+
     const { data, error } = await supabase.storage
       .from('product-images')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
       });
-    
+
     if (error) {
       console.error('Error uploading image:', error);
       return null;
     }
-    
+
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('product-images')
       .getPublicUrl(filePath);
-    
+
     return {
       url: publicUrl,
       path: filePath
@@ -1856,9 +1856,9 @@ export async function fetchAdminUsersList(
   params: AdminUsersListParams = {}
 ): Promise<AdminUsersListResponse | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('get_admin_users_list', {
       p_page: params.page || 1,
@@ -1867,12 +1867,12 @@ export async function fetchAdminUsersList(
       p_role_filter: params.role_filter || null,
       p_status_filter: params.status_filter || null,
     });
-    
+
     if (error) {
       console.error('fetchAdminUsersList error:', error);
       return null;
     }
-    
+
     return data as AdminUsersListResponse;
   } catch (error) {
     console.error('fetchAdminUsersList error:', error);
@@ -1893,21 +1893,21 @@ export async function assignUserRole(
   expiresAt?: string
 ): Promise<{ success: boolean; message: string; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('assign_user_role', {
       p_user_id: userId,
       p_role_name: roleName,
       p_expires_at: expiresAt || null,
     });
-    
+
     if (error) {
       console.error('assignUserRole error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; };
   } catch (error: any) {
     console.error('assignUserRole error:', error);
@@ -1926,20 +1926,20 @@ export async function revokeUserRole(
   roleName: string
 ): Promise<{ success: boolean; message: string; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('revoke_user_role', {
       p_user_id: userId,
       p_role_name: roleName,
     });
-    
+
     if (error) {
       console.error('revokeUserRole error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; };
   } catch (error: any) {
     console.error('revokeUserRole error:', error);
@@ -1960,21 +1960,21 @@ export async function suspendUser(
   reason?: string
 ): Promise<{ success: boolean; message: string; banned_until?: string; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('suspend_user', {
       p_user_id: userId,
       p_duration_days: durationDays || null,
       p_reason: reason || null,
     });
-    
+
     if (error) {
       console.error('suspendUser error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; banned_until?: string; };
   } catch (error: any) {
     console.error('suspendUser error:', error);
@@ -1991,19 +1991,19 @@ export async function activateUser(
   userId: string
 ): Promise<{ success: boolean; message: string; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('activate_user', {
       p_user_id: userId,
     });
-    
+
     if (error) {
       console.error('activateUser error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; };
   } catch (error: any) {
     console.error('activateUser error:', error);
@@ -2063,9 +2063,9 @@ export async function fetchAdminVendorsList(
   params: AdminVendorsListParams = {}
 ): Promise<AdminVendorsListResponse | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('get_admin_vendors_list', {
       p_page: params.page || 1,
@@ -2074,12 +2074,12 @@ export async function fetchAdminVendorsList(
       p_status_filter: params.status_filter || null,
       p_business_type_filter: params.business_type_filter || null,
     });
-    
+
     if (error) {
       console.error('fetchAdminVendorsList error:', error);
       return null;
     }
-    
+
     return data as AdminVendorsListResponse;
   } catch (error) {
     console.error('fetchAdminVendorsList error:', error);
@@ -2098,20 +2098,20 @@ export async function approveVendor(
   notes?: string
 ): Promise<{ success: boolean; message: string; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('approve_vendor', {
       p_vendor_id: vendorId,
       p_notes: notes || null,
     });
-    
+
     if (error) {
       console.error('approveVendor error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; };
   } catch (error: any) {
     console.error('approveVendor error:', error);
@@ -2130,20 +2130,20 @@ export async function rejectVendor(
   reason?: string
 ): Promise<{ success: boolean; message: string; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('reject_vendor', {
       p_vendor_id: vendorId,
       p_reason: reason || null,
     });
-    
+
     if (error) {
       console.error('rejectVendor error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; };
   } catch (error: any) {
     console.error('rejectVendor error:', error);
@@ -2162,20 +2162,20 @@ export async function updateVendorCommission(
   commissionRate: number
 ): Promise<{ success: boolean; message: string; old_rate?: number; new_rate?: number; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('update_vendor_commission', {
       p_vendor_id: vendorId,
       p_commission_rate: commissionRate,
     });
-    
+
     if (error) {
       console.error('updateVendorCommission error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; old_rate?: number; new_rate?: number; };
   } catch (error: any) {
     console.error('updateVendorCommission error:', error);
@@ -2194,20 +2194,20 @@ export async function suspendVendor(
   reason?: string
 ): Promise<{ success: boolean; message: string; products_deactivated?: number; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('suspend_vendor', {
       p_vendor_id: vendorId,
       p_reason: reason || null,
     });
-    
+
     if (error) {
       console.error('suspendVendor error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; products_deactivated?: number; };
   } catch (error: any) {
     console.error('suspendVendor error:', error);
@@ -2224,19 +2224,19 @@ export async function activateVendor(
   vendorId: string
 ): Promise<{ success: boolean; message: string; } | null> {
   noStore();
-  
+
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase.rpc('activate_vendor', {
       p_vendor_id: vendorId,
     });
-    
+
     if (error) {
       console.error('activateVendor error:', error);
       return { success: false, message: error.message };
     }
-    
+
     return data as { success: boolean; message: string; };
   } catch (error: any) {
     console.error('activateVendor error:', error);
@@ -2317,12 +2317,12 @@ export interface FeaturedStylist {
 export async function fetchTrendingProducts(limit: number = 20): Promise<TrendingProduct[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Curation API] Missing Supabase environment variables');
     return [];
   }
-  
+
   try {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_trending_products&limit=${limit}`,
@@ -2334,12 +2334,12 @@ export async function fetchTrendingProducts(limit: number = 20): Promise<Trendin
         next: { revalidate: 300 }, // Cache for 5 minutes (matches Edge Function TTL)
       }
     );
-    
+
     if (!response.ok) {
       console.error('[Curation API] Failed to fetch trending products:', response.status);
       return [];
     }
-    
+
     const data = await response.json();
     return data.success ? data.data : [];
   } catch (error) {
@@ -2360,12 +2360,12 @@ export async function fetchTrendingProducts(limit: number = 20): Promise<Trendin
 export async function fetchFeaturedBrands(limit: number = 6): Promise<FeaturedBrand[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Curation API] Missing Supabase environment variables');
     return [];
   }
-  
+
   try {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_featured_brands&limit=${limit}`,
@@ -2377,12 +2377,12 @@ export async function fetchFeaturedBrands(limit: number = 6): Promise<FeaturedBr
         next: { revalidate: 300 }, // Cache for 5 minutes
       }
     );
-    
+
     if (!response.ok) {
       console.error('[Curation API] Failed to fetch featured brands:', response.status);
       return [];
     }
-    
+
     const data = await response.json();
     return data.success ? data.data : [];
   } catch (error) {
@@ -2408,19 +2408,19 @@ export async function fetchProductRecommendations(
 ): Promise<ProductRecommendation[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Curation API] Missing Supabase environment variables');
     return [];
   }
-  
+
   // Validate productId is a valid UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(productId)) {
     console.error('[Curation API] Invalid product ID format:', productId);
     return [];
   }
-  
+
   try {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_recommendations&product_id=${productId}&limit=${limit}`,
@@ -2432,12 +2432,12 @@ export async function fetchProductRecommendations(
         next: { revalidate: 300 }, // Cache for 5 minutes
       }
     );
-    
+
     if (!response.ok) {
       console.error('[Curation API] Failed to fetch recommendations:', response.status);
       return [];
     }
-    
+
     const data = await response.json();
     return data.success ? data.data : [];
   } catch (error) {
@@ -2470,12 +2470,12 @@ export async function fetchTopStylists(limit: number = 10): Promise<FeaturedStyl
 export async function fetchFeaturedStylists(limit: number = 6): Promise<FeaturedStylist[]> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Curation API] Missing Supabase environment variables');
     return [];
   }
-  
+
   try {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/get-curated-content?action=fetch_featured_stylists&limit=${limit}`,
@@ -2487,12 +2487,12 @@ export async function fetchFeaturedStylists(limit: number = 6): Promise<Featured
         next: { revalidate: 300 }, // Cache for 5 minutes
       }
     );
-    
+
     if (!response.ok) {
       console.error('[Curation API] Failed to fetch featured stylists:', response.status);
       return [];
     }
-    
+
     const data = await response.json();
     return data.success ? data.data : [];
   } catch (error) {
@@ -2571,12 +2571,12 @@ export async function createSupportTicket(
 ): Promise<{ success: boolean; ticket_id?: string; error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Support API] Missing Supabase environment variables');
     return { success: false, error: 'Configuration error' };
   }
-  
+
   try {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/support-ticket-manager/create`,
@@ -2589,19 +2589,19 @@ export async function createSupportTicket(
         body: JSON.stringify(ticketData),
       }
     );
-    
+
     const data = await response.json();
-    
+
     if (!response.ok) {
       console.error('[Support API] Create ticket failed:', data);
       return { success: false, error: data.error || 'Failed to create ticket' };
     }
-    
+
     return {
       success: true,
       ticket_id: data.data?.ticket_id
     };
-    
+
   } catch (error) {
     console.error('[Support API] Create ticket error:', error);
     return { success: false, error: 'Network error' };
@@ -2618,18 +2618,18 @@ export async function getUserSupportTickets(
 ): Promise<TicketListResponse | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Support API] Missing Supabase environment variables');
     return null;
   }
-  
+
   try {
     const params = new URLSearchParams({
       limit: limit.toString(),
       offset: offset.toString()
     });
-    
+
     const response = await fetch(
       `${supabaseUrl}/functions/v1/support-ticket-manager/tickets?${params}`,
       {
@@ -2639,15 +2639,15 @@ export async function getUserSupportTickets(
         },
       }
     );
-    
+
     if (!response.ok) {
       console.error('[Support API] Get tickets failed:', response.status);
       return null;
     }
-    
+
     const data = await response.json();
     return data.success ? data.data : null;
-    
+
   } catch (error) {
     console.error('[Support API] Get tickets error:', error);
     return null;
@@ -2663,12 +2663,12 @@ export async function getSupportTicketDetails(
 ): Promise<TicketDetailsResponse | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Support API] Missing Supabase environment variables');
     return null;
   }
-  
+
   try {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/support-ticket-manager/ticket/${ticketId}`,
@@ -2679,15 +2679,15 @@ export async function getSupportTicketDetails(
         },
       }
     );
-    
+
     if (!response.ok) {
       console.error('[Support API] Get ticket details failed:', response.status);
       return null;
     }
-    
+
     const data = await response.json();
     return data.success ? data.data : null;
-    
+
   } catch (error) {
     console.error('[Support API] Get ticket details error:', error);
     return null;
@@ -2704,12 +2704,12 @@ export async function addSupportMessage(
 ): Promise<{ success: boolean; error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+
   if (!supabaseUrl || !anonKey) {
     console.error('[Support API] Missing Supabase environment variables');
     return { success: false, error: 'Configuration error' };
   }
-  
+
   try {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/support-ticket-manager/message`,
@@ -2725,16 +2725,16 @@ export async function addSupportMessage(
         }),
       }
     );
-    
+
     const data = await response.json();
-    
+
     if (!response.ok) {
       console.error('[Support API] Add message failed:', data);
       return { success: false, error: data.error || 'Failed to add message' };
     }
-    
+
     return { success: true };
-    
+
   } catch (error) {
     console.error('[Support API] Add message error:', error);
     return { success: false, error: 'Network error' };
@@ -2747,17 +2747,249 @@ export async function addSupportMessage(
 export async function getSupportCategories(): Promise<SupportCategory[]> {
   noStore();
   const supabase = await createClient();
-  
+
   const { data, error } = await supabase
     .from('support_categories')
     .select('*')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
-  
+
   if (error) {
     console.error('[Support API] Get categories error:', error);
     return [];
   }
-  
+
   return data || [];
+}
+
+
+// ============================================================================
+// CATEGORY-BASED PRODUCT FETCHING
+// ============================================================================
+
+export interface CategoryProduct {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  compare_at_price?: number;
+  image_url: string;
+  category_name: string;
+  category_slug: string;
+  in_stock: boolean;
+  is_featured: boolean;
+}
+
+export interface CategoryInfo {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  image_url?: string;
+  product_count: number;
+}
+
+/**
+ * Fetch products by category slug
+ * Server Component safe - uses direct Supabase query
+ * 
+ * @param categorySlug - Category slug to filter by
+ * @param limit - Number of products to fetch (default: 8)
+ * @returns Array of products in the category
+ */
+export async function fetchProductsByCategory(
+  categorySlug: string,
+  limit: number = 8
+): Promise<CategoryProduct[]> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    // First get the category ID from slug
+    const { data: category, error: categoryError } = await supabase
+      .from('categories')
+      .select('id, name, slug')
+      .eq('slug', categorySlug)
+      .eq('is_active', true)
+      .single();
+    
+    if (categoryError || !category) {
+      console.error(`[Category API] Category not found: ${categorySlug}`, categoryError);
+      return [];
+    }
+    
+    // Fetch products in this category with their variants and images
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        slug,
+        is_featured,
+        product_variants (
+          id,
+          price,
+          compare_at_price,
+          inventory (
+            quantity_available
+          )
+        ),
+        product_images (
+          image_url,
+          sort_order
+        )
+      `)
+      .eq('category_id', category.id)
+      .eq('is_active', true)
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (productsError) {
+      console.error(`[Category API] Error fetching products for ${categorySlug}:`, productsError);
+      return [];
+    }
+    
+    if (!products || products.length === 0) {
+      return [];
+    }
+    
+    // Transform to CategoryProduct format
+    return products.map((product: any) => {
+      // Get min price from variants
+      const prices = product.product_variants?.map((v: any) => v.price).filter((p: number) => p > 0) || [];
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      
+      // Get compare_at_price if exists
+      const compareAtPrices = product.product_variants
+        ?.map((v: any) => v.compare_at_price)
+        .filter((p: number | null) => p && p > 0) || [];
+      const compareAtPrice = compareAtPrices.length > 0 ? Math.min(...compareAtPrices) : undefined;
+      
+      // Calculate total inventory
+      const totalInventory = product.product_variants?.reduce((total: number, variant: any) => {
+        const qty = variant.inventory?.reduce((sum: number, inv: any) => sum + (inv.quantity_available || 0), 0) || 0;
+        return total + qty;
+      }, 0) || 0;
+      
+      // Get primary image
+      const sortedImages = product.product_images?.sort((a: any, b: any) => 
+        (a.sort_order || 0) - (b.sort_order || 0)
+      ) || [];
+      const primaryImage = sortedImages[0]?.image_url || '/placeholder-product.jpg';
+      
+      return {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: minPrice,
+        compare_at_price: compareAtPrice,
+        image_url: primaryImage,
+        category_name: category.name,
+        category_slug: category.slug,
+        in_stock: totalInventory > 0,
+        is_featured: product.is_featured || false,
+      };
+    });
+  } catch (error) {
+    console.error(`[Category API] Error in fetchProductsByCategory:`, error);
+    return [];
+  }
+}
+
+/**
+ * Fetch top-level categories with product counts
+ * Used for category navigation and homepage sections
+ * 
+ * @param limit - Number of categories to fetch (default: 12)
+ * @returns Array of categories with product counts
+ */
+export async function fetchTopCategories(limit: number = 12): Promise<CategoryInfo[]> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    // Get top-level categories (parent_id is null)
+    const { data: categories, error } = await supabase
+      .from('categories')
+      .select(`
+        id,
+        name,
+        slug,
+        description,
+        image_url
+      `)
+      .is('parent_id', null)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(limit);
+    
+    if (error) {
+      console.error('[Category API] Error fetching top categories:', error);
+      return [];
+    }
+    
+    if (!categories || categories.length === 0) {
+      return [];
+    }
+    
+    // Get product counts for each category
+    const categoriesWithCounts = await Promise.all(
+      categories.map(async (cat) => {
+        const { count } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+          .eq('category_id', cat.id)
+          .eq('is_active', true);
+        
+        return {
+          ...cat,
+          product_count: count || 0,
+        };
+      })
+    );
+    
+    // Filter out categories with no products and sort by product count
+    return categoriesWithCounts
+      .filter(cat => cat.product_count > 0)
+      .sort((a, b) => b.product_count - a.product_count);
+  } catch (error) {
+    console.error('[Category API] Error in fetchTopCategories:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch all active categories (flat list)
+ * Used for filter dropdowns and category selection
+ */
+export async function fetchAllCategories(): Promise<CategoryInfo[]> {
+  noStore();
+  
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, slug, description, image_url')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+    
+    if (error) {
+      console.error('[Category API] Error fetching all categories:', error);
+      return [];
+    }
+    
+    return (data || []).map(cat => ({
+      ...cat,
+      product_count: 0, // Not fetching counts for performance
+    }));
+  } catch (error) {
+    console.error('[Category API] Error in fetchAllCategories:', error);
+    return [];
+  }
 }

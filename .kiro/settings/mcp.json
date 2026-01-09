@@ -6,12 +6,13 @@
         "-y",
         "@supabase/mcp-server-supabase@latest",
         "--access-token",
-        "sbp_369ea0b3c613706587afbda6cee77481064e5d4c"
+        "sbp_ca26c07e0b8235acc121639b05bf61787738430e"
       ],
       "disabled": false,
       "autoApprove": [
         "list_tables",
-        "execute_sql"
+        "execute_sql",
+        "list_projects"
       ]
     }
   }

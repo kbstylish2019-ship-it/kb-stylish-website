@@ -154,20 +154,24 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   // 5. User hasn't already reviewed this product
 
   return (
-    <main>
+    <main className="bg-[#F5F5F5]">
       <ProductDetailClient product={product} />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <CustomerReviews 
-          productId={product.id}
-          avgRating={reviewStats.average} 
-          reviewCount={reviewStats.total} 
-          initialReviews={initialReviews}
-          stats={reviewStats}
-        />
-        <CompleteTheLook 
-          recommendations={recommendations}
-          sourceProductId={product.id}
-        />
+      <div className="max-w-7xl mx-auto px-4 pb-8">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <CustomerReviews 
+            productId={product.id}
+            avgRating={reviewStats.average} 
+            reviewCount={reviewStats.total} 
+            initialReviews={initialReviews}
+            stats={reviewStats}
+          />
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <CompleteTheLook 
+            recommendations={recommendations}
+            sourceProductId={product.id}
+          />
+        </div>
       </div>
     </main>
   );

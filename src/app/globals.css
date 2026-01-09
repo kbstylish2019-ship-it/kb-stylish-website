@@ -3,13 +3,23 @@
 
 /* Premium loading animations */
 @keyframes shimmer {
-  0% { transform: translateX(-100%) skewX(-12deg); }
-  100% { transform: translateX(200%) skewX(-12deg); }
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
 }
 
 @keyframes reverse-spin {
-  from { transform: rotate(360deg); }
-  to { transform: rotate(0deg); }
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
 }
 
 .animate-shimmer {
@@ -69,14 +79,22 @@
 :root {
   --radius: 0.625rem;
   /* Brand Variables */
-  --kb-primary-brand: #1976D2; /* KB Blue */
-  --kb-accent-gold: #FFD400; /* KB Yellow */
-  --kb-accent-client-blue: #007BFF; /* Use sparingly */
-  --kb-accent-red: #E31B23; /* KB Red */
-  --kb-background: #111827; /* Near Black */
-  --kb-surface-dark: #1a1f2e; /* Dark surface for modals/cards */
-  --kb-text-primary: #F9FAFB; /* Off-White */
-  --kb-text-secondary: #9CA3AF; /* Gray */
+  --kb-primary-brand: #1976D2;
+  /* KB Blue */
+  --kb-accent-gold: #FFD400;
+  /* KB Yellow */
+  --kb-accent-client-blue: #007BFF;
+  /* Use sparingly */
+  --kb-accent-red: #E31B23;
+  /* KB Red */
+  --kb-background: #111827;
+  /* Near Black */
+  --kb-surface-dark: #1a1f2e;
+  /* Dark surface for modals/cards */
+  --kb-text-primary: #F9FAFB;
+  /* Off-White */
+  --kb-text-secondary: #9CA3AF;
+  /* Gray */
 
   /* Light tokens (fallback) */
   --background: #ffffff;
@@ -121,7 +139,8 @@
   --popover-foreground: var(--kb-text-primary);
   --primary: var(--kb-primary-brand);
   --primary-foreground: #1f1330;
-  --secondary: #0b1220; /* deeper slate for subtle surfaces */
+  --secondary: #0b1220;
+  /* deeper slate for subtle surfaces */
   --secondary-foreground: var(--kb-text-primary);
   --muted: #0b1220;
   --muted-foreground: var(--kb-text-secondary);
@@ -150,7 +169,343 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground font-sans;
   }
+}
+
+/* ============================================
+   LIGHT MODE OVERRIDES
+   These override dark-mode patterns (border-white/10, bg-white/5, etc.)
+   to work properly on light backgrounds
+   
+   EXCLUDED: footer (has its own dark bg-[#1a1a2e])
+   EXCLUDED: header blue sections (bg-[#1976D2], bg-[#1565C0], bg-[#0d47a1])
+   ============================================ */
+
+/* Override border-white/10 to visible gray borders - only in main content areas */
+main .border-white\/10,
+section:not(header *) .border-white\/10,
+.rounded-xl.border-white\/10,
+.rounded-2xl.border-white\/10,
+aside .border-white\/10 {
+  border-color: rgb(229 231 235) !important; /* gray-200 */
+}
+
+/* Override ring-white/10 to visible gray rings - only in main content */
+main .ring-white\/10,
+aside .ring-white\/10,
+.rounded-xl.ring-white\/10,
+.rounded-2xl.ring-white\/10 {
+  --tw-ring-color: rgb(229 231 235) !important; /* gray-200 */
+}
+
+/* Override bg-white/5 to light gray background - only in main content */
+main .bg-white\/5,
+aside .bg-white\/5,
+.rounded-xl.bg-white\/5,
+.rounded-2xl.bg-white\/5 {
+  background-color: rgb(249 250 251) !important; /* gray-50 */
+}
+
+/* Override bg-white/10 for hover states - only in main content */
+main .bg-white\/10,
+aside .bg-white\/10 {
+  background-color: rgb(243 244 246) !important; /* gray-100 */
+}
+
+/* Override text-foreground/X patterns for better contrast - only in main */
+main .text-foreground\/40,
+aside .text-foreground\/40 {
+  color: rgb(156 163 175) !important; /* gray-400 */
+}
+
+main .text-foreground\/50,
+aside .text-foreground\/50 {
+  color: rgb(107 114 128) !important; /* gray-500 */
+}
+
+main .text-foreground\/60,
+aside .text-foreground\/60 {
+  color: rgb(107 114 128) !important; /* gray-500 */
+}
+
+main .text-foreground\/70,
+aside .text-foreground\/70 {
+  color: rgb(75 85 99) !important; /* gray-600 */
+}
+
+main .text-foreground\/80,
+aside .text-foreground\/80 {
+  color: rgb(55 65 81) !important; /* gray-700 */
+}
+
+main .text-foreground\/90,
+aside .text-foreground\/90 {
+  color: rgb(31 41 55) !important; /* gray-800 */
+}
+
+/* Override divide-white/X for table dividers - only in main */
+main .divide-white\/5 > :not([hidden]) ~ :not([hidden]),
+aside .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(243 244 246) !important; /* gray-100 */
+}
+
+main .divide-white\/10 > :not([hidden]) ~ :not([hidden]),
+aside .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(229 231 235) !important; /* gray-200 */
+}
+
+/* Override hover states - only in main content, NOT in header */
+main .hover\:bg-white\/5:hover,
+aside .hover\:bg-white\/5:hover {
+  background-color: rgb(243 244 246) !important; /* gray-100 */
+}
+
+main .hover\:bg-white\/10:hover,
+aside .hover\:bg-white\/10:hover {
+  background-color: rgb(229 231 235) !important; /* gray-200 */
+}
+
+/* Fix placeholder colors */
+.placeholder\:text-foreground\/40::placeholder {
+  color: rgb(156 163 175) !important; /* gray-400 */
+}
+
+.placeholder\:text-foreground\/50::placeholder {
+  color: rgb(107 114 128) !important; /* gray-500 */
+}
+
+/* Override bg-background/50 - only in main */
+main .bg-background\/50,
+aside .bg-background\/50 {
+  background-color: rgb(255 255 255 / 0.5) !important;
+}
+
+/* Fix select option backgrounds for light mode */
+select option,
+.\[\&\>option\]\:bg-\[\#1a1a1a\] option {
+  background-color: white !important;
+  color: #111827 !important;
+}
+
+/* Override specific dark backgrounds used in modals/dropdowns - NOT in footer or header */
+main .bg-\[\#1a1a1a\],
+aside .bg-\[\#1a1a1a\],
+div[role="dialog"] .bg-\[\#1a1a1a\] {
+  background-color: white !important;
+  border: 1px solid rgb(229 231 235) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+}
+
+/* Override kb-surface-dark variable for dropdowns - only in main */
+main .bg-\[var\(--kb-surface-dark\)\],
+aside .bg-\[var\(--kb-surface-dark\)\] {
+  background-color: white !important;
+  border: 1px solid rgb(229 231 235) !important;
+}
+
+/* Override amber/warning colors for light mode - only in main */
+main .bg-amber-500\/5,
+aside .bg-amber-500\/5 {
+  background-color: rgb(255 251 235) !important; /* amber-50 */
+}
+
+main .border-amber-500\/20,
+aside .border-amber-500\/20 {
+  border-color: rgb(253 230 138) !important; /* amber-200 */
+}
+
+main .text-amber-200,
+main .text-amber-300,
+aside .text-amber-200,
+aside .text-amber-300 {
+  color: rgb(180 83 9) !important; /* amber-700 */
+}
+
+/* Override red/error colors for light mode - only in main */
+main .bg-red-500\/10,
+main .bg-red-500\/15,
+aside .bg-red-500\/10,
+aside .bg-red-500\/15 {
+  background-color: rgb(254 242 242) !important; /* red-50 */
+}
+
+main .border-red-500\/20,
+aside .border-red-500\/20 {
+  border-color: rgb(254 202 202) !important; /* red-200 */
+}
+
+main .text-red-300,
+main .text-red-400,
+aside .text-red-300,
+aside .text-red-400 {
+  color: rgb(185 28 28) !important; /* red-700 */
+}
+
+/* Override green/success colors for light mode - only in main */
+main .bg-green-500\/10,
+main .bg-green-500\/15,
+main .bg-emerald-500\/15,
+aside .bg-green-500\/10,
+aside .bg-green-500\/15,
+aside .bg-emerald-500\/15 {
+  background-color: rgb(236 253 245) !important; /* emerald-50 */
+}
+
+main .text-green-300,
+main .text-emerald-300,
+aside .text-green-300,
+aside .text-emerald-300 {
+  color: rgb(4 120 87) !important; /* emerald-700 */
+}
+
+/* Override blue colors for light mode - only in main */
+main .bg-blue-500\/15,
+aside .bg-blue-500\/15 {
+  background-color: rgb(239 246 255) !important; /* blue-50 */
+}
+
+main .text-blue-300,
+aside .text-blue-300 {
+  color: rgb(29 78 216) !important; /* blue-700 */
+}
+
+/* Override gray badge colors - only in main */
+main .bg-gray-500\/15,
+aside .bg-gray-500\/15 {
+  background-color: rgb(249 250 251) !important; /* gray-50 */
+}
+
+main .text-gray-300,
+aside .text-gray-300 {
+  color: rgb(75 85 99) !important; /* gray-600 */
+}
+
+/* ============================================
+   INPUT FORM STYLING - Light Mode
+   ============================================ */
+
+/* All inputs, textareas, selects in main content */
+main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+main textarea,
+aside input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+aside textarea {
+  background-color: white !important;
+  border-color: rgb(209 213 219) !important; /* gray-300 */
+  color: rgb(17 24 39) !important; /* gray-900 */
+}
+
+main input::placeholder,
+main textarea::placeholder,
+aside input::placeholder,
+aside textarea::placeholder {
+  color: rgb(156 163 175) !important; /* gray-400 */
+}
+
+main input:focus,
+main textarea:focus,
+aside input:focus,
+aside textarea:focus {
+  border-color: #1976D2 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2) !important;
+}
+
+/* ============================================
+   TOGGLE/SWITCH STYLING - Light Mode
+   ============================================ */
+
+/* Toggle switches - the track */
+main [role="switch"],
+aside [role="switch"],
+main button[aria-checked],
+aside button[aria-checked] {
+  background-color: rgb(209 213 219) !important; /* gray-300 when off */
+}
+
+main [role="switch"][aria-checked="true"],
+aside [role="switch"][aria-checked="true"],
+main button[aria-checked="true"],
+aside button[aria-checked="true"] {
+  background-color: rgb(34 197 94) !important; /* green-500 when on */
+}
+
+/* Radio buttons */
+main input[type="radio"],
+aside input[type="radio"] {
+  accent-color: #1976D2 !important;
+}
+
+/* Checkboxes */
+main input[type="checkbox"],
+aside input[type="checkbox"] {
+  accent-color: #1976D2 !important;
+}
+
+/* ============================================
+   RING COLORS - Light Mode (only in main)
+   ============================================ */
+
+main .ring-white\/10,
+aside .ring-white\/10 {
+  --tw-ring-color: rgb(229 231 235) !important;
+}
+
+main .ring-white\/20,
+aside .ring-white\/20 {
+  --tw-ring-color: rgb(209 213 219) !important;
+}
+
+main .ring-amber-500\/10,
+aside .ring-amber-500\/10 {
+  --tw-ring-color: rgb(253 230 138) !important;
+}
+
+main .ring-red-500\/30,
+aside .ring-red-500\/30 {
+  --tw-ring-color: rgb(254 202 202) !important;
+}
+
+main .ring-green-500\/30,
+main .ring-emerald-500\/30,
+aside .ring-green-500\/30,
+aside .ring-emerald-500\/30 {
+  --tw-ring-color: rgb(167 243 208) !important;
+}
+
+main .ring-blue-500\/30,
+aside .ring-blue-500\/30 {
+  --tw-ring-color: rgb(191 219 254) !important;
+}
+
+main .ring-gray-500\/30,
+aside .ring-gray-500\/30 {
+  --tw-ring-color: rgb(209 213 219) !important;
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

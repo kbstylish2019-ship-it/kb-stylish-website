@@ -1,81 +1,67 @@
-"use client";
-import React from "react";
+'use client';
+
 import Image from "next/image";
 import Link from "next/link";
+import { memo, useState } from "react";
 import type { Product } from "@/lib/types";
-import NavigationLoader from "@/components/ui/NavigationLoader";
 
-/**
- * ProductCard component displays product information in a card layout.
- * Memoized to prevent unnecessary re-renders in product lists.
- * 
- * @param product - Product data to display
- * @param onClick - Optional click handler for tracking
- * @returns Memoized product card component
- */
 interface ProductCardProps {
   product: Product;
   onClick?: () => void;
 }
 
-const ProductCard = React.memo(function ProductCard({ product, onClick }: ProductCardProps) {
-  // Use slug if available, otherwise generate from name
-  const productSlug = product.slug || product.name.toLowerCase().replace(/\s+/g, '-');
-  
-  // Handle click event
-  const handleClick = () => {
-    if (onClick) {
-      onClick(); // Fire tracking (non-blocking)
-    }
-  };
-  
-  return (
-    <NavigationLoader 
-      href={`/product/${productSlug}`}
-      onClick={handleClick}
-      className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 ring-1 ring-white/10 transition-all hover:ring-2 hover:ring-white/20 cursor-pointer"
-    >
-        <div className="relative aspect-square w-full bg-gradient-to-br from-white/10 to-white/0">
-          {product.imageUrl && product.imageUrl !== '/placeholder-product.jpg' ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-              onError={(e) => {
-                // Fallback to placeholder if image fails to load
-                e.currentTarget.style.display = 'none';
-                // Show placeholder div
-                const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder');
-                if (placeholder) {
-                  (placeholder as HTMLElement).style.display = 'flex';
-                }
-              }}
-            />
-          ) : null}
-          {/* Elegant placeholder for missing images - always present but conditionally visible */}
-          <div 
-            className={`image-placeholder flex items-center justify-center h-full text-4xl text-foreground/30 ${
-              product.imageUrl && product.imageUrl !== '/placeholder-product.jpg' ? 'hidden' : 'flex'
-            }`}
-          >
-            📸
-          </div>
-          <div className="absolute right-3 top-3">
-            {product.badge ? (
-              <span className="rounded-full bg-[var(--kb-accent-gold)] px-2 py-1 text-xs font-semibold text-[#111827] shadow">
-                {product.badge}
-              </span>
-            ) : null}
-          </div>
-        </div>
-        <div className="p-4">
-          <p className="text-sm text-foreground/70 hover:text-foreground transition-colors">{product.name}</p>
-          <p className="mt-1 text-lg font-semibold">Rs. {product.price.toLocaleString()}</p>
-        </div>
-    </NavigationLoader>
-  );
-});
+function ProductCard({ product, onClick }: ProductCardProps) {
+  const [imageError, setImageError] = useState(false);
 
-export default ProductCard;
+  const formatPrice = (amount: number) => {
+    return `Rs. ${amount.toLocaleString('en-NP')}`;
+  };
+
+  return (
+    <Link
+      href={`/product/${product.slug || product.id}`}
+      onClick={onClick}
+      className="group block bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+    >
+      {/* Image */}
+      <div className="relative aspect-square bg-gray-100">
+        {product.badge && (
+          <span className="absolute top-2 left-2 z-10 bg-[#E31B23] text-white text-[10px] font-bold px-2 py-1 rounded">
+            {product.badge}
+          </span>
+        )}
+        {product.imageUrl && !imageError ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImageError(true)}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="p-3">
+        <h3 className="text-sm text-gray-800 font-medium line-clamp-2 min-h-[40px] group-hover:text-[#1976D2] transition-colors">
+          {product.name}
+        </h3>
+        <p className="text-lg font-bold text-[#E31B23] mt-2">
+          {formatPrice(product.price)}
+        </p>
+        {product.category && (
+          <p className="text-xs text-gray-500 mt-1">{product.category}</p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+export default memo(ProductCard);

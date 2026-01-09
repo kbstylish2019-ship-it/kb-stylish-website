@@ -256,14 +256,14 @@ export default function BookingsListClient({ userId }: { userId: string }) {
   
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
-      confirmed: 'bg-green-500/20 text-green-400 border-green-500/30',
-      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-      in_progress: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      completed: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      cancelled: 'bg-red-500/20 text-red-400 border-red-500/30',
-      no_show: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+      confirmed: 'bg-green-50 text-green-700 border-green-200',
+      pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
+      completed: 'bg-purple-50 text-purple-700 border-purple-200',
+      cancelled: 'bg-red-50 text-red-700 border-red-200',
+      no_show: 'bg-orange-50 text-orange-700 border-orange-200'
     };
-    return variants[status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    return variants[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   const formatCurrency = (cents: number) => {
@@ -311,7 +311,7 @@ export default function BookingsListClient({ userId }: { userId: string }) {
             value={searchInput}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchInput(e.target.value)}
             onKeyDown={handleKeyPress}
-            className="flex-1 px-3 py-2 border border-white/10 rounded-lg bg-white/5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
           />
           <Button onClick={handleSearch} size="sm" variant="outline">
             <Search className="h-4 w-4" />

@@ -335,9 +335,9 @@ export default function CheckoutClient() {
         <div className="lg:col-span-2 space-y-4">
           {/* Show All Bookings */}
           {bookings.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold text-gray-900">
                   Your Appointment{bookings.length > 1 ? 's' : ''}
                 </h2>
               </div>
@@ -345,19 +345,21 @@ export default function CheckoutClient() {
                 {bookings.map((bookingWrapper, index) => {
                   const booking = bookingWrapper.booking;
                   const startDate = new Date(booking.date);
+                  // Use a unique key combining index and booking properties
+                  const uniqueKey = booking.id || `booking-${index}-${booking.service}-${booking.date}`;
                   return (
-                    <div key={booking.id} className="flex flex-col sm:flex-row items-start gap-4 p-4 bg-white/5 rounded-lg">
+                    <div key={uniqueKey} className="flex flex-col sm:flex-row items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
                       <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-[var(--kb-primary-brand)] rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 bg-[#1976D2] rounded-lg flex items-center justify-center">
                           <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm3.5 6L10 10.5 6.5 8 8 6.5 10 8.5 12 6.5 13.5 8z" clipRule="evenodd"/>
                           </svg>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white">{booking.service}</h3>
-                        <p className="text-sm text-foreground/70 mt-1">with {booking.stylist}</p>
-                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-foreground/60">
+                        <h3 className="font-semibold text-gray-900">{booking.service}</h3>
+                        <p className="text-sm text-gray-600 mt-1">with {booking.stylist}</p>
+                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
                           <div className="flex items-center gap-1">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
@@ -378,7 +380,7 @@ export default function CheckoutClient() {
                       </div>
                       <div className="sm:text-right w-full sm:w-auto mt-3 sm:mt-0">
                         <div className="flex items-center justify-between sm:block">
-                          <p className="font-semibold text-white">NPR {booking.price.toFixed(0)}</p>
+                          <p className="font-semibold text-gray-900">NPR {booking.price.toFixed(0)}</p>
                         </div>
                         <div className="flex gap-3 mt-2 sm:justify-end">
                           <button
@@ -392,7 +394,7 @@ export default function CheckoutClient() {
                                 setChangeModalOpen(true);
                               }
                             }}
-                            className="text-xs text-[var(--kb-primary-brand)] hover:underline"
+                            className="text-xs text-[#1976D2] hover:underline"
                           >
                             Change
                           </button>
@@ -415,7 +417,7 @@ export default function CheckoutClient() {
                                 console.error('[CheckoutClient] Could not find matching booking item!');
                               }
                             }}
-                            className="text-xs text-red-400 hover:text-red-300"
+                            className="text-xs text-red-500 hover:text-red-600"
                           >
                             Remove
                           </button>
@@ -433,9 +435,9 @@ export default function CheckoutClient() {
             <ProductList items={products} onQtyChange={onQtyChange} onRemove={onRemove} />
           )}
           {items.length === 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
-              <p className="text-foreground/60">Your cart is empty</p>
-              <Link href="/" className="mt-4 inline-block text-[var(--kb-primary-brand)] hover:underline">
+            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+              <p className="text-gray-500">Your cart is empty</p>
+              <Link href="/" className="mt-4 inline-block text-[#1976D2] hover:underline">
                 Continue Shopping
               </Link>
             </div>

@@ -85,8 +85,8 @@ export default function StylistSidebar() {
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ring-1",
               isActive
-                ? "bg-[var(--kb-primary-brand)]/20 text-[var(--kb-primary-brand)] ring-[var(--kb-primary-brand)]/30"
-                : "text-foreground/90 hover:bg-white/5 ring-transparent hover:ring-white/10"
+                ? "bg-[#1976D2]/10 text-[#1976D2] ring-[#1976D2]/30"
+                : "text-gray-700 hover:bg-gray-100 ring-transparent hover:ring-gray-200"
             )}
           >
             <item.icon className="h-5 w-5 flex-shrink-0" />

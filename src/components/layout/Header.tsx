@@ -1,115 +1,529 @@
-import React from "react";
+'use client';
+
 import Link from "next/link";
-import Image from "next/image";
-import dynamic from "next/dynamic";
-import { cn } from "@/lib/utils";
-import type { UserCapability } from "@/lib/types";
-import { getCurrentUser } from '@/lib/auth';
-import { filterNav } from '@/lib/nav';
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { 
+  Search, ShoppingCart, User, Menu, X, Phone, 
+  ChevronDown, LogOut, LayoutDashboard, Package, 
+  Calendar, Settings, Store, Users, Scissors
+} from "lucide-react";
+import { useDecoupledCartStore } from "@/lib/store/decoupledCartStore";
+import { createClient } from "@/lib/supabase/client";
 
-// In tests, resolve HeaderClientControls synchronously to avoid next/dynamic mocks returning null
-const isTest = process.env.NODE_ENV === "test";
-let HeaderClientControls: React.ComponentType<any>;
-if (isTest) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const HCC = require("./HeaderClientControls");
-  HeaderClientControls = (HCC.default ?? HCC) as React.ComponentType<any>;
-} else {
-  HeaderClientControls = dynamic(() => import("./HeaderClientControls"), {
-    loading: () => <div className="inline-flex items-center gap-3 h-9" aria-hidden />,
-  }) as unknown as React.ComponentType<any>;
+interface HeaderProps {
+  isAuthed?: boolean;
 }
 
-// Convert capabilities object to legacy capability array format
-function capabilitiesToArray(capabilities: any): UserCapability[] {
-  const caps: UserCapability[] = [];
-  
-  // Base capabilities for everyone
-  caps.push("view_shop", "view_about", "view_cart");
-  
-  // Role-based capabilities
-  if (capabilities.canAccessAdmin) caps.push("admin_access");
-  if (capabilities.canAccessVendorDashboard) caps.push("vendor_access");
-  if (capabilities.canAccessStylistDashboard) caps.push("stylist_access");
-  if (capabilities.canBookServices) caps.push("view_bookings");
-  if (capabilities.canViewProfile) caps.push("view_profile");
-  
-  // Show "Become a Vendor" to non-vendors only
-  // This includes guests, customers, stylists, and admins (but not existing vendors)
-  if (!capabilities.canAccessVendorDashboard) {
-    caps.push("apply_vendor");
-  }
-  
-  return caps;
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
 }
 
-export interface HeaderProps {
-  // optional compatibility prop (store value is used internally)
-  cartItemCount?: number;
+interface UserInfo {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string;
 }
 
-export default async function Header({ }: HeaderProps) {
-  // Get current user and capabilities from server-side auth
-  const user = await getCurrentUser();
-  const capabilities = user ? capabilitiesToArray(user.capabilities) : ["view_shop", "view_about", "apply_vendor", "view_cart"] as UserCapability[];
+// Fallback categories if API fails
+const fallbackCategories = [
+  { name: "Skincare", href: "/shop?category=skincare" },
+  { name: "Hair Care", href: "/shop?category=hair-care" },
+  { name: "Hair Styling", href: "/shop?category=hair-styling" },
+  { name: "Nail & Manicure", href: "/shop?category=nail-manicure" },
+  { name: "Salon Tools", href: "/shop?category=salon-tools-equipments" },
+  { name: "New Arrivals", href: "/shop?sort=newest" },
+  { name: "Book a Stylist", href: "/book-a-stylist", isHighlight: true },
+];
+
+// Role-based navigation items
+const roleNavItems: Record<string, { label: string; href: string; icon: any }[]> = {
+  admin: [
+    { label: "Admin Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+    { label: "Manage Users", href: "/admin/users", icon: Users },
+    { label: "Manage Vendors", href: "/admin/vendors", icon: Store },
+    { label: "Manage Stylists", href: "/admin/stylists", icon: Scissors },
+  ],
+  vendor: [
+    { label: "Vendor Dashboard", href: "/vendor/dashboard", icon: LayoutDashboard },
+    { label: "My Products", href: "/vendor/products", icon: Package },
+    { label: "Orders", href: "/vendor/orders", icon: Package },
+    { label: "Settings", href: "/vendor/settings", icon: Settings },
+  ],
+  stylist: [
+    { label: "Stylist Dashboard", href: "/stylist/dashboard", icon: LayoutDashboard },
+    { label: "My Bookings", href: "/stylist/bookings", icon: Calendar },
+    { label: "My Schedule", href: "/stylist/schedule", icon: Calendar },
+    { label: "Earnings", href: "/stylist/earnings", icon: Package },
+  ],
+  customer: [
+    { label: "My Bookings", href: "/bookings", icon: Calendar },
+    { label: "Track Orders", href: "/track-order", icon: Package },
+  ],
+};
+
+export default function Header({ isAuthed = false }: HeaderProps) {
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState(fallbackCategories);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   
-  // Add authenticated capability if user exists
-  if (user) {
-    capabilities.push("authenticated");
-  }
-  
-  const isAuthed = capabilities.includes("authenticated");
-  const primaryNav = filterNav(capabilities, "primary");
-  const profileNav = filterNav(capabilities, "profile");
-  const utilityNav = filterNav(capabilities, "utility");
-  const cartNavItem = utilityNav.find((item) => item.id === "cart");
+  // Use the decoupled cart store for accurate cart count
+  const totalItems = useDecoupledCartStore((state) => state.totalItems);
+
+  // Fetch categories from API
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const response = await fetch('/api/categories');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.categories && data.categories.length > 0) {
+            const navCategories = data.categories
+              .slice(0, 5)
+              .map((cat: Category) => ({
+                name: cat.name,
+                href: `/shop?category=${cat.slug}`,
+              }));
+            navCategories.push({ name: "New Arrivals", href: "/shop?sort=newest" });
+            navCategories.push({ name: "Book a Stylist", href: "/book-a-stylist", isHighlight: true });
+            setCategories(navCategories);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories for nav:', error);
+      }
+    }
+    fetchCategories();
+  }, []);
+
+  // Fetch user roles when authenticated
+  useEffect(() => {
+    async function fetchUserRoles() {
+      if (!isAuthed) {
+        setUserRoles([]);
+        setUserInfo(null);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/roles');
+        if (response.ok) {
+          const data = await response.json();
+          setUserRoles(data.roles || ['customer']);
+          setUserInfo(data.user || null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user roles:', error);
+        setUserRoles(['customer']);
+      }
+    }
+    fetchUserRoles();
+  }, [isAuthed]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/shop?search=${encodeURIComponent(searchQuery.trim())}`;
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      // Clear cart store
+      useDecoupledCartStore.getState().clearCart();
+      // Redirect to home
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+      setUserMenuOpen(false);
+    }
+  };
+
+  // Get navigation items based on user roles
+  const getNavItems = () => {
+    const items: { label: string; href: string; icon: any }[] = [];
+    
+    // Add role-specific items (prioritize higher roles)
+    if (userRoles.includes('admin')) {
+      items.push(...roleNavItems.admin);
+    } else if (userRoles.includes('vendor')) {
+      items.push(...roleNavItems.vendor);
+    } else if (userRoles.includes('stylist')) {
+      items.push(...roleNavItems.stylist);
+    }
+    
+    // Always add customer items for all authenticated users
+    items.push(...roleNavItems.customer);
+    
+    return items;
+  };
+
+  // Get primary role for display
+  const getPrimaryRole = () => {
+    if (userRoles.includes('admin')) return 'Admin';
+    if (userRoles.includes('vendor')) return 'Vendor';
+    if (userRoles.includes('stylist')) return 'Stylist';
+    return 'Customer';
+  };
 
   return (
-    <header className="sticky top-0 z-50 bg-[var(--kb-primary-brand)] text-white shadow-lg">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Brand */}
-          <Link href="/" className="group inline-flex items-center gap-3">
-            <div className="relative h-10 w-10 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/30 group-hover:ring-white/50 transition">
-              <Image
-                src="/kbStylishlogo.png"
-                alt="KB Stylish Logo"
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">KB Stylish</span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-6">
-            {primaryNav.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={cn(
-                  "text-sm font-medium text-white/90 hover:text-white transition-colors",
-                  item.emphasis === "cta" &&
-                    "relative text-white before:absolute before:inset-x-0 before:-bottom-1 before:h-[2px] before:bg-[var(--kb-accent-gold)]"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Right Actions (client) */}
-          <HeaderClientControls
-            isAuthed={isAuthed}
-            primaryNav={primaryNav}
-            profileNav={profileNav}
-            showCart={Boolean(cartNavItem)}
-          />
+    <header className="sticky top-0 z-50 w-full">
+      {/* Top Bar - Contact & Help */}
+      <div className="bg-[#1565C0] text-white text-xs">
+        <div className="max-w-7xl mx-auto px-4 py-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <a href="tel:+9779851234567" className="flex items-center gap-1 hover:text-yellow-300 transition-colors">
+              <Phone className="h-3 w-3" />
+              <span>+977 985-1234567</span>
+            </a>
+            <span className="hidden sm:inline text-white/50">|</span>
+            <span className="hidden sm:inline text-white/70">Free delivery on orders above Rs. 2000</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/vendor/apply" className="hover:text-yellow-300 transition-colors">
+              Become a Seller
+            </Link>
+            <Link href="/support" className="hover:text-yellow-300 transition-colors">
+              Help & Support
+            </Link>
+          </div>
         </div>
       </div>
-      {/* Strong bottom accent bar for separation */}
-      <div className="h-[4px] bg-[var(--kb-accent-gold)]" aria-hidden />
+
+      {/* Main Header */}
+      <div className="bg-[#1976D2]">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-4 lg:gap-8">
+            {/* Logo */}
+            <Link href="/" className="flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                  <span className="text-[#1976D2] font-bold text-lg">KB</span>
+                </div>
+                <div className="hidden sm:block">
+                  <span className="text-white font-bold text-xl">KB Stylish</span>
+                  <p className="text-white/70 text-[10px] -mt-1">Beauty & Salon Products</p>
+                </div>
+              </div>
+            </Link>
+
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="flex-1 max-w-3xl">
+              <div className="relative flex">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search for facial kits, hair care, salon products..."
+                  className="w-full h-11 pl-4 pr-12 rounded-l-lg bg-white text-gray-800 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+                <button
+                  type="submit"
+                  className="px-6 h-11 bg-[#FFD400] hover:bg-[#FFC107] rounded-r-lg transition-colors flex items-center justify-center"
+                >
+                  <Search className="h-5 w-5 text-gray-800" />
+                </button>
+              </div>
+            </form>
+
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-2 lg:gap-4">
+              {/* User Menu */}
+              {isAuthed ? (
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="hidden sm:flex items-center gap-2 text-white hover:text-yellow-300 transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                      {userInfo?.avatarUrl ? (
+                        <img 
+                          src={userInfo.avatarUrl} 
+                          alt="" 
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div className="hidden lg:block text-left">
+                      <p className="text-[10px] text-white/70">Hello, {userInfo?.displayName || 'User'}</p>
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        {getPrimaryRole()}
+                        <ChevronDown className={`h-4 w-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                      {/* User Info */}
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <p className="text-gray-900 font-medium">{userInfo?.displayName || 'User'}</p>
+                        <p className="text-gray-500 text-sm">{userInfo?.email}</p>
+                        <span className="inline-block mt-1 px-2 py-0.5 bg-[#1976D2]/10 text-[#1976D2] text-xs rounded-full">
+                          {getPrimaryRole()}
+                        </span>
+                      </div>
+
+                      {/* Profile Link */}
+                      <Link
+                        href="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>My Profile</span>
+                      </Link>
+
+                      {/* Role-based Navigation */}
+                      <div className="border-t border-gray-200 mt-1 pt-1">
+                        {getNavItems().map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.label}</span>
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* Logout */}
+                      <div className="border-t border-gray-200 mt-1 pt-1">
+                        <button
+                          onClick={handleLogout}
+                          disabled={isLoggingOut}
+                          className="flex items-center gap-3 px-4 py-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors w-full disabled:opacity-50"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>{isLoggingOut ? 'Logging out...' : 'Log Out'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="hidden sm:flex items-center gap-2 text-white hover:text-yellow-300 transition-colors"
+                >
+                  <User className="h-6 w-6" />
+                  <div className="hidden lg:block text-left">
+                    <p className="text-[10px] text-white/70">Hello, Sign in</p>
+                    <p className="text-sm font-medium">Account</p>
+                  </div>
+                </Link>
+              )}
+
+              {/* Cart */}
+              <Link
+                href="/checkout"
+                className="relative flex items-center gap-2 text-white hover:text-yellow-300 transition-colors"
+                data-testid="cart-button"
+              >
+                <div className="relative">
+                  <ShoppingCart className="h-6 w-6" />
+                  {totalItems > 0 && (
+                    <span
+                      data-testid="cart-badge"
+                      className="absolute -top-2 -right-2 h-5 w-5 bg-[#FFD400] text-gray-900 text-xs font-bold rounded-full flex items-center justify-center"
+                    >
+                      {totalItems > 99 ? "99+" : totalItems}
+                    </span>
+                  )}
+                </div>
+                <span className="hidden lg:inline text-sm font-medium">Cart</span>
+              </Link>
+
+              {/* Mobile Menu Toggle */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 text-white hover:text-yellow-300 transition-colors"
+                aria-label="Toggle menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Category Navigation - Same blue, subtle top border */}
+        <div className="border-t border-white/20">
+          <div className="max-w-7xl mx-auto px-4">
+            <nav className="hidden lg:flex items-center gap-1 py-2 overflow-x-auto">
+              <Link
+                href="/shop"
+                className="flex items-center gap-1 px-4 py-2 text-white text-sm font-medium hover:bg-white/10 rounded-lg transition-colors whitespace-nowrap"
+              >
+                <Menu className="h-4 w-4" />
+                All Categories
+              </Link>
+              {categories.map((cat: any) => (
+                <Link
+                  key={cat.name}
+                  href={cat.href}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors whitespace-nowrap ${
+                    cat.isHighlight 
+                      ? 'bg-[#FFD400] text-gray-900 font-semibold hover:bg-[#FFC107]' 
+                      : 'text-white/90 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {cat.name}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden bg-white border-b shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            {/* Mobile Search */}
+            <form onSubmit={handleSearch} className="mb-4">
+              <div className="relative flex">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="w-full h-10 pl-4 pr-12 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-0 top-0 px-4 h-10 bg-[#1976D2] rounded-r-lg"
+                >
+                  <Search className="h-4 w-4 text-white" />
+                </button>
+              </div>
+            </form>
+
+            {/* Mobile User Info */}
+            {isAuthed && userInfo && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="font-medium text-gray-800">{userInfo.displayName}</p>
+                <p className="text-sm text-gray-500">{getPrimaryRole()}</p>
+              </div>
+            )}
+
+            {/* Mobile Categories */}
+            <nav className="space-y-1">
+              <Link
+                href="/shop"
+                className="block px-4 py-3 text-gray-800 font-medium hover:bg-gray-100 rounded-lg"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                All Categories
+              </Link>
+              {categories.map((cat: any) => (
+                <Link
+                  key={cat.name}
+                  href={cat.href}
+                  className={`block px-4 py-3 rounded-lg ${
+                    cat.isHighlight 
+                      ? 'bg-[#FFD400] text-gray-900 font-semibold hover:bg-[#FFC107]' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {cat.name}
+                </Link>
+              ))}
+              
+              <hr className="my-2" />
+              
+              {/* Mobile Role-based Navigation */}
+              {isAuthed ? (
+                <>
+                  <Link
+                    href="/profile"
+                    className="block px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    My Profile
+                  </Link>
+                  {getNavItems().map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="flex items-center gap-2 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  ))}
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg w-full"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log Out
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="block px-4 py-3 text-[#1976D2] font-medium hover:bg-blue-50 rounded-lg"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Login / Register
+                </Link>
+              )}
+              
+              <Link
+                href="/vendor/apply"
+                className="block px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Become a Seller
+              </Link>
+              <Link
+                href="/support"
+                className="block px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Help & Support
+              </Link>
+            </nav>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

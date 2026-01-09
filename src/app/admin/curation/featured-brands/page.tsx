@@ -67,9 +67,9 @@ export default async function FeaturedBrandsPage() {
   if (brandsError || !brands) {
     return (
       <DashboardLayout title="Featured Brands" sidebar={<AdminSidebar />}>
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
-          <h2 className="text-lg font-semibold text-red-500">Failed to Load Brands</h2>
-          <p className="mt-2 text-sm text-red-400">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h2 className="text-lg font-semibold text-red-700">Failed to Load Brands</h2>
+          <p className="mt-2 text-sm text-red-600">
             Unable to fetch brand list. Please refresh the page or try again later.
           </p>
         </div>
@@ -82,8 +82,8 @@ export default async function FeaturedBrandsPage() {
     <DashboardLayout title="Featured Brands" sidebar={<AdminSidebar />}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">Featured Brands Management</h1>
-          <p className="mt-2 text-sm text-foreground/70">
+          <h1 className="text-2xl font-semibold text-gray-900">Featured Brands Management</h1>
+          <p className="mt-2 text-sm text-gray-600">
             Toggle brands to feature them on the homepage. Featured brands will appear in the "Featured Brands" section.
           </p>
         </div>
