@@ -125,9 +125,11 @@ export default function CustomSelect({
         <input
           type="text"
           value={value}
+          onChange={() => {}} // No-op handler to satisfy React
           required
           className="absolute opacity-0 pointer-events-none"
           tabIndex={-1}
+          aria-hidden="true"
         />
       )}
     </div>

@@ -282,18 +282,34 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
                       <div className="flex flex-wrap gap-2">
                         {option.values.map((value) => {
                           const isSelected = selection[option.name] === value;
+                          // Check if this option value has any available variants
+                          const variantsWithValue = product.variants.filter(v => v.options[option.name] === value);
+                          const hasStock = variantsWithValue.some(v => (v.stock || 0) > 0);
+                          const isUnavailable = variantsWithValue.length > 0 && !hasStock;
+                          
                           return (
-                            <button
-                              key={value}
-                              onClick={() => setSelection(prev => ({ ...prev, [option.name]: value }))}
-                              className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                                isSelected
-                                  ? 'border-[#1976D2] bg-blue-50 text-[#1976D2]'
-                                  : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                              }`}
-                            >
-                              {value}
-                            </button>
+                            <div key={value} className="relative group">
+                              <button
+                                onClick={() => !isUnavailable && setSelection(prev => ({ ...prev, [option.name]: value }))}
+                                disabled={isUnavailable}
+                                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                                  isUnavailable
+                                    ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed line-through'
+                                    : isSelected
+                                      ? 'border-[#1976D2] bg-blue-50 text-[#1976D2]'
+                                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                }`}
+                                title={isUnavailable ? 'Out of stock' : undefined}
+                              >
+                                {value}
+                              </button>
+                              {/* Tooltip for unavailable options */}
+                              {isUnavailable && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                  Out of stock
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -323,13 +339,30 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
-                  <span className="text-sm text-gray-500">
+                  <div className="flex flex-col">
                     {isInStock ? (
-                      currentStock < 10 ? `Only ${currentStock} left in stock` : 'In Stock'
+                      currentStock <= 5 ? (
+                        <span className="text-sm font-medium text-amber-600 flex items-center gap-1">
+                          <span className="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+                          Only {currentStock} left!
+                        </span>
+                      ) : currentStock < 10 ? (
+                        <span className="text-sm text-amber-600">Only {currentStock} left in stock</span>
+                      ) : (
+                        <span className="text-sm text-green-600 flex items-center gap-1">
+                          <Check className="h-4 w-4" />
+                          In Stock
+                        </span>
+                      )
                     ) : (
-                      <span className="text-red-500">Out of Stock</span>
+                      <span className="text-sm font-medium text-red-500">Out of Stock</span>
                     )}
-                  </span>
+                    {selectedVariant && (
+                      <span className="text-xs text-gray-500">
+                        SKU: {selectedVariant.sku || 'N/A'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 

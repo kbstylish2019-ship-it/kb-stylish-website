@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { VendorProductsResponse } from "@/lib/apiClient";
 import { toggleProductActive, deleteVendorProduct } from "@/app/actions/vendor";
 import AddProductModal from "./AddProductModal";
+import EditProductModal from "./EditProductModal";
 import VendorReviewsManager from "./VendorReviewsManager";
 
 interface ProductsPageClientProps {
@@ -17,6 +18,7 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
   const [products, setProducts] = useState(initialData.products);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<typeof products[0] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'products' | 'reviews'>('products');
   
@@ -262,6 +264,13 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              onClick={() => setEditingProduct(product)}
+                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                              title="Edit product"
+                            >
+                              <Edit className="h-4 w-4 text-foreground/60 hover:text-foreground" />
+                            </button>
+                            <button
                               onClick={() => handleToggleActive(product.id, product.is_active)}
                               className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
                               title={product.is_active ? 'Deactivate' : 'Activate'}
@@ -303,6 +312,20 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
           setIsAddModalOpen(false);
         }}
       />
+      
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <EditProductModal
+          product={editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSuccess={(updatedProduct) => {
+            setProducts(prev => prev.map(p => 
+              p.id === updatedProduct.id ? updatedProduct : p
+            ));
+            setEditingProduct(null);
+          }}
+        />
+      )}
     </>
   );
 }

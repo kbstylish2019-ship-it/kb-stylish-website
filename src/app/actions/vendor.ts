@@ -84,28 +84,12 @@ export async function updateVendorProduct(
   const supabase = await createClient();
   
   try {
-    // Convert prices to cents if provided
-    const updateData: any = {};
-    
-    if (updates.name !== undefined) updateData.p_name = updates.name;
-    if (updates.description !== undefined) updateData.p_description = updates.description;
-    if (updates.category !== undefined) updateData.p_category = updates.category;
-    if (updates.price !== undefined) {
-      updateData.p_price_cents = Math.round(parseFloat(updates.price as string) * 100);
-    }
-    if (updates.comparePrice !== undefined) {
-      updateData.p_compare_at_price_cents = updates.comparePrice 
-        ? Math.round(parseFloat(updates.comparePrice as string) * 100)
-        : null;
-    }
-    if (updates.inventory !== undefined) {
-      updateData.p_stock_quantity = parseInt(updates.inventory as string);
-    }
-    if (updates.sku !== undefined) updateData.p_sku = updates.sku;
-    
-    const { data, error } = await supabase.rpc('update_vendor_product', {
+    // Use the simple function with correct parameters
+    const { data, error } = await supabase.rpc('update_vendor_product_simple', {
       p_product_id: productId,
-      ...updateData,
+      p_name: updates.name || null,
+      p_description: updates.description || null,
+      p_category_id: updates.category || null,
     });
     
     if (error) {
@@ -184,5 +168,181 @@ export async function toggleProductActive(
   } catch (error: any) {
     console.error('toggleProductActive error:', error);
     return { success: false, message: error.message || 'Failed to toggle product status' };
+  }
+}
+
+// ============================================================================
+// INVENTORY SYSTEM UPGRADE - New Server Actions (Phase 8 Implementation)
+// ============================================================================
+
+/**
+ * Add a custom attribute for the vendor
+ * Allows vendors to create attributes like "Volume", "Scent", "Flavor", etc.
+ */
+export async function addVendorAttribute(
+  name: string,
+  displayName: string,
+  attributeType: 'text' | 'color' | 'number' | 'select',
+  isVariantDefining: boolean = true,
+  values: Array<{ value: string; display_value: string; color_hex?: string; sort_order: number }>
+): Promise<{ success: boolean; attribute_id?: string; message?: string }> {
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('add_vendor_attribute', {
+      p_name: name,
+      p_display_name: displayName,
+      p_attribute_type: attributeType,
+      p_is_variant_defining: isVariantDefining,
+      p_values: values
+    });
+    
+    if (error) {
+      console.error('addVendorAttribute error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    revalidatePath('/vendor/products');
+    return data as { success: boolean; attribute_id?: string; message?: string };
+  } catch (error: any) {
+    console.error('addVendorAttribute error:', error);
+    return { success: false, message: error.message || 'Failed to add attribute' };
+  }
+}
+
+/**
+ * Delete (soft or hard) a vendor's custom attribute
+ * Soft deletes if attribute is in use by variants, hard deletes otherwise
+ */
+export async function deleteVendorAttribute(
+  attributeId: string
+): Promise<{ success: boolean; message?: string }> {
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('delete_vendor_attribute', {
+      p_attribute_id: attributeId
+    });
+    
+    if (error) {
+      console.error('deleteVendorAttribute error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    revalidatePath('/vendor/products');
+    return data as { success: boolean; message?: string };
+  } catch (error: any) {
+    console.error('deleteVendorAttribute error:', error);
+    return { success: false, message: error.message || 'Failed to delete attribute' };
+  }
+}
+
+/**
+ * Update inventory quantity for a variant
+ * Creates audit trail in inventory_movements table
+ */
+export async function updateInventoryQuantity(
+  variantId: string,
+  quantityChange: number,
+  movementType: 'purchase' | 'sale' | 'adjustment' | 'transfer' | 'return' | 'damage',
+  notes?: string
+): Promise<{ success: boolean; old_quantity?: number; new_quantity?: number; message?: string }> {
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('update_inventory_quantity', {
+      p_variant_id: variantId,
+      p_quantity_change: quantityChange,
+      p_movement_type: movementType,
+      p_notes: notes || null
+    });
+    
+    if (error) {
+      console.error('updateInventoryQuantity error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    revalidatePath('/vendor/products');
+    revalidatePath('/vendor/dashboard');
+    return data as { success: boolean; old_quantity?: number; new_quantity?: number; message?: string };
+  } catch (error: any) {
+    console.error('updateInventoryQuantity error:', error);
+    return { success: false, message: error.message || 'Failed to update inventory' };
+  }
+}
+
+/**
+ * Add a new variant to an existing product
+ */
+export async function addProductVariant(
+  productId: string,
+  sku: string,
+  price: number,
+  compareAtPrice?: number,
+  costPrice?: number,
+  quantity: number = 0,
+  attributeValueIds: string[] = []
+): Promise<{ success: boolean; variant_id?: string; message?: string }> {
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('add_product_variant', {
+      p_product_id: productId,
+      p_sku: sku.toUpperCase(),
+      p_price: price,
+      p_compare_at_price: compareAtPrice || null,
+      p_cost_price: costPrice || null,
+      p_quantity: quantity,
+      p_attribute_value_ids: attributeValueIds
+    });
+    
+    if (error) {
+      console.error('addProductVariant error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    revalidatePath('/vendor/products');
+    return data as { success: boolean; variant_id?: string; message?: string };
+  } catch (error: any) {
+    console.error('addProductVariant error:', error);
+    return { success: false, message: error.message || 'Failed to add variant' };
+  }
+}
+
+/**
+ * Update an existing variant's details (SKU, price, etc.)
+ */
+export async function updateProductVariant(
+  variantId: string,
+  updates: {
+    sku?: string;
+    price?: number;
+    compareAtPrice?: number;
+    costPrice?: number;
+    isActive?: boolean;
+  }
+): Promise<{ success: boolean; message?: string }> {
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase.rpc('update_product_variant', {
+      p_variant_id: variantId,
+      p_sku: updates.sku?.toUpperCase() || null,
+      p_price: updates.price ?? null,
+      p_compare_at_price: updates.compareAtPrice ?? null,
+      p_cost_price: updates.costPrice ?? null,
+      p_is_active: updates.isActive ?? null
+    });
+    
+    if (error) {
+      console.error('updateProductVariant error:', error);
+      return { success: false, message: error.message };
+    }
+    
+    revalidatePath('/vendor/products');
+    return data as { success: boolean; message?: string };
+  } catch (error: any) {
+    console.error('updateProductVariant error:', error);
+    return { success: false, message: error.message || 'Failed to update variant' };
   }
 }

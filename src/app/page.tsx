@@ -129,16 +129,16 @@ export default async function HomePage() {
 
       {/* Value Propositions */}
       <section className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             {valueProps.map((prop) => (
-              <div key={prop.title} className="flex items-center gap-3 p-2">
-                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-                  <prop.icon className="h-6 w-6 text-[#1976D2]" />
+              <div key={prop.title} className="flex items-center gap-2 sm:gap-3 p-1 sm:p-2">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
+                  <prop.icon className="h-4 w-4 sm:h-6 sm:w-6 text-[#1976D2]" />
                 </div>
-                <div>
-                  <p className="font-semibold text-gray-800 text-sm">{prop.title}</p>
-                  <p className="text-xs text-gray-500">{prop.desc}</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate">{prop.title}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 truncate">{prop.desc}</p>
                 </div>
               </div>
             ))}
@@ -254,56 +254,56 @@ export default async function HomePage() {
 
       {/* Combo Deals Section */}
       <section className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-gradient-to-r from-[#FFD400] to-[#FFC107] rounded-lg p-6">
+        <div className="bg-gradient-to-r from-[#FFD400] to-[#FFC107] rounded-lg p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">🎁 Combo Deals</h2>
-              <p className="text-sm text-gray-700">Save more when you buy together</p>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">🎁 Combo Deals</h2>
+              <p className="text-xs sm:text-sm text-gray-700">Save more when you buy together</p>
             </div>
             <Link
               href="/shop?category=combos"
-              className="flex items-center gap-1 bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-1 bg-gray-800 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full hover:bg-gray-700 transition-colors"
             >
               View All <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Combo deal cards would go here */}
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                <Gift className="h-12 w-12 text-gray-400" />
+          {/* Horizontal scroll on mobile, grid on desktop */}
+          <div className="flex md:grid md:grid-cols-4 gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
+              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
+                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
               </div>
-              <p className="font-medium text-gray-800 text-sm">Starter Kit</p>
-              <p className="text-xs text-gray-500">5 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1">Rs. 2,999</p>
-              <p className="text-xs text-gray-400 line-through">Rs. 4,500</p>
+              <p className="font-medium text-gray-800 text-xs sm:text-sm">Starter Kit</p>
+              <p className="text-[10px] sm:text-xs text-gray-500">5 Products</p>
+              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 2,999</p>
+              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 4,500</p>
             </div>
-            <div className="bg-white rounded-lg p-4 text-center">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                <Gift className="h-12 w-12 text-gray-400" />
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
+              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
+                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
               </div>
-              <p className="font-medium text-gray-800 text-sm">Pro Facial Kit</p>
-              <p className="text-xs text-gray-500">8 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1">Rs. 5,499</p>
-              <p className="text-xs text-gray-400 line-through">Rs. 7,999</p>
+              <p className="font-medium text-gray-800 text-xs sm:text-sm">Pro Facial Kit</p>
+              <p className="text-[10px] sm:text-xs text-gray-500">8 Products</p>
+              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 5,499</p>
+              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 7,999</p>
             </div>
-            <div className="bg-white rounded-lg p-4 text-center hidden md:block">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                <Gift className="h-12 w-12 text-gray-400" />
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
+              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
+                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
               </div>
-              <p className="font-medium text-gray-800 text-sm">Hair Care Bundle</p>
-              <p className="text-xs text-gray-500">6 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1">Rs. 3,299</p>
-              <p className="text-xs text-gray-400 line-through">Rs. 4,800</p>
+              <p className="font-medium text-gray-800 text-xs sm:text-sm">Hair Care Bundle</p>
+              <p className="text-[10px] sm:text-xs text-gray-500">6 Products</p>
+              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 3,299</p>
+              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 4,800</p>
             </div>
-            <div className="bg-white rounded-lg p-4 text-center hidden md:block">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                <Gift className="h-12 w-12 text-gray-400" />
+            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
+              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
+                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
               </div>
-              <p className="font-medium text-gray-800 text-sm">Complete Salon Set</p>
-              <p className="text-xs text-gray-500">12 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1">Rs. 9,999</p>
-              <p className="text-xs text-gray-400 line-through">Rs. 15,000</p>
+              <p className="font-medium text-gray-800 text-xs sm:text-sm">Complete Salon Set</p>
+              <p className="text-[10px] sm:text-xs text-gray-500">12 Products</p>
+              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 9,999</p>
+              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 15,000</p>
             </div>
           </div>
         </div>

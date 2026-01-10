@@ -22,10 +22,12 @@ export interface CartProductItem {
   product_id: string;
   product_name: string;
   variant_name?: string;
-  variant_data?: {  // ⭐ NEW: Structured variant attributes for UI
+  variant_data?: {  // ⭐ Dynamic variant attributes for UI (size, color, volume, etc.)
     size?: string;
     color?: string;
     colorHex?: string;
+    // Support any additional attributes dynamically
+    [key: string]: string | undefined;
   };
   sku: string;
   price: number;
@@ -754,15 +756,29 @@ function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
     const sizeAttr = variantAttrs.find((a: any) => a.name === 'Size' || a.name === 'size');
     const colorAttr = variantAttrs.find((a: any) => a.name === 'Color' || a.name === 'color');
     
-    // Build display name from attributes if available
-    if (sizeAttr || colorAttr) {
-      const parts = [];
-      if (sizeAttr?.value) parts.push(sizeAttr.value);
-      if (colorAttr?.value) parts.push(colorAttr.value);
+    // Build display name from ALL attributes
+    if (variantAttrs.length > 0) {
+      const parts = variantAttrs
+        .filter((a: any) => a.value)
+        .map((a: any) => a.value);
       if (parts.length > 0) variantName = parts.join(' / ');
     }
     
     const price = parseFloat(item.price_snapshot || item.current_price || item.price || '0');
+    
+    // Build variant_data with ALL attributes dynamically
+    const variantData: Record<string, string | undefined> = {};
+    variantAttrs.forEach((attr: any) => {
+      if (attr.value) {
+        // Use lowercase attribute name as key
+        const key = attr.name?.toLowerCase() || 'unknown';
+        variantData[key] = attr.value;
+        // Special handling for color hex
+        if ((key === 'color') && attr.color_hex) {
+          variantData.colorHex = attr.color_hex;
+        }
+      }
+    });
     
     return {
       id: item.id,
@@ -770,11 +786,7 @@ function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
       product_id: item.product?.id || '',
       product_name: item.product_name || item.product?.name || 'Product',
       variant_name: variantName,
-      variant_data: {  // ⭐ NEW: Structured variant data for UI
-        size: sizeAttr?.value,
-        color: colorAttr?.value,
-        colorHex: colorAttr?.color_hex  // ⭐ FIXED: Use color_hex from API
-      },
+      variant_data: variantData,  // ⭐ Use dynamically built variant data
       sku: sku,
       price: price,
       quantity: item.quantity || 1,

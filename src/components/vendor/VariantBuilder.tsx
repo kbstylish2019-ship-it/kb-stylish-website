@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, AlertCircle, Check, Loader2, Grid, DollarSign } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Check, Loader2, Grid, DollarSign, Globe, User, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { addVendorAttribute, deleteVendorAttribute } from '@/app/actions/vendor';
 
 interface ProductAttribute {
   id: string;
@@ -11,6 +12,7 @@ interface ProductAttribute {
   display_name: string;
   attribute_type: string;
   is_variant_defining: boolean;
+  vendor_id?: string | null; // null = global, string = vendor-specific
 }
 
 interface AttributeValue {
@@ -19,6 +21,7 @@ interface AttributeValue {
   value: string;
   display_value: string;
   color_hex?: string;
+  vendor_id?: string | null;
 }
 
 interface VariantForBackend {
@@ -33,70 +36,86 @@ interface VariantForBackend {
 interface VariantBuilderProps {
   productName?: string;
   onChange: (variants: VariantForBackend[]) => void;
+  userId?: string; // Current vendor's user ID
 }
 
-export default function VariantBuilder({ productName = 'Product', onChange }: VariantBuilderProps) {
+// Constants for limits
+const MAX_VARIANTS = 100;
+const VARIANT_WARNING_THRESHOLD = 50;
+
+export default function VariantBuilder({ productName = 'Product', onChange, userId }: VariantBuilderProps) {
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, AttributeValue[]>>({});
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>({});
   const [variants, setVariants] = useState<VariantForBackend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [showAddAttributeModal, setShowAddAttributeModal] = useState(false);
   
   const supabase = createClient();
   
   // Fetch attributes and values from database
-  useEffect(() => {
-    const fetchAttributes = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch variant-defining attributes
-        const { data: attrsData, error: attrsError } = await supabase
-          .from('product_attributes')
-          .select('*')
-          .eq('is_variant_defining', true)
-          .eq('is_active', true)
-          .order('sort_order');
-        
-        if (attrsError) throw attrsError;
-        
-        setAttributes(attrsData || []);
-        
-        // Fetch all attribute values
-        const { data: valuesData, error: valuesError } = await supabase
-          .from('attribute_values')
-          .select('*')
-          .eq('is_active', true)
-          .order('sort_order');
-        
-        if (valuesError) throw valuesError;
-        
-        // Group values by attribute_id
-        const groupedValues: Record<string, AttributeValue[]> = {};
-        (valuesData || []).forEach(value => {
-          if (!groupedValues[value.attribute_id]) {
-            groupedValues[value.attribute_id] = [];
-          }
-          groupedValues[value.attribute_id].push(value);
-        });
-        
-        setAttributeValues(groupedValues);
-      } catch (err: any) {
-        console.error('Failed to fetch attributes:', err);
-        setError(err.message || 'Failed to load attributes');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchAttributes();
+  const fetchAttributes = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch variant-defining attributes (global + vendor's own)
+      const { data: attrsData, error: attrsError } = await supabase
+        .from('product_attributes')
+        .select('*')
+        .eq('is_variant_defining', true)
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (attrsError) throw attrsError;
+      
+      setAttributes(attrsData || []);
+      
+      // Fetch all attribute values (global + vendor's own)
+      const { data: valuesData, error: valuesError } = await supabase
+        .from('attribute_values')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      
+      if (valuesError) throw valuesError;
+      
+      // Group values by attribute_id
+      const groupedValues: Record<string, AttributeValue[]> = {};
+      (valuesData || []).forEach(value => {
+        if (!groupedValues[value.attribute_id]) {
+          groupedValues[value.attribute_id] = [];
+        }
+        groupedValues[value.attribute_id].push(value);
+      });
+      
+      setAttributeValues(groupedValues);
+    } catch (err: any) {
+      console.error('Failed to fetch attributes:', err);
+      setError(err.message || 'Failed to load attributes');
+    } finally {
+      setIsLoading(false);
+    }
   }, [supabase]);
+
+  useEffect(() => {
+    fetchAttributes();
+  }, [fetchAttributes]);
   
   // Generate variants when selected attributes change
   useEffect(() => {
     const generated = generateVariants();
     setVariants(generated);
+    
+    // Check variant count and set warning
+    if (generated.length > MAX_VARIANTS) {
+      setWarning(`Too many variants (${generated.length}). Maximum is ${MAX_VARIANTS}. Please reduce attribute selections.`);
+    } else if (generated.length > VARIANT_WARNING_THRESHOLD) {
+      setWarning(`${generated.length} variants will be created. Consider reducing for easier management.`);
+    } else {
+      setWarning(null);
+    }
   }, [selectedAttributes, productName]);
   
   // Notify parent when variants change
@@ -269,9 +288,18 @@ export default function VariantBuilder({ productName = 'Product', onChange }: Va
     <div className="space-y-6">
       {/* Step 1: Select Attributes */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Grid className="h-5 w-5 text-foreground/60" />
-          <h3 className="text-lg font-semibold text-foreground">Select Product Attributes</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Grid className="h-5 w-5 text-foreground/60" />
+            <h3 className="text-lg font-semibold text-foreground">Select Product Attributes</h3>
+          </div>
+          <button
+            onClick={() => setShowAddAttributeModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-[var(--kb-primary-brand)] text-[var(--kb-primary-brand)] rounded-lg hover:bg-[var(--kb-primary-brand)]/10 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Custom
+          </button>
         </div>
         
         <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-3">
@@ -282,10 +310,35 @@ export default function VariantBuilder({ productName = 'Product', onChange }: Va
           </p>
         </div>
         
+        {/* Variant count warning */}
+        {warning && (
+          <div className={cn(
+            "rounded-xl border p-3 flex items-center gap-3",
+            variants.length > MAX_VARIANTS 
+              ? "border-red-500/20 bg-red-500/10" 
+              : "border-amber-500/20 bg-amber-500/10"
+          )}>
+            <AlertCircle className={cn(
+              "h-4 w-4",
+              variants.length > MAX_VARIANTS ? "text-red-400" : "text-amber-400"
+            )} />
+            <span className={cn(
+              "text-sm",
+              variants.length > MAX_VARIANTS ? "text-red-400" : "text-amber-400"
+            )}>{warning}</span>
+          </div>
+        )}
+        
         {attributes.length === 0 ? (
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
             <p className="text-sm text-amber-400">
               No variant attributes configured. Products will have a single default variant.
+              <button 
+                onClick={() => setShowAddAttributeModal(true)}
+                className="ml-2 underline hover:no-underline"
+              >
+                Create your first attribute
+              </button>
             </p>
           </div>
         ) : (
@@ -297,6 +350,13 @@ export default function VariantBuilder({ productName = 'Product', onChange }: Va
                 values={attributeValues[attr.id] || []}
                 selectedValues={selectedAttributes[attr.id] || []}
                 onToggle={(valueId) => toggleAttributeValue(attr.id, valueId)}
+                onDelete={attr.vendor_id ? async () => {
+                  const result = await deleteVendorAttribute(attr.id);
+                  if (result.success) {
+                    fetchAttributes();
+                  }
+                } : undefined}
+                isCustom={!!attr.vendor_id}
               />
             ))}
           </div>
@@ -338,6 +398,17 @@ export default function VariantBuilder({ productName = 'Product', onChange }: Va
           <span className="text-sm text-amber-400">Please configure at least one variant</span>
         </div>
       )}
+      
+      {/* Add Attribute Modal */}
+      {showAddAttributeModal && (
+        <AddAttributeModal
+          onClose={() => setShowAddAttributeModal(false)}
+          onSuccess={() => {
+            setShowAddAttributeModal(false);
+            fetchAttributes();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -348,20 +419,53 @@ interface AttributeSelectorProps {
   values: AttributeValue[];
   selectedValues: string[];
   onToggle: (valueId: string) => void;
+  onDelete?: () => void;
+  isCustom?: boolean;
 }
 
-function AttributeSelector({ attribute, values, selectedValues, onToggle }: AttributeSelectorProps) {
+function AttributeSelector({ attribute, values, selectedValues, onToggle, onDelete, isCustom }: AttributeSelectorProps) {
   const isColor = attribute.attribute_type === 'color';
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between mb-3">
-        <label className="text-sm font-medium text-foreground">
-          {attribute.display_name}
-        </label>
-        <span className="text-xs text-foreground/60">
-          {selectedValues.length} selected
-        </span>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground">
+            {attribute.display_name}
+          </label>
+          {isCustom && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-[var(--kb-primary-brand)]/20 text-[var(--kb-primary-brand)] rounded">
+              <User className="h-3 w-3" />
+              Custom
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-foreground/60">
+            {selectedValues.length} selected
+          </span>
+          {isCustom && onDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
+              title="Delete custom attribute"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
       </div>
       
       <div className={cn(
@@ -583,6 +687,264 @@ function BulkActionsMenu({ onSetAllPrices, onSetAllInventory, onAutoGenerateSKUs
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+
+// Add Attribute Modal Component - Simplified for vendors
+interface AddAttributeModalProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function AddAttributeModal({ onClose, onSuccess }: AddAttributeModalProps) {
+  const [attributeName, setAttributeName] = useState('');
+  const [isColorAttribute, setIsColorAttribute] = useState(false);
+  const [values, setValues] = useState<Array<{ display_value: string; color_hex?: string }>>([
+    { display_value: '' }
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Auto-generate internal name from display name
+  const generateInternalName = (displayName: string): string => {
+    return displayName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 50) || 'attribute';
+  };
+  
+  // Auto-generate internal value from display value
+  const generateInternalValue = (displayValue: string): string => {
+    return displayValue
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 50) || 'value';
+  };
+  
+  const handleAddValue = () => {
+    setValues([...values, { display_value: '' }]);
+  };
+  
+  const handleRemoveValue = (index: number) => {
+    if (values.length > 1) {
+      setValues(values.filter((_, i) => i !== index));
+    }
+  };
+  
+  const handleValueChange = (index: number, displayValue: string) => {
+    setValues(values.map((v, i) => i === index ? { ...v, display_value: displayValue } : v));
+  };
+  
+  const handleColorChange = (index: number, colorHex: string) => {
+    setValues(values.map((v, i) => i === index ? { ...v, color_hex: colorHex } : v));
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    
+    // Validation
+    if (!attributeName.trim()) {
+      setError('Please enter an attribute name');
+      return;
+    }
+    
+    const validValues = values.filter(v => v.display_value.trim());
+    if (validValues.length === 0) {
+      setError('Please add at least one option');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const internalName = generateInternalName(attributeName);
+      const attributeType = isColorAttribute ? 'color' : 'text';
+      
+      const result = await addVendorAttribute(
+        internalName,
+        attributeName.trim(),
+        attributeType,
+        true,
+        validValues.map((v, i) => ({
+          value: generateInternalValue(v.display_value),
+          display_value: v.display_value.trim(),
+          color_hex: v.color_hex,
+          sort_order: i
+        }))
+      );
+      
+      if (result.success) {
+        onSuccess();
+      } else {
+        setError(result.message || 'Failed to create attribute');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Example placeholders based on common use cases
+  const getPlaceholder = (index: number): string => {
+    if (isColorAttribute) {
+      const colorExamples = ['Red', 'Blue', 'Green', 'Black', 'White'];
+      return colorExamples[index % colorExamples.length];
+    }
+    const examples = ['Small', 'Medium', 'Large', '100ml', '250ml'];
+    return examples[index % examples.length];
+  };
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md mx-4 bg-white dark:bg-[#1a1a1a] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-white/10 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-foreground">Create New Attribute</h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-gray-500 dark:text-foreground/60 hover:text-gray-700 dark:hover:text-foreground rounded transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Helpful intro */}
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-3">
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              💡 Create attributes like &quot;Size&quot;, &quot;Volume&quot;, &quot;Flavor&quot;, or &quot;Material&quot; to offer product variations to your customers.
+            </p>
+          </div>
+          
+          {error && (
+            <div className="rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 p-3 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
+              <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
+            </div>
+          )}
+          
+          {/* Attribute Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-foreground/80 mb-1.5">
+              Attribute Name
+            </label>
+            <input
+              type="text"
+              value={attributeName}
+              onChange={(e) => setAttributeName(e.target.value)}
+              placeholder="e.g., Size, Volume, Flavor, Scent"
+              className="w-full bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] focus:border-transparent"
+              autoFocus
+            />
+          </div>
+          
+          {/* Color toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsColorAttribute(!isColorAttribute)}
+              className={cn(
+                "relative w-11 h-6 rounded-full transition-colors border",
+                isColorAttribute 
+                  ? "bg-[var(--kb-primary-brand)] border-[var(--kb-primary-brand)]" 
+                  : "bg-gray-200 dark:bg-white/20 border-gray-300 dark:border-white/30"
+              )}
+            >
+              <span className={cn(
+                "absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm",
+                isColorAttribute ? "left-[22px]" : "left-0.5"
+              )} />
+            </button>
+            <span className="text-sm text-gray-700 dark:text-foreground/80">This is a color attribute</span>
+          </div>
+          
+          {/* Values */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-foreground/80">
+                Options
+              </label>
+              <button
+                type="button"
+                onClick={handleAddValue}
+                className="flex items-center gap-1 text-xs text-[var(--kb-primary-brand)] hover:underline"
+              >
+                <Plus className="h-3 w-3" />
+                Add Option
+              </button>
+            </div>
+            <div className="space-y-2">
+              {values.map((val, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  {isColorAttribute && (
+                    <input
+                      type="color"
+                      value={val.color_hex || '#000000'}
+                      onChange={(e) => handleColorChange(index, e.target.value)}
+                      className="w-10 h-10 rounded border border-gray-300 dark:border-white/20 cursor-pointer flex-shrink-0"
+                      title="Pick a color"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    value={val.display_value}
+                    onChange={(e) => handleValueChange(index, e.target.value)}
+                    placeholder={getPlaceholder(index)}
+                    className="flex-1 bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveValue(index)}
+                    disabled={values.length === 1}
+                    className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                    title="Remove option"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-foreground/50 mt-2">
+              Add all the options customers can choose from
+            </p>
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 dark:text-foreground/70 hover:text-gray-800 dark:hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--kb-primary-brand)] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  Create Attribute
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

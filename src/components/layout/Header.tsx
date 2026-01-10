@@ -409,7 +409,7 @@ export default function Header({ isAuthed = false }: HeaderProps) {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b shadow-lg">
+        <div className="lg:hidden bg-white border-b shadow-lg max-h-[calc(100vh-120px)] overflow-y-auto">
           <div className="max-w-7xl mx-auto px-4 py-4">
             {/* Mobile Search */}
             <form onSubmit={handleSearch} className="mb-4">

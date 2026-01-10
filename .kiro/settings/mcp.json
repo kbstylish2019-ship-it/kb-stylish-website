@@ -12,7 +12,9 @@
       "autoApprove": [
         "list_tables",
         "execute_sql",
-        "list_projects"
+        "list_projects",
+        "apply_migration",
+        "list_migrations"
       ]
     }
   }

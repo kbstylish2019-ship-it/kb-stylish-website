@@ -51,13 +51,9 @@ export default function ProductList({
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-gray-900">{it.name}</div>
                   
-                  {it.variantData && (it.variantData.size || it.variantData.color) ? (
-                    <div className="flex items-center gap-2 mt-1.5">
-                      {it.variantData.size && (
-                        <span key={`size-${it.id}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 font-medium border border-gray-200">
-                          {it.variantData.size}
-                        </span>
-                      )}
+                  {it.variantData && Object.keys(it.variantData).filter(k => k !== 'colorHex' && it.variantData![k]).length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      {/* Show color first if present */}
                       {it.variantData.color && (
                         <span key={`color-${it.id}`} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 border border-gray-200">
                           <span 
@@ -67,6 +63,15 @@ export default function ProductList({
                           {it.variantData.color}
                         </span>
                       )}
+                      {/* Show all other attributes */}
+                      {Object.entries(it.variantData)
+                        .filter(([key, value]) => key !== 'color' && key !== 'colorHex' && value)
+                        .map(([key, value]) => (
+                          <span key={`${key}-${it.id}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 font-medium border border-gray-200">
+                            {value}
+                          </span>
+                        ))
+                      }
                     </div>
                   ) : it.variant ? (
                     <div className="text-xs text-gray-500 mt-1">{it.variant}</div>

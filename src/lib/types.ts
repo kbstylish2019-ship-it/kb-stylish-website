@@ -127,6 +127,8 @@ export interface CartProductItem {
     size?: string;
     color?: string;
     colorHex?: string;
+    // Support any additional attributes dynamically
+    [key: string]: string | undefined;
   };
   imageUrl?: string;
   price: number; // per unit
