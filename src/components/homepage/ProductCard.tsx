@@ -30,6 +30,11 @@ function ProductCard({ product, onClick }: ProductCardProps) {
             {product.badge}
           </span>
         )}
+        {product.is_combo && (
+          <span className="absolute top-2 right-2 z-10 bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md">
+            COMBO
+          </span>
+        )}
         {product.imageUrl && !imageError ? (
           <Image
             src={product.imageUrl}
@@ -56,6 +61,11 @@ function ProductCard({ product, onClick }: ProductCardProps) {
         <p className="text-lg font-bold text-[#E31B23] mt-2">
           {formatPrice(product.price)}
         </p>
+        {product.is_combo && product.combo_savings_cents && product.combo_savings_cents > 0 && (
+          <p className="text-xs text-green-600 font-semibold mt-1">
+            Save {formatPrice(product.combo_savings_cents / 100)}
+          </p>
+        )}
         {product.category && (
           <p className="text-xs text-gray-500 mt-1">{product.category}</p>
         )}

@@ -82,6 +82,7 @@ export interface ProductWithVariants {
   variants: any[];
   images: any[];
   inventory: Record<string, any>;
+  combo_items?: any[];  // Combo constituent items (for combo products)
 }
 
 export interface CacheStatus {
@@ -200,6 +201,11 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
         slug,
         description,
         is_featured,
+        is_combo,
+        combo_price_cents,
+        combo_savings_cents,
+        combo_quantity_limit,
+        combo_quantity_sold,
         created_at,
         updated_at,
         categories(
@@ -308,16 +314,39 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
 
     // Transform raw data into Product interface
     let transformedProducts: Product[] = data.map((rawProduct: any) => {
-      // Calculate price from variants
-      const prices = rawProduct.product_variants?.map((v: any) => v.price) || [];
-      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+      // For combo products, use combo price; for regular products, use variant prices
+      let minPrice = 0;
+      let maxPrice = 0;
+      
+      if (rawProduct.is_combo) {
+        // Combo products: price is stored in cents, convert to rupees
+        minPrice = rawProduct.combo_price_cents ? rawProduct.combo_price_cents / 100 : 0;
+        maxPrice = minPrice;
+      } else {
+        // Regular products: calculate price from variants
+        const prices = rawProduct.product_variants?.map((v: any) => v.price) || [];
+        minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+        maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+      }
 
       // Calculate total inventory
-      const totalInventory = rawProduct.product_variants?.reduce((total: number, variant: any) => {
-        const inventory = variant.inventory?.[0]?.quantity_available || 0;
-        return total + inventory;
-      }, 0) || 0;
+      let totalInventory = 0;
+      
+      if (rawProduct.is_combo) {
+        // For combo products, check combo quantity limit vs sold
+        if (rawProduct.combo_quantity_limit) {
+          totalInventory = Math.max(0, rawProduct.combo_quantity_limit - (rawProduct.combo_quantity_sold || 0));
+        } else {
+          // If no limit set, assume available (would need to check constituent inventory in real implementation)
+          totalInventory = 1;
+        }
+      } else {
+        // For regular products, sum variant inventory
+        totalInventory = rawProduct.product_variants?.reduce((total: number, variant: any) => {
+          const inventory = variant.inventory?.[0]?.quantity_available || 0;
+          return total + inventory;
+        }, 0) || 0;
+      }
 
       // Get primary image
       const sortedImages = rawProduct.product_images?.sort((a: any, b: any) =>
@@ -350,9 +379,17 @@ export async function fetchProducts(params: FetchProductsParams = {}): Promise<P
         inStock: totalInventory > 0,
         stockCount: totalInventory,
         isFeatured: rawProduct.is_featured || false,
-        badge: rawProduct.is_featured ? 'Featured' : (totalInventory === 0 ? 'Out of Stock' : undefined),
+        badge: rawProduct.is_combo ? 'COMBO' : 
+               rawProduct.is_featured ? 'Featured' : 
+               (totalInventory === 0 ? 'Out of Stock' : undefined),
         createdAt: rawProduct.created_at,
-        updatedAt: rawProduct.updated_at
+        updatedAt: rawProduct.updated_at,
+        // Add combo-specific data for proper display
+        ...(rawProduct.is_combo && {
+          combo_savings_cents: rawProduct.combo_savings_cents,
+          combo_quantity_limit: rawProduct.combo_quantity_limit,
+          combo_quantity_sold: rawProduct.combo_quantity_sold,
+        })
       };
     });
 
@@ -468,10 +505,20 @@ async function fetchProductsMock(params: FetchProductsParams = {}): Promise<Prod
 }
 
 /**
- * Get available product categories for filter UI
- * Fetches from categories table
+ * Category item for filter UI
  */
-export async function getProductCategories(): Promise<string[]> {
+export interface CategoryFilterItem {
+  id: string;
+  slug: string;
+  name: string;
+  parent_id: string | null;
+}
+
+/**
+ * Get available product categories for filter UI
+ * Fetches from categories table with hierarchy info
+ */
+export async function getProductCategories(): Promise<CategoryFilterItem[]> {
   noStore();
 
   const supabase = await createClient();
@@ -479,7 +526,7 @@ export async function getProductCategories(): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from('categories')
-      .select('slug')
+      .select('id, slug, name, parent_id')
       .eq('is_active', true)
       .order('sort_order')
       .order('name');
@@ -489,7 +536,8 @@ export async function getProductCategories(): Promise<string[]> {
       return [];
     }
 
-    return data?.map(c => c.slug) || [];
+    // Filter out test categories
+    return (data || []).filter(c => !c.name.toLowerCase().includes('test'));
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
@@ -568,6 +616,7 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
         variants: any[];
         images: any[];
         inventory: Record<string, any>;
+        combo_items?: any[];  // Combo constituent items
       }>();
 
     if (error) {
@@ -584,7 +633,8 @@ export async function fetchProductBySlug(slug: string): Promise<ProductWithVaria
       product: data.product,
       variants: data.variants || [],
       images: data.images || [],
-      inventory: data.inventory || {}
+      inventory: data.inventory || {},
+      combo_items: data.combo_items || []  // Include combo items for combo products
     };
 
     // CRITICAL: Always fetch fresh review stats (don't cache these volatile fields)
@@ -2990,6 +3040,53 @@ export async function fetchAllCategories(): Promise<CategoryInfo[]> {
     }));
   } catch (error) {
     console.error('[Category API] Error in fetchAllCategories:', error);
+    return [];
+  }
+}
+
+
+// ============================================================================
+// COMBO PRODUCTS API FUNCTIONS
+// ============================================================================
+
+export interface ComboProductSummary {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  combo_price_cents: number;
+  combo_savings_cents: number;
+  combo_quantity_limit: number | null;
+  combo_quantity_sold: number;
+  item_count: number;
+  image_url: string | null;
+  created_at: string;
+}
+
+/**
+ * Fetch active combo products for homepage display
+ * Uses get_active_combos RPC function with caching
+ * 
+ * @param limit - Number of combos to fetch (default: 4)
+ * @returns Array of combo product summaries
+ */
+export async function fetchActiveCombos(limit: number = 4): Promise<ComboProductSummary[]> {
+  noStore();
+
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .rpc('get_active_combos', { p_limit: limit });
+
+    if (error) {
+      console.error('[Combo API] Error fetching active combos:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('[Combo API] Error in fetchActiveCombos:', error);
     return [];
   }
 }

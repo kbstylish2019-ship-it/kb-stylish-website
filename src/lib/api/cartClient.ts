@@ -490,6 +490,80 @@ export class CartAPIClient {
   }
 
   /**
+   * Add combo to cart
+   * Expands combo into constituent items with proportional discounts
+   */
+  async addComboToCart(comboId: string): Promise<CartResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      console.log('[CartAPI] addComboToCart called with:', { comboId });
+      
+      const response = await this.executeWithRetry(async () => {
+        return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'add_combo',
+            combo_id: comboId,
+          }),
+          credentials: 'include',
+        });
+      });
+
+      const data = await response.json();
+      console.log('[CartAPI] addComboToCart response:', { ok: response.ok, data });
+      
+      if (data.guest_token) {
+        setGuestTokenCookieUtil(data.guest_token);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[CartAPI] Failed to add combo to cart:', error);
+      return {
+        success: false,
+        error: 'Failed to add combo to cart',
+      };
+    }
+  }
+
+  /**
+   * Remove combo from cart
+   * Removes all items with the same combo_group_id
+   */
+  async removeComboFromCart(comboGroupId: string): Promise<CartResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      console.log('[CartAPI] removeComboFromCart called with:', { comboGroupId });
+      
+      const response = await this.executeWithRetry(async () => {
+        return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'remove_combo',
+            combo_group_id: comboGroupId,
+          }),
+          credentials: 'include',
+        });
+      });
+
+      const data = await response.json();
+      console.log('[CartAPI] removeComboFromCart response:', { ok: response.ok, data });
+
+      return data;
+    } catch (error) {
+      console.error('[CartAPI] Failed to remove combo from cart:', error);
+      return {
+        success: false,
+        error: 'Failed to remove combo from cart',
+      };
+    }
+  }
+
+  /**
    * Create payment intent for checkout with payment gateway integration
    */
   async createOrderIntent(request: CreateOrderIntentRequest): Promise<PaymentIntentResponse> {
@@ -562,6 +636,41 @@ export class CartAPIClient {
       return {
         success: false,
         error: 'Failed to verify payment',
+      };
+    }
+  }
+
+  /**
+   * Update combo quantity (updates all items in combo proportionally)
+   */
+  async updateComboQuantity(comboGroupId: string, quantity: number): Promise<CartResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      
+      console.log('[CartAPI] updateComboQuantity called with:', { comboGroupId, quantity });
+      
+      const response = await this.executeWithRetry(async () => {
+        return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'update_combo_quantity',
+            combo_group_id: comboGroupId,
+            quantity,
+          }),
+          credentials: 'include',
+        });
+      });
+
+      const data = await response.json();
+      console.log('[CartAPI] updateComboQuantity response:', { ok: response.ok, data });
+
+      return data;
+    } catch (error) {
+      console.error('[CartAPI] Failed to update combo quantity:', error);
+      return {
+        success: false,
+        error: 'Failed to update combo quantity',
       };
     }
   }

@@ -8,6 +8,7 @@ import { fetchVendorDashboardStats } from "@/lib/apiClient";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import VendorCtaButton from "@/components/vendor/VendorCtaButton";
+import { isAuthorizedComboVendor } from "@/lib/constants/combo";
 
 // Use real components in tests to avoid next/dynamic being mocked to null
 const isTest = process.env.NODE_ENV === "test";
@@ -26,16 +27,27 @@ if (isTest) {
   StatCard = dynamic(() => import("@/components/vendor/StatCard"));
 }
 
-function VendorSidebar() {
-  const items = [
+function VendorSidebar({ userId }: { userId?: string }) {
+  const baseItems = [
     { id: "dashboard", label: "Dashboard", href: "/vendor/dashboard" },
     { id: "products", label: "Products", href: "/vendor/products" },
+  ];
+  
+  // Add Combos link only for authorized vendors
+  const comboItem = userId && isAuthorizedComboVendor(userId) 
+    ? [{ id: "combos", label: "Combos", href: "/vendor/combos" }]
+    : [];
+  
+  const remainingItems = [
     { id: "orders", label: "Orders", href: "/vendor/orders" },
     { id: "payouts", label: "Payouts", href: "/vendor/payouts" },
     { id: "analytics", label: "Analytics", href: "/vendor/analytics" },
     { id: "support", label: "Support", href: "/vendor/support" },
     { id: "settings", label: "Settings", href: "/vendor/settings" },
   ];
+  
+  const items = [...baseItems, ...comboItem, ...remainingItems];
+  
   return (
     <nav className="flex flex-col gap-1 text-sm">
       {items.map((i) => (
@@ -146,7 +158,7 @@ export default async function VendorDashboardPage() {
   // 4. Handle error state if stats failed to load
   if (!stats) {
     return (
-      <DashboardLayout title="Vendor Dashboard" sidebar={<VendorSidebar />}>
+      <DashboardLayout title="Vendor Dashboard" sidebar={<VendorSidebar userId={user.id} />}>
         <OnboardingWizardWrapper />
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <h2 className="text-lg font-semibold text-red-700">Failed to Load Dashboard</h2>
@@ -181,7 +193,7 @@ export default async function VendorDashboardPage() {
 
   return (
     <>
-      <DashboardLayout title="Vendor Dashboard" actions={<VendorCtaButton userId={user.id} />} sidebar={<VendorSidebar />}> 
+      <DashboardLayout title="Vendor Dashboard" actions={<VendorCtaButton userId={user.id} />} sidebar={<VendorSidebar userId={user.id} />}> 
         <OnboardingWizardWrapper />
         {/* Live Stat Grid */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">

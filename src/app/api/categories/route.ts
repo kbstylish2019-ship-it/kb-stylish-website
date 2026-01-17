@@ -35,7 +35,7 @@ export async function GET() {
     // Fetch top-level categories (parent_id IS NULL)
     const { data: categories, error } = await supabase
       .from('categories')
-      .select('id, name, slug, sort_order')
+      .select('id, name, slug, sort_order, image_url')
       .is('parent_id', null)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })

@@ -170,6 +170,50 @@ async function finalizeOrder(supabase, jobData) {
     }
     
     // ========================================================================
+    // INCREMENT COMBO SOLD COUNTERS
+    // ========================================================================
+    try {
+      // Get unique combo IDs from order items
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select('combo_id, combo_group_id')
+        .eq('order_id', data.order_id)
+        .not('combo_id', 'is', null);
+      
+      if (orderItems && orderItems.length > 0) {
+        // Group by combo_id to count quantities
+        const comboQuantities = new Map<string, number>();
+        const processedGroups = new Set<string>();
+        
+        orderItems.forEach((item: any) => {
+          // Only count each combo_group_id once (all items in a group = 1 combo)
+          if (item.combo_group_id && !processedGroups.has(item.combo_group_id)) {
+            processedGroups.add(item.combo_group_id);
+            const currentQty = comboQuantities.get(item.combo_id) || 0;
+            comboQuantities.set(item.combo_id, currentQty + 1);
+          }
+        });
+        
+        // Increment sold counter for each combo
+        for (const [comboId, quantity] of comboQuantities) {
+          const { error: comboError } = await supabase.rpc('increment_combo_sold', {
+            p_combo_id: comboId,
+            p_quantity: quantity
+          });
+          
+          if (comboError) {
+            console.error(`Failed to increment combo sold for ${comboId}:`, comboError);
+          } else {
+            console.log(`[Order] Incremented combo ${comboId} sold by ${quantity}`);
+          }
+        }
+      }
+    } catch (comboError) {
+      // Don't fail order if combo increment fails
+      console.error('[Order] Failed to increment combo sold counters:', comboError);
+    }
+    
+    // ========================================================================
     // SEND ORDER CONFIRMATION EMAIL
     // ========================================================================
     try {

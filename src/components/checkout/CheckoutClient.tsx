@@ -6,11 +6,12 @@ import type { Address, CartProductItem, OrderCosts, PaymentMethod, CartBookingIt
 import type { CartBookingItem as StoreCartBookingItem } from "@/lib/store/decoupledCartStore";
 import BookingDetails from "@/components/checkout/BookingDetails";
 import ProductList from "@/components/checkout/ProductList";
+import ComboGroup from "@/components/cart/ComboGroup";
 import ShippingForm from "@/components/checkout/ShippingForm";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import ChangeAppointmentModal from "@/components/booking/ChangeAppointmentModal";
 import type { StylistWithServices } from "@/lib/apiClient";
-import useDecoupledCartStore from "@/lib/store/decoupledCartStore";
+import useDecoupledCartStore, { groupCartItemsByCombo } from "@/lib/store/decoupledCartStore";
 import { cartAPI } from "@/lib/api/cartClient";
 import {
   getEmptyAddress,
@@ -30,8 +31,18 @@ export default function CheckoutClient() {
   const updateProductQuantity = useDecoupledCartStore((state) => state.updateProductQuantity);
   const removeProductItem = useDecoupledCartStore((state) => state.removeProductItem);
   const removeBookingItem = useDecoupledCartStore((state) => state.removeBookingItem);
+  const removeComboItem = useDecoupledCartStore((state) => state.removeComboItem);
+  const updateComboQuantity = useDecoupledCartStore((state) => state.updateComboQuantity);
+  const isRemovingCombo = useDecoupledCartStore((state) => state.isRemovingCombo);
+  const isUpdatingItem = useDecoupledCartStore((state) => state.isUpdatingItem);
   const clearCart = useDecoupledCartStore((state) => state.clearCart);
   const grandTotal = useDecoupledCartStore((state) => state.grandTotal);
+  
+  // Group items by combo
+  const { comboGroups, regularItems } = React.useMemo(
+    () => groupCartItemsByCombo(productItems),
+    [productItems]
+  );
   
   // Combine items for display (temporarily for compatibility)
   const items = [...productItems, ...bookingItems];
@@ -39,9 +50,10 @@ export default function CheckoutClient() {
   // Debug logging to identify items
   React.useEffect(() => {
     console.log('[CheckoutClient] Product items:', productItems);
+    console.log('[CheckoutClient] Combo groups:', comboGroups);
+    console.log('[CheckoutClient] Regular items:', regularItems);
     console.log('[CheckoutClient] Booking items:', bookingItems);
-    console.log('[CheckoutClient] Combined items:', items);
-  }, [productItems, bookingItems]);
+  }, [productItems, bookingItems, comboGroups, regularItems]);
   
   const [address, setAddress] = React.useState<Address>(getEmptyAddress());
   const [discountCode, setDiscountCode] = React.useState<string>("");
@@ -130,6 +142,14 @@ export default function CheckoutClient() {
   // Map the decoupled store items to the expected format
   const products = React.useMemo(
     () => productItems.map((item): CartProductItem => {
+      // 🔍 DEBUG: Log each item transformation
+      console.log('[CheckoutClient] Transforming item:', {
+        id: item.id,
+        product_name: item.product_name,
+        store_price: item.price,
+        quantity: item.quantity
+      });
+      
       // Transform from CartProductItem to display format
       return {
         type: "product",
@@ -430,10 +450,55 @@ export default function CheckoutClient() {
             </div>
           )}
           
-          {/* Show Products */}
-          {products.length > 0 && (
-            <ProductList items={products} onQtyChange={onQtyChange} onRemove={onRemove} />
+          {/* Show Combo Groups */}
+          {comboGroups.length > 0 && (
+            <div className="space-y-4 mb-4">
+              {comboGroups.map((group) => (
+                <ComboGroup
+                  key={group.comboGroupId}
+                  comboGroupId={group.comboGroupId}
+                  comboName={group.comboName}
+                  items={group.items.map(item => ({
+                    type: "product" as const,
+                    id: item.id,
+                    name: item.product_name,
+                    variant: item.variant_name,
+                    variantId: item.variant_id,
+                    variantData: item.variant_data,
+                    imageUrl: item.image_url,
+                    price: item.price,
+                    quantity: item.quantity,
+                  }))}
+                  originalTotal={group.originalTotal}
+                  discountedTotal={group.discountedTotal}
+                  onRemove={removeComboItem}
+                  onQuantityChange={updateComboQuantity}
+                  isRemoving={isRemovingCombo === group.comboGroupId}
+                  isUpdating={isUpdatingItem[group.comboGroupId] || false}
+                />
+              ))}
+            </div>
           )}
+          
+          {/* Show Regular Products */}
+          {regularItems.length > 0 && (
+            <ProductList 
+              items={regularItems.map(item => ({
+                type: "product" as const,
+                id: item.id,
+                name: item.product_name,
+                variant: item.variant_name,
+                variantId: item.variant_id,
+                variantData: item.variant_data,
+                imageUrl: item.image_url,
+                price: item.price,
+                quantity: item.quantity,
+              }))} 
+              onQtyChange={onQtyChange} 
+              onRemove={onRemove} 
+            />
+          )}
+          
           {items.length === 0 && (
             <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
               <p className="text-gray-500">Your cart is empty</p>

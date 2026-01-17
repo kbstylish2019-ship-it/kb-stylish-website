@@ -34,6 +34,12 @@ export interface Product {
   imageUrl?: string; // optional until CDN configured
   badge?: string; // e.g., "New", "Trending"
   category?: string; // e.g., 'ethnic' | 'streetwear' | 'formal' | 'casual'
+  // Combo product fields
+  is_combo?: boolean;
+  combo_price_cents?: number;
+  combo_savings_cents?: number;
+  combo_quantity_limit?: number;
+  combo_quantity_sold?: number;
 }
 
 // PDP domain models (Product Detail Page)

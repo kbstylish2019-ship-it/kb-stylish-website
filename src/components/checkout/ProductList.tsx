@@ -31,8 +31,8 @@ export default function ProductList({
         Your Products
       </h2>
       <ul className="divide-y divide-gray-100">
-        {items.map((it) => (
-          <li key={it.id} className="flex gap-3 py-3">
+        {items.map((it, index) => (
+          <li key={`${it.id}-${it.variantId || it.variant || ''}-${index}`} className="flex gap-3 py-3">
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
               {it.imageUrl ? (
                 <Image 
@@ -55,7 +55,7 @@ export default function ProductList({
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       {/* Show color first if present */}
                       {it.variantData.color && (
-                        <span key={`color-${it.id}`} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 border border-gray-200">
+                        <span key={`color-${it.id}-${it.variant || ''}`} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 border border-gray-200">
                           <span 
                             className="w-3 h-3 rounded-full border border-gray-300 shadow-sm" 
                             style={{ backgroundColor: it.variantData.colorHex || '#666' }} 
@@ -67,7 +67,7 @@ export default function ProductList({
                       {Object.entries(it.variantData)
                         .filter(([key, value]) => key !== 'color' && key !== 'colorHex' && value)
                         .map(([key, value]) => (
-                          <span key={`${key}-${it.id}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 font-medium border border-gray-200">
+                          <span key={`${key}-${it.id}-${it.variant || ''}-${value}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 font-medium border border-gray-200">
                             {value}
                           </span>
                         ))

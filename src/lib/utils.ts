@@ -10,9 +10,10 @@ export function formatNPR(amount: number) {
     return new Intl.NumberFormat("en-NP", {
       style: "currency",
       currency: "NPR",
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount)
   } catch {
-    return `NPR ${amount.toLocaleString("en-NP")}`
+    return `NPR ${amount.toFixed(2)}`
   }
 }

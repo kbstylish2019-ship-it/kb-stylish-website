@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Pencil, Trash2, FolderTree } from "lucide-react";
+import React, { useState, useRef } from "react";
+import Image from "next/image";
+import { Plus, Pencil, Trash2, FolderTree, Upload, X, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Category } from "@/lib/categoryApi";
 
@@ -14,7 +15,9 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -71,6 +74,55 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
     }));
   };
   
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingCategory) return;
+    
+    // Validate file
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File too large. Maximum 5MB allowed.', 'error');
+      return;
+    }
+    
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      showToast('Invalid file type. Only JPEG, PNG, and WEBP allowed.', 'error');
+      return;
+    }
+    
+    setIsUploading(true);
+    
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('category_id', editingCategory.id);
+      
+      const response = await fetch('/api/admin/categories/upload-image', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setFormData(prev => ({ ...prev, image_url: result.image_url }));
+        showToast('Image uploaded successfully', 'success');
+      } else {
+        showToast(result.error || 'Failed to upload image', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to upload image', 'error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, image_url: '' }));
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -95,7 +147,6 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
       if (result.success) {
         showToast(result.message, 'success');
         setIsModalOpen(false);
-        // Refresh categories
         window.location.reload();
       } else {
         showToast(result.message, 'error');
@@ -125,7 +176,6 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
       
       if (result.success) {
         showToast(result.message, 'success');
-        // Refresh categories
         window.location.reload();
       } else {
         showToast(result.message, 'error');
@@ -158,7 +208,6 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
       
       if (result.success) {
         showToast('Category reactivated successfully', 'success');
-        // Refresh categories
         window.location.reload();
       } else {
         showToast(result.message, 'error');
@@ -236,6 +285,7 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
                 <tr className="bg-white/5 text-left text-xs uppercase tracking-wide text-foreground/70">
                   <th className="px-4 py-3">Category</th>
                   <th className="px-4 py-3">Slug</th>
+                  <th className="px-4 py-3">Image</th>
                   <th className="px-4 py-3">Products</th>
                   <th className="px-4 py-3">Sort Order</th>
                   <th className="px-4 py-3">Status</th>
@@ -253,6 +303,23 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
                         </div>
                       </td>
                       <td className="px-4 py-3 text-foreground/60 font-mono text-xs">{category.slug}</td>
+                      <td className="px-4 py-3">
+                        {category.image_url ? (
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5">
+                            <Image
+                              src={category.image_url}
+                              alt={category.name}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                            <ImageIcon className="h-4 w-4 text-foreground/30" />
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-foreground/80">{category.product_count}</td>
                       <td className="px-4 py-3 text-foreground/60">{category.sort_order}</td>
                       <td className="px-4 py-3">
@@ -307,6 +374,23 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
                           </div>
                         </td>
                         <td className="px-4 py-3 text-foreground/60 font-mono text-xs">{child.slug}</td>
+                        <td className="px-4 py-3">
+                          {child.image_url ? (
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5">
+                              <Image
+                                src={child.image_url}
+                                alt={child.name}
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                              <ImageIcon className="h-4 w-4 text-foreground/30" />
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-foreground/80">{child.product_count}</td>
                         <td className="px-4 py-3 text-foreground/60">{child.sort_order}</td>
                         <td className="px-4 py-3">
@@ -361,7 +445,7 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
       {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-background p-6 shadow-xl ring-1 ring-white/10">
+          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-background p-6 shadow-xl ring-1 ring-white/10 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">
               {editingCategory ? 'Edit Category' : 'Add New Category'}
             </h3>
@@ -416,6 +500,67 @@ export default function CategoriesPageClient({ initialCategories }: CategoriesPa
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
                   placeholder="Optional category description"
                 />
+              </div>
+              
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Category Image</label>
+                {formData.image_url ? (
+                  <div className="relative w-full h-40 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                    <Image
+                      src={formData.image_url}
+                      alt="Category preview"
+                      fill
+                      className="object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full transition-colors"
+                    >
+                      <X className="h-4 w-4 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full h-40 rounded-lg border-2 border-dashed border-white/20 bg-white/5 flex flex-col items-center justify-center gap-2">
+                    <ImageIcon className="h-8 w-8 text-foreground/30" />
+                    <p className="text-sm text-foreground/50">No image uploaded</p>
+                  </div>
+                )}
+                
+                {editingCategory && (
+                  <div className="mt-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="category-image-upload"
+                    />
+                    <label
+                      htmlFor="category-image-upload"
+                      className={cn(
+                        "inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors",
+                        isUploading
+                          ? "bg-white/5 text-foreground/50 cursor-not-allowed"
+                          : "bg-white/10 hover:bg-white/15 text-foreground"
+                      )}
+                    >
+                      <Upload className="h-4 w-4" />
+                      {isUploading ? 'Uploading...' : 'Upload Image'}
+                    </label>
+                    <p className="mt-1 text-xs text-foreground/50">
+                      JPEG, PNG, or WEBP. Max 5MB.
+                    </p>
+                  </div>
+                )}
+                
+                {!editingCategory && (
+                  <p className="mt-2 text-xs text-foreground/50">
+                    Save the category first, then edit to upload an image.
+                  </p>
+                )}
               </div>
               
               <div>

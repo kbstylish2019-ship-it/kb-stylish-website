@@ -1,7 +1,14 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Search } from "lucide-react";
+
+interface CategoryItem {
+  id: string;
+  slug: string;
+  name: string;
+  parent_id: string | null;
+}
 
 interface CurrentFilters {
   search: string;
@@ -12,7 +19,7 @@ interface CurrentFilters {
 }
 
 interface FilterSidebarProps {
-  availableCategories: string[];
+  availableCategories: CategoryItem[];
   currentFilters: CurrentFilters;
 }
 
@@ -31,25 +38,30 @@ export default function FilterSidebar({
     category: true,
     price: true,
   });
+  
+  // Track expanded parent categories
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
+  
+  const toggleCategoryExpand = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
 
-  const categories = availableCategories.length > 0 
-    ? availableCategories.map(cat => ({
-        id: cat,
-        label: cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-      }))
-    : [
-        { id: 'facial-kits', label: 'Facial Kits' },
-        { id: 'hair-care', label: 'Hair Care' },
-        { id: 'skin-care', label: 'Skin Care' },
-        { id: 'salon-equipment', label: 'Salon Equipment' },
-        { id: 'combos', label: 'Combo Deals' },
-        { id: 'herbal', label: 'Herbal Products' },
-        { id: 'makeup', label: 'Makeup' },
-      ];
+  // Build category hierarchy
+  const rootCategories = availableCategories.filter(cat => !cat.parent_id);
+  const getChildren = (parentId: string) => 
+    availableCategories.filter(cat => cat.parent_id === parentId);
 
   const handleApplyFilters = () => {
     const params = new URLSearchParams();
@@ -91,17 +103,61 @@ export default function FilterSidebar({
   };
 
   const onSearchChange = (v: string) => setFilters(f => ({ ...f, search: v }));
-  const onToggleCategory = (id: string, checked: boolean) =>
+  const onToggleCategory = (slug: string, checked: boolean) =>
     setFilters(f => ({
       ...f,
       selectedCategories: checked
-        ? [...new Set([...f.selectedCategories, id])]
-        : f.selectedCategories.filter(x => x !== id),
+        ? [...new Set([...f.selectedCategories, slug])]
+        : f.selectedCategories.filter(x => x !== slug),
     }));
   const onMinPriceChange = (v: string) => setFilters(f => ({ ...f, minPrice: v }));
   const onMaxPriceChange = (v: string) => setFilters(f => ({ ...f, maxPrice: v }));
 
   const hasFilters = filters.search || filters.selectedCategories.length > 0 || filters.minPrice || filters.maxPrice;
+
+  // Render a category item with optional children
+  const renderCategory = (cat: CategoryItem, isChild: boolean = false) => {
+    const children = getChildren(cat.id);
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedCategories.has(cat.id);
+    const isChecked = filters.selectedCategories.includes(cat.slug);
+    
+    return (
+      <div key={cat.id} className={isChild ? "ml-4" : ""}>
+        <div className="flex items-center gap-2 py-1.5">
+          {hasChildren && (
+            <button
+              onClick={() => toggleCategoryExpand(cat.id)}
+              className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+              aria-label={isExpanded ? "Collapse" : "Expand"}
+            >
+              <ChevronRight 
+                className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
+              />
+            </button>
+          )}
+          <label className={`flex items-center gap-2 cursor-pointer group flex-1 ${!hasChildren ? 'ml-5' : ''}`}>
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={(e) => onToggleCategory(cat.slug, e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#1976D2] focus:ring-[#1976D2]"
+            />
+            <span className={`text-sm ${isChecked ? 'text-[#1976D2] font-medium' : 'text-gray-600 group-hover:text-gray-800'}`}>
+              {cat.name}
+            </span>
+          </label>
+        </div>
+        
+        {/* Render children if expanded */}
+        {hasChildren && isExpanded && (
+          <div className="border-l border-gray-200 ml-2">
+            {children.map(child => renderCategory(child, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <aside className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -148,26 +204,12 @@ export default function FilterSidebar({
           )}
         </button>
         {openSections.category && (
-          <div className="px-4 pb-4 space-y-2">
-            {categories.map((cat) => {
-              const isChecked = filters.selectedCategories.includes(cat.id);
-              return (
-                <label
-                  key={cat.id}
-                  className="flex items-center gap-3 py-1 cursor-pointer group"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={(e) => onToggleCategory(cat.id, e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-[#1976D2] focus:ring-[#1976D2]"
-                  />
-                  <span className={`text-sm ${isChecked ? 'text-[#1976D2] font-medium' : 'text-gray-600 group-hover:text-gray-800'}`}>
-                    {cat.label}
-                  </span>
-                </label>
-              );
-            })}
+          <div className="px-4 pb-4 space-y-1 max-h-[400px] overflow-y-auto">
+            {rootCategories.length > 0 ? (
+              rootCategories.map(cat => renderCategory(cat))
+            ) : (
+              <p className="text-sm text-gray-500 py-2">No categories available</p>
+            )}
           </div>
         )}
       </div>

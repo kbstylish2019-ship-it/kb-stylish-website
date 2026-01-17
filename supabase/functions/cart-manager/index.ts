@@ -73,7 +73,7 @@ Deno.serve(async (req)=>{
     }
     // Parse request
     requestData = await req.json();
-    const { action, variant_id, quantity, merge_guest_cart } = requestData;
+    const { action, variant_id, quantity, merge_guest_cart, combo_id, combo_group_id } = requestData;
     if (!action) {
       return new Response(JSON.stringify({
         error: 'Action is required'
@@ -168,6 +168,39 @@ Deno.serve(async (req)=>{
         }
         response = await mergeGuestCart(serviceClient, authenticatedUser, guestToken);
         break;
+      case 'add_combo':
+        if (!combo_id) {
+          return new Response(JSON.stringify({
+            error: 'combo_id is required for add_combo action'
+          }), {
+            status: 400,
+            headers: responseHeaders
+          });
+        }
+        response = await addComboToCart(serviceClient, authenticatedUser, guestToken, combo_id);
+        break;
+      case 'remove_combo':
+        if (!combo_group_id) {
+          return new Response(JSON.stringify({
+            error: 'combo_group_id is required for remove_combo action'
+          }), {
+            status: 400,
+            headers: responseHeaders
+          });
+        }
+        response = await removeComboFromCart(serviceClient, authenticatedUser, guestToken, combo_group_id);
+        break;
+      case 'update_combo_quantity':
+        if (!combo_group_id || quantity === undefined) {
+          return new Response(JSON.stringify({
+            error: 'combo_group_id and quantity are required for update_combo_quantity action'
+          }), {
+            status: 400,
+            headers: responseHeaders
+          });
+        }
+        response = await updateComboQuantity(serviceClient, authenticatedUser, guestToken, combo_group_id, quantity);
+        break;
       default:
         return new Response(JSON.stringify({
           error: `Unknown action: ${action}`
@@ -225,6 +258,10 @@ async function getCart(supabase, authenticatedUser, guestToken) {
     }
     const cart = cartJson;
     const items = cart?.items ?? [];
+    
+    // 🔍 DEBUG: Log cart items to see what database returns
+    console.log('[Edge Function] Cart items from database:', JSON.stringify(items, null, 2));
+    
     const warnings = [];
     for (const item of items){
       if (item.price_snapshot != null && item.current_price != null && item.price_snapshot !== item.current_price && item.product?.name) {
@@ -461,6 +498,186 @@ async function mergeGuestCart(supabase, authenticatedUser, guestToken) {
     return {
       success: false,
       message: 'Failed to merge carts'
+    };
+  }
+}
+
+
+// ============================================================================
+// COMBO PRODUCTS - Cart Operations
+// ============================================================================
+
+// Add combo to cart (expands into constituent items)
+async function addComboToCart(supabase, authenticatedUser, guestToken, combo_id: string) {
+  try {
+    const addPayload: Record<string, unknown> = {
+      p_combo_id: combo_id
+    };
+    if (authenticatedUser?.id) addPayload.p_user_id = authenticatedUser.id;
+    else addPayload.p_guest_token = guestToken;
+
+    console.log('[Edge Function] Calling add_combo_to_cart_secure with:', addPayload);
+    const { data, error } = await supabase.rpc('add_combo_to_cart_secure', addPayload);
+
+    if (error) {
+      console.error('RPC error in add_combo_to_cart_secure:', JSON.stringify({
+        error,
+        payload: addPayload
+      }));
+      return {
+        success: false,
+        message: `Failed to add combo to cart: ${error.message}`
+      };
+    }
+
+    // Check if the RPC returned an error
+    if (data && !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Failed to add combo to cart'
+      };
+    }
+
+    // Return the full updated cart
+    const cartResponse = await getCart(supabase, authenticatedUser, guestToken);
+    if (cartResponse.success) {
+      return {
+        success: true,
+        cart: cartResponse.cart,
+        combo_group_id: data?.combo_group_id,
+        message: 'Combo added to cart successfully',
+        warnings: cartResponse.warnings
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Combo added but failed to retrieve updated cart'
+      };
+    }
+  } catch (error) {
+    console.error('Error adding combo to cart:', error);
+    return {
+      success: false,
+      message: 'Failed to add combo to cart'
+    };
+  }
+}
+
+// Remove combo from cart (removes all items in the combo group)
+async function removeComboFromCart(supabase, authenticatedUser, guestToken, combo_group_id: string) {
+  try {
+    const removePayload: Record<string, unknown> = {
+      p_combo_group_id: combo_group_id
+    };
+    if (authenticatedUser?.id) removePayload.p_user_id = authenticatedUser.id;
+    else removePayload.p_guest_token = guestToken;
+
+    console.log('[Edge Function] Calling remove_combo_from_cart_secure with:', removePayload);
+    const { data, error } = await supabase.rpc('remove_combo_from_cart_secure', removePayload);
+
+    if (error) {
+      console.error('RPC error in remove_combo_from_cart_secure:', JSON.stringify({
+        error,
+        payload: removePayload
+      }));
+      return {
+        success: false,
+        message: `Failed to remove combo from cart: ${error.message}`
+      };
+    }
+
+    // Check if the RPC returned an error
+    if (data && !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Failed to remove combo from cart'
+      };
+    }
+
+    // Return the full updated cart
+    const cartResponse = await getCart(supabase, authenticatedUser, guestToken);
+    if (cartResponse.success) {
+      return {
+        success: true,
+        cart: cartResponse.cart,
+        message: 'Combo removed from cart successfully',
+        warnings: cartResponse.warnings
+      };
+    } else {
+      return {
+        success: true,
+        cart: {
+          id: null,
+          items: [],
+          cart_items: [],
+          item_count: 0,
+          subtotal: 0
+        },
+        message: 'Combo removed from cart successfully'
+      };
+    }
+  } catch (error) {
+    console.error('Error removing combo from cart:', error);
+    return {
+      success: false,
+      message: 'Failed to remove combo from cart'
+    };
+  }
+}
+
+
+// Update combo quantity (updates all items in combo proportionally)
+async function updateComboQuantity(supabase, authenticatedUser, guestToken, combo_group_id: string, quantity: number) {
+  try {
+    const updatePayload: Record<string, unknown> = {
+      p_combo_group_id: combo_group_id,
+      p_new_quantity: quantity
+    };
+    if (authenticatedUser?.id) updatePayload.p_user_id = authenticatedUser.id;
+    else updatePayload.p_guest_token = guestToken;
+
+    console.log('[Edge Function] Calling update_combo_quantity_secure with:', updatePayload);
+    const { data, error } = await supabase.rpc('update_combo_quantity_secure', updatePayload);
+
+    if (error) {
+      console.error('RPC error in update_combo_quantity_secure:', JSON.stringify({
+        error,
+        payload: updatePayload
+      }));
+      return {
+        success: false,
+        message: `Failed to update combo quantity: ${error.message}`
+      };
+    }
+
+    // Check if the RPC returned an error
+    if (data && !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Failed to update combo quantity'
+      };
+    }
+
+    // Return the full updated cart
+    const cartResponse = await getCart(supabase, authenticatedUser, guestToken);
+    if (cartResponse.success) {
+      return {
+        success: true,
+        cart: cartResponse.cart,
+        message: 'Combo quantity updated successfully',
+        warnings: cartResponse.warnings
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Combo quantity updated but failed to retrieve updated cart'
+      };
+    }
+  } catch (error) {
+    console.error('Error updating combo quantity:', error);
+    return {
+      success: false,
+      message: 'Failed to update combo quantity'
     };
   }
 }

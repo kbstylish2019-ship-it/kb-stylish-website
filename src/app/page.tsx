@@ -1,13 +1,16 @@
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   fetchTrendingProducts, 
-  fetchFeaturedBrands, 
   fetchProductsByCategory,
-  type CategoryProduct 
+  fetchActiveCombos,
+  type CategoryProduct,
+  type ComboProductSummary 
 } from "@/lib/apiClient";
-import { ChevronRight, Truck, Shield, Clock, Headphones, Sparkles, Gift, Percent } from "lucide-react";
+import { ChevronRight, Truck, Shield, Clock, Headphones, Sparkles, Gift, Percent, Package } from "lucide-react";
+import { formatNPR } from "@/lib/utils";
 
 // Lazy load components for better performance
 const HeroBanner = dynamic(() => import("@/components/homepage/HeroBanner"), {
@@ -20,10 +23,6 @@ const CategoryStrip = dynamic(() => import("@/components/homepage/CategoryStrip"
 
 const ProductSection = dynamic(() => import("@/components/homepage/ProductSection"), {
   loading: () => <div className="h-96 bg-white animate-pulse rounded-lg" />,
-});
-
-const BrandCarousel = dynamic(() => import("@/components/homepage/BrandCarousel"), {
-  loading: () => <div className="h-32 bg-white animate-pulse rounded-lg" />,
 });
 
 const PromoBanners = dynamic(() => import("@/components/homepage/PromoBanners"), {
@@ -42,16 +41,16 @@ export default async function HomePage() {
   // Fetch data server-side - parallel fetching for performance
   const [
     trendingProducts, 
-    featuredBrands,
     skinCareProducts,
     hairCareProducts,
     nailProducts,
+    activeCombos,
   ] = await Promise.all([
     fetchTrendingProducts().catch(() => []),
-    fetchFeaturedBrands().catch(() => []),
     fetchProductsByCategory('skincare', 8).catch(() => []),
     fetchProductsByCategory('hair-care', 8).catch(() => []),
     fetchProductsByCategory('nail-manicure', 8).catch(() => []),
+    fetchActiveCombos(4).catch(() => []),
   ]);
 
   // Helper to convert CategoryProduct to TrendingProduct format for ProductSection
@@ -127,25 +126,6 @@ export default async function HomePage() {
         </Suspense>
       </section>
 
-      {/* Value Propositions */}
-      <section className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-            {valueProps.map((prop) => (
-              <div key={prop.title} className="flex items-center gap-2 sm:gap-3 p-1 sm:p-2">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-                  <prop.icon className="h-4 w-4 sm:h-6 sm:w-6 text-[#1976D2]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate">{prop.title}</p>
-                  <p className="text-[10px] sm:text-xs text-gray-500 truncate">{prop.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Flash Sale / Hot Deals Section */}
       <section className="max-w-7xl mx-auto px-4 mt-6">
         <div className="bg-gradient-to-r from-[#E31B23] to-[#ff5722] rounded-lg p-4 text-white">
@@ -184,27 +164,6 @@ export default async function HomePage() {
         <Suspense fallback={<div className="h-48 bg-gray-100 animate-pulse rounded-lg" />}>
           <PromoBanners />
         </Suspense>
-      </section>
-
-      {/* Featured Brands */}
-      <section className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">Shop by Brands</h2>
-              <p className="text-sm text-gray-500">Trusted brands for your salon needs</p>
-            </div>
-            <Link
-              href="/shop"
-              className="flex items-center gap-1 text-[#1976D2] text-sm font-medium hover:underline"
-            >
-              See All <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <Suspense fallback={<div className="h-32 bg-gray-100 animate-pulse rounded-lg" />}>
-            <BrandCarousel brands={featuredBrands} />
-          </Suspense>
-        </div>
       </section>
 
       {/* Skincare Category - Dynamic from DB */}
@@ -253,61 +212,73 @@ export default async function HomePage() {
       )}
 
       {/* Combo Deals Section */}
-      <section className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-gradient-to-r from-[#FFD400] to-[#FFC107] rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800">🎁 Combo Deals</h2>
-              <p className="text-xs sm:text-sm text-gray-700">Save more when you buy together</p>
+      {activeCombos.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 mt-6">
+          <div className="bg-gradient-to-r from-[#FFD400] to-[#FFC107] rounded-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800">🎁 Combo Deals</h2>
+                <p className="text-xs sm:text-sm text-gray-700">Save more when you buy together</p>
+              </div>
+              <Link
+                href="/shop?is_combo=true"
+                className="flex items-center gap-1 bg-gray-800 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full hover:bg-gray-700 transition-colors"
+              >
+                View All <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
-            <Link
-              href="/shop?category=combos"
-              className="flex items-center gap-1 bg-gray-800 text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full hover:bg-gray-700 transition-colors"
-            >
-              View All <ChevronRight className="h-4 w-4" />
-            </Link>
+            {/* Horizontal scroll on mobile, grid on desktop */}
+            <div className="flex md:grid md:grid-cols-4 gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+              {activeCombos.map((combo) => {
+                const comboPrice = combo.combo_price_cents / 100;
+                const originalPrice = (combo.combo_price_cents + combo.combo_savings_cents) / 100;
+                const savingsPercent = Math.round((combo.combo_savings_cents / (combo.combo_price_cents + combo.combo_savings_cents)) * 100);
+                const remaining = combo.combo_quantity_limit ? combo.combo_quantity_limit - combo.combo_quantity_sold : null;
+                
+                return (
+                  <Link
+                    key={combo.id}
+                    href={`/product/${combo.slug}`}
+                    className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto hover:shadow-md transition-shadow group"
+                  >
+                    <div className="relative w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 overflow-hidden">
+                      {combo.image_url ? (
+                        <Image
+                          src={combo.image_url}
+                          alt={combo.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform"
+                          sizes="(max-width: 768px) 144px, 200px"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Package className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                        </div>
+                      )}
+                      {/* Savings Badge */}
+                      {savingsPercent > 0 && (
+                        <span className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                          -{savingsPercent}%
+                        </span>
+                      )}
+                      {/* Limited Stock Badge */}
+                      {remaining !== null && remaining <= 5 && remaining > 0 && (
+                        <span className="absolute bottom-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                          Only {remaining} left!
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-medium text-gray-800 text-xs sm:text-sm line-clamp-1">{combo.name}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500">{combo.item_count} Products</p>
+                    <p className="text-[#E31B23] font-bold mt-1 text-sm">{formatNPR(comboPrice)}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 line-through">{formatNPR(originalPrice)}</p>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-          {/* Horizontal scroll on mobile, grid on desktop */}
-          <div className="flex md:grid md:grid-cols-4 gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
-                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-              </div>
-              <p className="font-medium text-gray-800 text-xs sm:text-sm">Starter Kit</p>
-              <p className="text-[10px] sm:text-xs text-gray-500">5 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 2,999</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 4,500</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
-                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-              </div>
-              <p className="font-medium text-gray-800 text-xs sm:text-sm">Pro Facial Kit</p>
-              <p className="text-[10px] sm:text-xs text-gray-500">8 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 5,499</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 7,999</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
-                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-              </div>
-              <p className="font-medium text-gray-800 text-xs sm:text-sm">Hair Care Bundle</p>
-              <p className="text-[10px] sm:text-xs text-gray-500">6 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 3,299</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 4,800</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 sm:p-4 text-center flex-shrink-0 w-36 sm:w-auto">
-              <div className="w-full aspect-square bg-gray-100 rounded-lg mb-2 sm:mb-3 flex items-center justify-center">
-                <Gift className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-              </div>
-              <p className="font-medium text-gray-800 text-xs sm:text-sm">Complete Salon Set</p>
-              <p className="text-[10px] sm:text-xs text-gray-500">12 Products</p>
-              <p className="text-[#E31B23] font-bold mt-1 text-sm">Rs. 9,999</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 line-through">Rs. 15,000</p>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Call to Action - Book a Stylist */}
       <section className="max-w-7xl mx-auto px-4 mt-6 mb-8">
@@ -330,6 +301,25 @@ export default async function HomePage() {
                 <Sparkles className="h-24 w-24 text-yellow-300" />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Value Propositions - Trust Building Section */}
+      <section className="max-w-7xl mx-auto px-4 mt-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            {valueProps.map((prop) => (
+              <div key={prop.title} className="flex items-center gap-2 sm:gap-3 p-1 sm:p-2">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
+                  <prop.icon className="h-4 w-4 sm:h-6 sm:w-6 text-[#1976D2]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate">{prop.title}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 truncate">{prop.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { fetchProducts, getProductCategories } from "@/lib/apiClient";
-import type { ProductFilters, ProductSort } from "@/lib/apiClient";
+import type { ProductFilters, ProductSort, CategoryFilterItem } from "@/lib/apiClient";
 import { ChevronRight, SlidersHorizontal, X } from "lucide-react";
 import SortDropdown from "@/components/shop/SortDropdown";
 import RetryButton from "@/components/shop/RetryButton";
@@ -105,7 +105,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   let totalCount = 0;
   let hasMore = false;
   let nextCursor: string | undefined;
-  let categories: any[] = [];
+  let categories: CategoryFilterItem[] = [];
   let fetchError: string | null = null;
 
   try {

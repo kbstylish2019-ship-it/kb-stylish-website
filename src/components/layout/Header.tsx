@@ -15,29 +15,12 @@ interface HeaderProps {
   isAuthed?: boolean;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 interface UserInfo {
   id: string;
   email: string;
   displayName: string;
   avatarUrl?: string;
 }
-
-// Fallback categories if API fails
-const fallbackCategories = [
-  { name: "Skincare", href: "/shop?category=skincare" },
-  { name: "Hair Care", href: "/shop?category=hair-care" },
-  { name: "Hair Styling", href: "/shop?category=hair-styling" },
-  { name: "Nail & Manicure", href: "/shop?category=nail-manicure" },
-  { name: "Salon Tools", href: "/shop?category=salon-tools-equipments" },
-  { name: "New Arrivals", href: "/shop?sort=newest" },
-  { name: "Book a Stylist", href: "/book-a-stylist", isHighlight: true },
-];
 
 // Role-based navigation items
 const roleNavItems: Record<string, { label: string; href: string; icon: any }[]> = {
@@ -70,7 +53,6 @@ export default function Header({ isAuthed = false }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [categories, setCategories] = useState(fallbackCategories);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -78,32 +60,6 @@ export default function Header({ isAuthed = false }: HeaderProps) {
   
   // Use the decoupled cart store for accurate cart count
   const totalItems = useDecoupledCartStore((state) => state.totalItems);
-
-  // Fetch categories from API
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const response = await fetch('/api/categories');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.categories && data.categories.length > 0) {
-            const navCategories = data.categories
-              .slice(0, 5)
-              .map((cat: Category) => ({
-                name: cat.name,
-                href: `/shop?category=${cat.slug}`,
-              }));
-            navCategories.push({ name: "New Arrivals", href: "/shop?sort=newest" });
-            navCategories.push({ name: "Book a Stylist", href: "/book-a-stylist", isHighlight: true });
-            setCategories(navCategories);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch categories for nav:', error);
-      }
-    }
-    fetchCategories();
-  }, []);
 
   // Fetch user roles when authenticated
   useEffect(() => {
@@ -206,6 +162,9 @@ export default function Header({ isAuthed = false }: HeaderProps) {
             <span className="hidden sm:inline text-white/70">Free delivery on orders above Rs. 2000</span>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/book-a-stylist" className="hover:text-yellow-300 transition-colors">
+              Book a Stylist
+            </Link>
             <Link href="/vendor/apply" className="hover:text-yellow-300 transition-colors">
               Become a Seller
             </Link>
@@ -345,10 +304,10 @@ export default function Header({ isAuthed = false }: HeaderProps) {
                 </Link>
               )}
 
-              {/* Cart */}
+              {/* Cart - Highlighted with yellow */}
               <Link
                 href="/checkout"
-                className="relative flex items-center gap-2 text-white hover:text-yellow-300 transition-colors"
+                className="relative flex items-center gap-2 bg-[#FFD400] text-gray-900 px-3 py-1.5 rounded-lg hover:bg-[#FFC107] transition-colors"
                 data-testid="cart-button"
               >
                 <div className="relative">
@@ -356,13 +315,13 @@ export default function Header({ isAuthed = false }: HeaderProps) {
                   {totalItems > 0 && (
                     <span
                       data-testid="cart-badge"
-                      className="absolute -top-2 -right-2 h-5 w-5 bg-[#FFD400] text-gray-900 text-xs font-bold rounded-full flex items-center justify-center"
+                      className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
                     >
                       {totalItems > 99 ? "99+" : totalItems}
                     </span>
                   )}
                 </div>
-                <span className="hidden lg:inline text-sm font-medium">Cart</span>
+                <span className="hidden lg:inline text-sm font-semibold">Cart</span>
               </Link>
 
               {/* Mobile Menu Toggle */}
@@ -378,33 +337,7 @@ export default function Header({ isAuthed = false }: HeaderProps) {
           </div>
         </div>
 
-        {/* Category Navigation - Same blue, subtle top border */}
-        <div className="border-t border-white/20">
-          <div className="max-w-7xl mx-auto px-4">
-            <nav className="hidden lg:flex items-center gap-1 py-2 overflow-x-auto">
-              <Link
-                href="/shop"
-                className="flex items-center gap-1 px-4 py-2 text-white text-sm font-medium hover:bg-white/10 rounded-lg transition-colors whitespace-nowrap"
-              >
-                <Menu className="h-4 w-4" />
-                All Categories
-              </Link>
-              {categories.map((cat: any) => (
-                <Link
-                  key={cat.name}
-                  href={cat.href}
-                  className={`px-4 py-2 text-sm rounded-lg transition-colors whitespace-nowrap ${
-                    cat.isHighlight 
-                      ? 'bg-[#FFD400] text-gray-900 font-semibold hover:bg-[#FFC107]' 
-                      : 'text-white/90 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {cat.name}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </div>
+
       </div>
 
       {/* Mobile Menu */}
@@ -447,20 +380,6 @@ export default function Header({ isAuthed = false }: HeaderProps) {
               >
                 All Categories
               </Link>
-              {categories.map((cat: any) => (
-                <Link
-                  key={cat.name}
-                  href={cat.href}
-                  className={`block px-4 py-3 rounded-lg ${
-                    cat.isHighlight 
-                      ? 'bg-[#FFD400] text-gray-900 font-semibold hover:bg-[#FFC107]' 
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {cat.name}
-                </Link>
-              ))}
               
               <hr className="my-2" />
               
@@ -506,6 +425,13 @@ export default function Header({ isAuthed = false }: HeaderProps) {
                 </Link>
               )}
               
+              <Link
+                href="/book-a-stylist"
+                className="block px-4 py-3 bg-[#FFD400] text-gray-900 font-semibold hover:bg-[#FFC107] rounded-lg"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Book a Stylist
+              </Link>
               <Link
                 href="/vendor/apply"
                 className="block px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg"

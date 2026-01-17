@@ -4,6 +4,7 @@ import type { ProductDetail, ProductVariant, ProductOption, Review, Media } from
 import { fetchProductBySlug, fetchProductReviews, fetchProductRecommendations, type ProductWithVariants } from "@/lib/apiClient";
 import CustomerReviews from "@/components/product/CustomerReviews";
 import CompleteTheLook from "@/components/product/CompleteTheLook";
+import type { ComboProduct, ComboItem } from "@/types/combo";
 
 // Import loading skeleton
 import { ProductDetailSkeleton } from "@/components/ui/LoadingSpinner";
@@ -11,6 +12,14 @@ import { ProductDetailSkeleton } from "@/components/ui/LoadingSpinner";
 // Lazy load product detail client for better performance
 const ProductDetailClient = dynamic(
   () => import("@/components/product/ProductDetailClient"),
+  {
+    loading: () => <ProductDetailSkeleton />,
+  }
+);
+
+// Lazy load combo detail client
+const ComboDetailClient = dynamic(
+  () => import("@/components/product/ComboDetailClient"),
   {
     loading: () => <ProductDetailSkeleton />,
   }
@@ -129,6 +138,64 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     notFound();
   }
   
+  // Check if this is a combo product
+  const isCombo = productData.product?.is_combo === true;
+  
+  if (isCombo) {
+    // Transform combo data for ComboDetailClient
+    const combo: ComboProduct = {
+      id: productData.product.id,
+      name: productData.product.name || 'Unnamed Combo',
+      slug: productData.product.slug,
+      description: productData.product.description || '',
+      is_combo: true,
+      combo_price_cents: productData.product.combo_price_cents || 0,
+      combo_savings_cents: productData.product.combo_savings_cents || 0,
+      combo_quantity_limit: productData.product.combo_quantity_limit,
+      combo_quantity_sold: productData.product.combo_quantity_sold || 0,
+      images: productData.images?.map((img: any) => ({
+        url: img.image_url,
+        alt: img.alt_text || productData.product.name
+      })) || [],
+      vendor_id: productData.product.vendor_id,
+      category_id: productData.product.category_id,
+      is_active: productData.product.is_active,
+      is_featured: productData.product.is_featured,
+      created_at: productData.product.created_at,
+      updated_at: productData.product.updated_at,
+    };
+    
+    // Transform combo items (constituents)
+    const constituents: ComboItem[] = (productData.combo_items || []).map((item: any) => ({
+      id: item.id,
+      combo_product_id: item.combo_product_id,
+      constituent_product_id: item.constituent_product_id,
+      constituent_variant_id: item.constituent_variant_id,
+      quantity: item.quantity,
+      display_order: item.display_order,
+      product: item.product ? {
+        id: item.product.id,
+        name: item.product.name,
+        slug: item.product.slug,
+        description: item.product.description,
+        images: item.product.images || [],
+      } : undefined,
+      variant: item.variant ? {
+        id: item.variant.id,
+        sku: item.variant.sku,
+        price: item.variant.price,
+        options: item.variant.options || {},
+      } : undefined,
+    }));
+    
+    return (
+      <main className="bg-[#F5F5F5]">
+        <ComboDetailClient combo={combo} constituents={constituents} />
+      </main>
+    );
+  }
+  
+  // Regular product flow
   // Transform to ProductDetail type
   const product: ProductDetail = transformToProductDetail(productData);
   

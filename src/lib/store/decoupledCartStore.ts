@@ -34,6 +34,10 @@ export interface CartProductItem {
   quantity: number;
   image_url?: string;
   subtotal: number;
+  // ⭐ Combo fields
+  combo_group_id?: string;
+  combo_name?: string;
+  original_price?: number; // Price before combo discount
 }
 
 // ============ Booking Types ============
@@ -97,6 +101,16 @@ interface DecoupledCartState {
   
   removeBookingItem: (reservationId: string) => Promise<boolean>;
   
+  // ============ Combo Actions ============
+  addComboItem: (comboId: string) => Promise<boolean>;
+  
+  removeComboItem: (comboGroupId: string) => Promise<boolean>;
+  
+  updateComboQuantity: (comboGroupId: string, quantity: number) => Promise<boolean>;
+  
+  isAddingCombo: boolean;
+  isRemovingCombo: string | null;
+  
   // ============ Cart Management ============
   initializeCart: (initialData?: any) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -138,6 +152,8 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
       isGuest: true,
       isAddingProduct: false,
       isAddingBooking: false,
+      isAddingCombo: false,
+      isRemovingCombo: null,
       isUpdatingItem: {},
       isRemovingItem: {},
       error: null,
@@ -385,6 +401,143 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
           set(state => ({ 
             isRemovingItem: { ...state.isRemovingItem, [reservationId]: false },
             error: error instanceof Error ? error.message : 'Failed to remove booking',
+            lastError: error instanceof Error ? error : null
+          }));
+          return false;
+        }
+      },
+      
+      // ============ Combo Actions ============
+      addComboItem: async (comboId) => {
+        console.log('[DecoupledStore] Adding combo:', comboId);
+        console.log('[BEFORE] productCount:', get().productCount);
+        console.log('[BEFORE] totalItems:', get().totalItems);
+        
+        set({ isAddingCombo: true, error: null });
+        
+        try {
+          const response = await cartAPI.addComboToCart(comboId);
+          
+          console.log('[API Response]:', response);
+          
+          if (response.success && response.cart) {
+            const apiItems = response.cart.cart_items || response.cart.items || [];
+            console.log('[API Items Count]:', apiItems.length);
+            
+            const newProductItems = transformApiItemsToProducts(apiItems);
+            console.log('[Transformed Items Count]:', newProductItems.length);
+            
+            const newProductCount = newProductItems.reduce((sum, item) => sum + item.quantity, 0);
+            console.log('[NEW productCount]:', newProductCount);
+            
+            set({
+              cartId: response.cart.id,
+              productItems: newProductItems,
+              productTotal: calculateProductTotal(newProductItems),
+              productCount: newProductCount,
+              isAddingCombo: false
+            });
+            
+            get().updateGrandTotals();
+            
+            console.log('[AFTER] productCount:', get().productCount);
+            console.log('[AFTER] totalItems:', get().totalItems);
+            
+            if (response.warnings && response.warnings.length > 0) {
+              console.warn('[DecoupledStore] Combo warnings:', response.warnings);
+            }
+            
+            return true;
+          } else {
+            throw new Error(response.error || response.message || 'Failed to add combo to cart');
+          }
+        } catch (error) {
+          console.error('[DecoupledStore] Failed to add combo:', error);
+          set({ 
+            isAddingCombo: false, 
+            error: error instanceof Error ? error.message : 'Failed to add combo',
+            lastError: error instanceof Error ? error : null
+          });
+          return false;
+        }
+      },
+      
+      removeComboItem: async (comboGroupId) => {
+        console.log('[DecoupledStore] Removing combo group:', comboGroupId);
+        
+        set({ isRemovingCombo: comboGroupId, error: null });
+        
+        try {
+          const response = await cartAPI.removeComboFromCart(comboGroupId);
+          
+          if (response.success && response.cart) {
+            const apiItems = response.cart.cart_items || response.cart.items || [];
+            const newProductItems = transformApiItemsToProducts(apiItems);
+            
+            set({
+              productItems: newProductItems,
+              productTotal: calculateProductTotal(newProductItems),
+              productCount: newProductItems.reduce((sum, item) => sum + item.quantity, 0),
+              isRemovingCombo: null
+            });
+            
+            get().updateGrandTotals();
+            return true;
+          } else {
+            throw new Error(response.error || response.message || 'Failed to remove combo');
+          }
+        } catch (error) {
+          console.error('[DecoupledStore] Failed to remove combo:', error);
+          set({ 
+            isRemovingCombo: null, 
+            error: error instanceof Error ? error.message : 'Failed to remove combo',
+            lastError: error instanceof Error ? error : null
+          });
+          return false;
+        }
+      },
+      
+      updateComboQuantity: async (comboGroupId, quantity) => {
+        console.log('[DecoupledStore] Updating combo quantity:', { comboGroupId, quantity });
+        
+        if (quantity < 1) {
+          return get().removeComboItem(comboGroupId);
+        }
+        
+        set(state => ({ 
+          isUpdatingItem: { ...state.isUpdatingItem, [comboGroupId]: true },
+          error: null 
+        }));
+        
+        try {
+          const response = await cartAPI.updateComboQuantity(comboGroupId, quantity);
+          
+          if (response.success && response.cart) {
+            const apiItems = response.cart.cart_items || response.cart.items || [];
+            const newProductItems = transformApiItemsToProducts(apiItems);
+            
+            set(state => ({
+              productItems: newProductItems,
+              productTotal: calculateProductTotal(newProductItems),
+              productCount: newProductItems.reduce((sum, item) => sum + item.quantity, 0),
+              isUpdatingItem: { ...state.isUpdatingItem, [comboGroupId]: false }
+            }));
+            
+            get().updateGrandTotals();
+            
+            if (response.warnings && response.warnings.length > 0) {
+              console.warn('[DecoupledStore] Combo quantity warnings:', response.warnings);
+            }
+            
+            return true;
+          } else {
+            throw new Error(response.error || response.message || 'Failed to update combo quantity');
+          }
+        } catch (error) {
+          console.error('[DecoupledStore] Failed to update combo quantity:', error);
+          set(state => ({ 
+            isUpdatingItem: { ...state.isUpdatingItem, [comboGroupId]: false },
+            error: error instanceof Error ? error.message : 'Failed to update combo quantity',
             lastError: error instanceof Error ? error : null
           }));
           return false;
@@ -764,7 +917,18 @@ function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
       if (parts.length > 0) variantName = parts.join(' / ');
     }
     
+    // 🔍 DEBUG: Log price data to understand what's being returned
+    console.log('[transformApiItemsToProducts] Item price data:', {
+      product_name: item.product_name,
+      price_snapshot: item.price_snapshot,
+      current_price: item.current_price,
+      price: item.price,
+      raw_item: item
+    });
+    
     const price = parseFloat(item.price_snapshot || item.current_price || item.price || '0');
+    
+    console.log('[transformApiItemsToProducts] Final price used:', price);
     
     // Build variant_data with ALL attributes dynamically
     const variantData: Record<string, string | undefined> = {};
@@ -791,13 +955,63 @@ function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
       price: price,
       quantity: item.quantity || 1,
       image_url: item.product_image,  // ⭐ FIXED: Use product_image from API
-      subtotal: price * (item.quantity || 1)
+      subtotal: price * (item.quantity || 1),
+      // ⭐ Combo fields
+      combo_group_id: item.combo_group_id,
+      combo_name: item.combo_name,
+      original_price: item.current_price ? parseFloat(item.current_price) : undefined,
     };
   });
 }
 
 function calculateProductTotal(items: CartProductItem[]): number {
   return items.reduce((total, item) => total + item.subtotal, 0);
+}
+
+// ============ Combo Grouping Helper ============
+export interface ComboGroup {
+  comboGroupId: string;
+  comboName: string;
+  items: CartProductItem[];
+  discountedTotal: number;
+  originalTotal: number;
+}
+
+export function groupCartItemsByCombo(items: CartProductItem[]): {
+  comboGroups: ComboGroup[];
+  regularItems: CartProductItem[];
+} {
+  const comboMap = new Map<string, CartProductItem[]>();
+  const regularItems: CartProductItem[] = [];
+
+  // Separate combo items from regular items
+  items.forEach(item => {
+    if (item.combo_group_id) {
+      const existing = comboMap.get(item.combo_group_id) || [];
+      comboMap.set(item.combo_group_id, [...existing, item]);
+    } else {
+      regularItems.push(item);
+    }
+  });
+
+  // Build combo groups with totals
+  const comboGroups: ComboGroup[] = Array.from(comboMap.entries()).map(([comboGroupId, items]) => {
+    const discountedTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const originalTotal = items.reduce((sum, item) => 
+      sum + (item.original_price || item.price) * item.quantity, 0
+    );
+    const comboName = items[0]?.combo_name || 'Combo Package';
+
+    return {
+      comboGroupId,
+      comboName,
+      items,
+      discountedTotal,
+      originalTotal,
+    };
+  });
+
+  return { comboGroups, regularItems };
 }
 
 // ============ Public API ============

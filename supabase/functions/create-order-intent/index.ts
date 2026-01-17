@@ -162,6 +162,42 @@ Deno.serve(async (req)=>{
     // Bookings already stored in paisa/cents
     const booking_total = (cart.bookings || []).reduce((sum, booking)=>sum + booking.price_cents, 0);
     const subtotal_cents = product_total + booking_total;
+    
+    // ========================================================================
+    // COMBO AVAILABILITY VALIDATION
+    // ========================================================================
+    // Check if any cart items are part of combos and validate availability
+    const comboItems = (cart.items || []).filter((item: any) => item.combo_id);
+    if (comboItems.length > 0) {
+      // Get unique combo IDs
+      const uniqueComboIds = [...new Set(comboItems.map((item: any) => item.combo_id))];
+      
+      for (const comboId of uniqueComboIds) {
+        const { data: availability, error: availError } = await serviceClient.rpc('get_combo_availability', {
+          p_combo_id: comboId
+        });
+        
+        if (availError) {
+          console.error(`Failed to check combo availability for ${comboId}:`, availError);
+          continue; // Don't block checkout for availability check errors
+        }
+        
+        if (availability && !availability.available) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Combo no longer available',
+            details: [`The combo "${availability.reason || 'bundle'}" is no longer available. Please remove it from your cart.`]
+          }), {
+            status: 400,
+            headers: {
+              ...dynCors,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+      }
+    }
+    
     // TODO: Add tax calculation when frontend displays it
     // For now, match frontend calculation (no tax, just shipping)
     const tax_cents = 0; // Tax not displayed in frontend yet

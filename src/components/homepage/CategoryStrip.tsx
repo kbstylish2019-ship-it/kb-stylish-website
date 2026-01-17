@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { 
   Sparkles, 
@@ -20,7 +21,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 
-// Map category slugs to icons and colors
+// Map category slugs to icons and colors (fallback when no image)
 const categoryConfig: Record<string, { icon: LucideIcon; color: string }> = {
   'skincare': { icon: Droplets, color: "bg-pink-100 text-pink-600" },
   'facial-kits': { icon: Sparkles, color: "bg-purple-100 text-purple-600" },
@@ -47,10 +48,11 @@ interface Category {
   name: string;
   slug: string;
   sort_order: number;
+  image_url?: string | null;
 }
 
 // Fallback categories if API fails
-const fallbackCategories = [
+const fallbackCategories: Category[] = [
   { id: '1', name: "Skincare", slug: "skincare", sort_order: 1 },
   { id: '2', name: "Hair Care", slug: "hair-care", sort_order: 2 },
   { id: '3', name: "Hair Styling", slug: "hair-styling", sort_order: 3 },
@@ -102,6 +104,7 @@ export default function CategoryStrip() {
         {categories.slice(0, 10).map((cat) => {
           const config = categoryConfig[cat.slug] || defaultConfig;
           const IconComponent = config.icon;
+          const hasImage = cat.image_url && !cat.image_url.includes('unsplash'); // Skip placeholder unsplash images
           
           return (
             <Link
@@ -109,9 +112,21 @@ export default function CategoryStrip() {
               href={`/shop?category=${cat.slug}`}
               className="flex flex-col items-center gap-2 min-w-[80px] p-3 rounded-lg hover:bg-gray-50 transition-colors group"
             >
-              <div className={`w-14 h-14 rounded-full ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                <IconComponent className="h-6 w-6" />
-              </div>
+              {hasImage ? (
+                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-[#1976D2] group-hover:scale-110 transition-all">
+                  <Image
+                    src={cat.image_url!}
+                    alt={cat.name}
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className={`w-14 h-14 rounded-full ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <IconComponent className="h-6 w-6" />
+                </div>
+              )}
               <span className="text-xs font-medium text-gray-700 text-center whitespace-nowrap">
                 {cat.name}
               </span>
