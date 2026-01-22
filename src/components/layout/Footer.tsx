@@ -9,13 +9,15 @@ export default function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* About KB Stylish */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-[#1976D2] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">KB</span>
-              </div>
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="/kbStylishlogo.png" 
+                alt="KB Stylish Logo" 
+                className="h-12 w-auto"
+              />
               <div>
                 <span className="font-bold text-lg">KB Stylish</span>
-                <p className="text-xs text-gray-400">Beauty & Salon Products</p>
+                <p className="text-xs text-gray-400">Friendly, hygienic and affordable</p>
               </div>
             </div>
             <p className="text-sm text-gray-400 mb-4">
@@ -122,14 +124,14 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-[#1976D2] flex-shrink-0" />
-                <a href="tel:+9779851234567" className="text-gray-400 hover:text-white transition-colors">
-                  +977 985-1234567
+                <a href="tel:+9779801227448" className="text-gray-400 hover:text-white transition-colors">
+                  +977 9801227448
                 </a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-[#1976D2] flex-shrink-0" />
-                <a href="mailto:info@kbstylish.com" className="text-gray-400 hover:text-white transition-colors">
-                  info@kbstylish.com
+                <a href="mailto:kbstylish2019@gmail.com" className="text-gray-400 hover:text-white transition-colors">
+                  kbstylish2019@gmail.com
                 </a>
               </li>
             </ul>
@@ -138,8 +140,7 @@ export default function Footer() {
             <div className="mt-6">
               <p className="text-xs text-gray-500 mb-2">We Accept</p>
               <div className="flex gap-2">
-                <div className="px-3 py-1 bg-white/10 rounded text-xs">eSewa</div>
-                <div className="px-3 py-1 bg-white/10 rounded text-xs">Khalti</div>
+                <div className="px-3 py-1 bg-white/10 rounded text-xs">NPX</div>
                 <div className="px-3 py-1 bg-white/10 rounded text-xs">COD</div>
               </div>
             </div>

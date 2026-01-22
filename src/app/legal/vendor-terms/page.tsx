@@ -102,8 +102,8 @@ export default function VendorTermsPage() {
               <h2 className="text-xl font-semibold text-foreground mb-3">8. Contact</h2>
               <p>For vendor support, contact us at:</p>
               <p className="mt-2">
-                <strong>Email:</strong> vendors@kbstylish.com.np<br />
-                <strong>Phone:</strong> +977-XXX-XXXXXXX
+                <strong>Email:</strong> kbstylish2019@gmail.com<br />
+                <strong>Phone:</strong> +977 9801227448
               </p>
             </section>
 

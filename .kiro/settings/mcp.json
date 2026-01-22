@@ -14,7 +14,10 @@
         "execute_sql",
         "list_projects",
         "apply_migration",
-        "list_migrations"
+        "list_migrations",
+        "get_edge_function",
+        "get_logs",
+        "list_edge_functions"
       ]
     }
   }

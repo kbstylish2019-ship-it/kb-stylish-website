@@ -90,8 +90,8 @@ export default function PrivacyPolicyPage() {
               <h2 className="text-xl font-semibold text-foreground mb-3">7. Contact Us</h2>
               <p>If you have questions about this Privacy Policy, please contact us at:</p>
               <p className="mt-2">
-                <strong>Email:</strong> privacy@kbstylish.com.np<br />
-                <strong>Address:</strong> Kathmandu, Nepal
+                <strong>Email:</strong> kbstylish2019@gmail.com<br />
+                <strong>Phone:</strong> +977 9801227448
               </p>
             </section>
 

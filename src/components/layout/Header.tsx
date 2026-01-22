@@ -154,9 +154,9 @@ export default function Header({ isAuthed = false }: HeaderProps) {
       <div className="bg-[#1565C0] text-white text-xs">
         <div className="max-w-7xl mx-auto px-4 py-1.5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <a href="tel:+9779851234567" className="flex items-center gap-1 hover:text-yellow-300 transition-colors">
+            <a href="tel:+9779801227448" className="flex items-center gap-1 hover:text-yellow-300 transition-colors">
               <Phone className="h-3 w-3" />
-              <span>+977 985-1234567</span>
+              <span>+977 9801227448</span>
             </a>
             <span className="hidden sm:inline text-white/50">|</span>
             <span className="hidden sm:inline text-white/70">Free delivery on orders above Rs. 2000</span>
@@ -181,13 +181,15 @@ export default function Header({ isAuthed = false }: HeaderProps) {
           <div className="flex items-center gap-4 lg:gap-8">
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                  <span className="text-[#1976D2] font-bold text-lg">KB</span>
-                </div>
+              <div className="flex items-center gap-3">
+                <img 
+                  src="/kbStylishlogo.png" 
+                  alt="KB Stylish Logo" 
+                  className="h-14 w-auto"
+                />
                 <div className="hidden sm:block">
                   <span className="text-white font-bold text-xl">KB Stylish</span>
-                  <p className="text-white/70 text-[10px] -mt-1">Beauty & Salon Products</p>
+                  <p className="text-white/70 text-[10px] -mt-1">Friendly, hygienic and affordable</p>
                 </div>
               </div>
             </Link>

@@ -45,13 +45,14 @@ function OrderConfirmationContent() {
         </div>
 
         {/* Order Details Card */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-8 mb-6">
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-8 mb-6">
           <div className="flex items-center justify-between mb-6 pb-6 border-b border-white/10">
             <div>
               <p className="text-sm text-gray-400 mb-1">Order Number</p>
               <p className="text-xl font-mono font-bold text-[var(--kb-primary-brand)]">
-                #{paymentIntentId.slice(-12).toUpperCase()}
+                #{paymentIntentId.toUpperCase()}
               </p>
+              <p className="text-xs text-gray-400 mt-1">Save this number for tracking</p>
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-400 mb-1">Order Date</p>
@@ -70,7 +71,7 @@ function OrderConfirmationContent() {
             <h3 className="text-lg font-semibold text-white mb-4">Order Status</h3>
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-white/10"></div>
+              <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-600"></div>
 
               {/* Status items */}
               {[
@@ -83,7 +84,7 @@ function OrderConfirmationContent() {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
                     status.completed 
                       ? 'bg-gradient-to-br from-green-500 to-green-600' 
-                      : 'bg-white/10 border-2 border-white/20'
+                      : 'bg-gray-700 border-2 border-gray-500'
                   }`}>
                     {status.completed && (
                       <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,9 +112,9 @@ function OrderConfirmationContent() {
               <div>
                 <p className="text-blue-200 font-medium mb-1">What's Next?</p>
                 <ul className="text-sm text-blue-200/80 space-y-1">
-                  <li>• You'll receive a confirmation email shortly</li>
-                  <li>• We'll notify you when your order is ready</li>
-                  <li>• Track your order status in your account</li>
+                  <li>• Save your order number for tracking</li>
+                  <li>• Track your order at <span className="font-medium">Track Order</span> page</li>
+                  <li>• Questions? Call <span className="font-medium">+977 9801227448</span></li>
                 </ul>
               </div>
             </div>

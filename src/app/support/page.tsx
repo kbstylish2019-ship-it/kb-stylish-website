@@ -138,19 +138,19 @@ export default async function SupportPage() {
                 <div>
                   <div className="text-foreground/60">Email</div>
                   <a 
-                    href="mailto:support@kbstylish.com" 
+                    href="mailto:kbstylish2019@gmail.com" 
                     className="text-[var(--kb-accent-gold)] hover:underline"
                   >
-                    support@kbstylish.com
+                    kbstylish2019@gmail.com
                   </a>
                 </div>
                 <div>
                   <div className="text-foreground/60">Phone</div>
                   <a 
-                    href="tel:+9771234567890" 
+                    href="tel:+9779801227448" 
                     className="text-[var(--kb-accent-gold)] hover:underline"
                   >
-                    +977 123-456-7890
+                    +977 9801227448
                   </a>
                 </div>
                 <div>

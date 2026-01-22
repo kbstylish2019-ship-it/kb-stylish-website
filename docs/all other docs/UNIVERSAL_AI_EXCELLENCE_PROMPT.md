@@ -17,7 +17,7 @@ This prompt MUST be followed for:
 - 🏗️ Architecture changes
 - 📊 Investigations
 - 🔧 Refactoring
-- 📚 Documentation
+- 📚 Documentation'
 - 🧪 Testing
 
 **DO NOT WRITE CODE IMMEDIATELY.**

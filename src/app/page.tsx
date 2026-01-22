@@ -81,22 +81,15 @@ export default async function HomePage() {
 
           {/* Side Promotions - Takes 1 column */}
           <div className="hidden lg:flex flex-col gap-4">
-            {/* App Download Card */}
+            {/* App Coming Soon Card */}
             <div className="bg-gradient-to-br from-[#1976D2] to-[#0d47a1] rounded-lg p-4 text-white flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="h-5 w-5 text-yellow-300" />
                 <span className="text-sm font-medium">KB Stylish App</span>
               </div>
-              <p className="text-xs text-white/80 mb-3">Get exclusive deals on the app</p>
-              <div className="flex gap-2">
-                <div className="bg-black rounded px-2 py-1 text-[10px]">
-                  <span className="block text-[8px] text-gray-400">GET IT ON</span>
-                  Google Play
-                </div>
-                <div className="bg-black rounded px-2 py-1 text-[10px]">
-                  <span className="block text-[8px] text-gray-400">Download on</span>
-                  App Store
-                </div>
+              <p className="text-xs text-white/80 mb-2">Exclusive deals & easy ordering</p>
+              <div className="bg-white/10 rounded-lg px-3 py-2 text-center">
+                <span className="text-sm font-semibold text-yellow-300">🚀 Coming Soon!</span>
               </div>
             </div>
 
@@ -342,10 +335,10 @@ export default async function HomePage() {
             <h3 className="text-lg font-bold mb-2">Call or WhatsApp</h3>
             <p className="text-xs text-white/60 mb-2">FOR ORDER</p>
             <a
-              href="tel:+9779851234567"
+              href="tel:+9779801227448"
               className="inline-flex items-center gap-2 bg-[#25D366] text-white text-lg font-bold px-4 py-2 rounded-full hover:bg-[#128C7E] transition-colors"
             >
-              📞 9851234567
+              📞 9801227448
             </a>
           </div>
         </div>

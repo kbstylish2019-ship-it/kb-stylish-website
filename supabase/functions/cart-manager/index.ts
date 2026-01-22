@@ -73,7 +73,7 @@ Deno.serve(async (req)=>{
     }
     // Parse request
     requestData = await req.json();
-    const { action, variant_id, quantity, merge_guest_cart, combo_id, combo_group_id } = requestData;
+    const { action, variant_id, quantity, merge_guest_cart, combo_id, combo_group_id, cart_item_id } = requestData;
     if (!action) {
       return new Response(JSON.stringify({
         error: 'Action is required'
@@ -136,15 +136,22 @@ Deno.serve(async (req)=>{
         response = await updateCartItem(serviceClient, authenticatedUser, guestToken, variant_id, quantity);
         break;
       case 'remove':
-        if (!variant_id) {
+        // Support both cart_item_id (preferred) and variant_id (legacy)
+        if (!cart_item_id && !variant_id) {
           return new Response(JSON.stringify({
-            error: 'variant_id is required for remove action'
+            error: 'cart_item_id or variant_id is required for remove action'
           }), {
             status: 400,
             headers: responseHeaders
           });
         }
-        response = await removeFromCart(serviceClient, authenticatedUser, guestToken, variant_id);
+        if (cart_item_id) {
+          // Use the new precise removal by cart_item_id
+          response = await removeFromCartById(serviceClient, authenticatedUser, guestToken, cart_item_id);
+        } else {
+          // Legacy: remove by variant_id (may remove wrong item if duplicates exist)
+          response = await removeFromCart(serviceClient, authenticatedUser, guestToken, variant_id);
+        }
         break;
       case 'clear':
         response = await clearCart(serviceClient, authenticatedUser, guestToken);
@@ -402,6 +409,51 @@ async function removeFromCart(supabase, authenticatedUser, guestToken, variant_i
     }
   } catch (error) {
     console.error('Error removing from cart:', error);
+    return {
+      success: false,
+      message: 'Failed to remove item from cart'
+    };
+  }
+}
+
+// NEW: Remove cart item by cart_item_id (more precise than variant_id)
+async function removeFromCartById(supabase, authenticatedUser, guestToken, cart_item_id) {
+  try {
+    console.log('[Edge Function] Removing cart item by ID:', cart_item_id);
+    
+    // Step 1: Remove the specific cart item
+    const remPayload = {
+      p_cart_item_id: cart_item_id
+    };
+    if (authenticatedUser?.id) remPayload.p_user_id = authenticatedUser.id;
+    else remPayload.p_guest_token = guestToken;
+    
+    const { data, error } = await supabase.rpc('remove_cart_item_by_id_secure', remPayload);
+    if (error) {
+      console.error('[Edge Function] Failed to remove cart item:', error);
+      return {
+        success: false,
+        message: 'Failed to remove item from cart'
+      };
+    }
+    
+    // Step 2: Return the full updated cart
+    const cartResponse = await getCart(supabase, authenticatedUser, guestToken);
+    if (cartResponse.success) {
+      return {
+        success: true,
+        cart: cartResponse.cart,
+        message: 'Item removed from cart successfully',
+        warnings: cartResponse.warnings
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Item removed but failed to retrieve updated cart'
+      };
+    }
+  } catch (error) {
+    console.error('Error removing cart item by ID:', error);
     return {
       success: false,
       message: 'Failed to remove item from cart'

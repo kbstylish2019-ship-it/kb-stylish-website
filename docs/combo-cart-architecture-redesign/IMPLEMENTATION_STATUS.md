@@ -1,7 +1,35 @@
 # COMBO CART REDESIGN - IMPLEMENTATION STATUS
 
-**Last Updated**: January 17, 2026, 23:50 UTC  
+**Last Updated**: January 18, 2026, 12:00 UTC  
 **Overall Status**: 🎉 ALL PHASES COMPLETE + ALL FIXES DEPLOYED
+
+---
+
+## 🎉 PHASE F COMPLETE: Remove Button Fix + Logo Update
+
+**Status**: ✅ DEPLOYED (Edge function pending deployment)
+
+**Problems Fixed**:
+1. Remove button removing wrong item (combo or different product)
+2. Logo showing "KB" text instead of actual logo image
+
+**Root Cause**: 
+- Removal was using `variant_id` which could match multiple items
+- When multiple items have same variant (combos), first match was removed
+
+**Solution**: 
+1. Created `remove_cart_item_by_id_secure` database function
+2. Updated edge function to accept `cart_item_id` parameter
+3. Updated cartAPI to pass cart_item_id directly
+4. Replaced KB text logo with actual logo image + updated slogan
+
+**Result**: 
+- ✅ Correct item is removed every time
+- ✅ No more ID confusion between combos and regular products
+- ✅ Logo displays properly with correct slogan
+- ✅ Precise removal by cart_items.id
+
+**See**: `PHASE_F_REMOVE_BUG_FIX.md` for detailed documentation
 
 ---
 

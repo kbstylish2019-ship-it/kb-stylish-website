@@ -17,7 +17,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
  */ const MAX_JOBS_PER_RUN = 10;
 const LOCK_TIMEOUT_SECONDS = 30;
 const WORKER_ID = `worker_${crypto.randomUUID().substring(0, 8)}`;
-Deno.serve(async (req)=>{
+Deno.serve(async (req) => {
   const origin = req.headers.get('origin');
   const corsHeaders = getCorsHeaders(origin);
   if (req.method === 'OPTIONS') {
@@ -39,7 +39,7 @@ Deno.serve(async (req)=>{
     console.log(`Order worker ${workerId} starting (max jobs: ${maxJobs})`);
     const processedJobs = [];
     let jobsProcessed = 0;
-    while(jobsProcessed < maxJobs){
+    while (jobsProcessed < maxJobs) {
       const job = await acquireNextJob(supabaseClient, workerId);
       if (!job) {
         console.log('No more jobs in queue');
@@ -47,7 +47,7 @@ Deno.serve(async (req)=>{
       }
       console.log(`Processing job ${job.id} of type ${job.job_type}`);
       let result;
-      switch(job.job_type){
+      switch (job.job_type) {
         case 'finalize_order':
           result = await finalizeOrder(supabaseClient, job.payload);
           break;
@@ -168,7 +168,7 @@ async function finalizeOrder(supabase, jobData) {
     } else {
       console.log('Metrics updated:', metricsData);
     }
-    
+
     // ========================================================================
     // INCREMENT COMBO SOLD COUNTERS
     // ========================================================================
@@ -179,12 +179,12 @@ async function finalizeOrder(supabase, jobData) {
         .select('combo_id, combo_group_id')
         .eq('order_id', data.order_id)
         .not('combo_id', 'is', null);
-      
+
       if (orderItems && orderItems.length > 0) {
         // Group by combo_id to count quantities
         const comboQuantities = new Map<string, number>();
         const processedGroups = new Set<string>();
-        
+
         orderItems.forEach((item: any) => {
           // Only count each combo_group_id once (all items in a group = 1 combo)
           if (item.combo_group_id && !processedGroups.has(item.combo_group_id)) {
@@ -193,14 +193,14 @@ async function finalizeOrder(supabase, jobData) {
             comboQuantities.set(item.combo_id, currentQty + 1);
           }
         });
-        
+
         // Increment sold counter for each combo
         for (const [comboId, quantity] of comboQuantities) {
           const { error: comboError } = await supabase.rpc('increment_combo_sold', {
             p_combo_id: comboId,
             p_quantity: quantity
           });
-          
+
           if (comboError) {
             console.error(`Failed to increment combo sold for ${comboId}:`, comboError);
           } else {
@@ -212,7 +212,7 @@ async function finalizeOrder(supabase, jobData) {
       // Don't fail order if combo increment fails
       console.error('[Order] Failed to increment combo sold counters:', comboError);
     }
-    
+
     // ========================================================================
     // SEND ORDER CONFIRMATION EMAIL
     // ========================================================================
@@ -221,14 +221,14 @@ async function finalizeOrder(supabase, jobData) {
         .from('orders')
         .select(`
           *,
-          order_items(product_name, quantity, price_at_purchase, product_variants(products(images)))
+          order_items(product_name, quantity, unit_price_cents, product_variants(products(images)))
         `)
         .eq('id', data.order_id)
         .single();
-      
+
       if (orderData) {
         const { data: userData } = await supabase.auth.admin.getUserById(orderData.user_id);
-        
+
         if (userData?.user?.email) {
           // Trigger send-email Edge Function
           await supabase.functions.invoke('send-email', {
@@ -246,7 +246,7 @@ async function finalizeOrder(supabase, jobData) {
                 items: orderData.order_items.map((item: any) => ({
                   name: item.product_name,
                   quantity: item.quantity,
-                  price: item.price_at_purchase,
+                  price: item.unit_price_cents,
                 })),
                 subtotal: orderData.subtotal_cents,
                 shipping: orderData.shipping_cents,
@@ -277,7 +277,7 @@ async function finalizeOrder(supabase, jobData) {
             id,
             product_name,
             quantity,
-            price_at_purchase,
+            unit_price_cents,
             products!inner(
               vendor_id,
               vendor_profiles!inner(
@@ -290,7 +290,7 @@ async function finalizeOrder(supabase, jobData) {
         `)
         .eq('id', data.order_id)
         .single();
-      
+
       if (orderData?.order_items) {
         // Group items by vendor
         const vendorGroups = new Map();
@@ -305,14 +305,14 @@ async function finalizeOrder(supabase, jobData) {
           vendorGroups.get(vendorId).items.push({
             name: item.product_name,
             quantity: item.quantity,
-            price: item.price_at_purchase,
+            price: item.unit_price_cents,
           });
         });
 
         // Send email to each vendor
         for (const [vendorId, vendorData] of vendorGroups) {
           if (vendorData.vendor?.contact_email) {
-            const totalEarnings = vendorData.items.reduce((sum: number, item: any) => 
+            const totalEarnings = vendorData.items.reduce((sum: number, item: any) =>
               sum + (item.price * item.quantity), 0
             );
 
@@ -346,7 +346,7 @@ async function finalizeOrder(supabase, jobData) {
       // Don't fail order if vendor emails fail
       console.error('[Order] Failed to send vendor alert emails:', emailError);
     }
-    
+
     return {
       success: true,
       message: `Order ${data.order_id} created successfully`,
@@ -425,7 +425,7 @@ async function processRefund(supabase, jobData) {
         should_retry: true
       };
     }
-    for (const item of order.order_items){
+    for (const item of order.order_items) {
       const { error } = await supabase.from('inventory').update({
         quantity_available: supabase.raw('quantity_available + ?', [
           item.quantity

@@ -112,7 +112,10 @@ export default function ProductList({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onRemove(it.id, it.variant)}
+                  onClick={() => {
+                    console.log('[ProductList] Remove clicked:', { id: it.id, name: it.name, variant: it.variant });
+                    onRemove(it.id, it.variant);
+                  }}
                   aria-label={`Remove ${it.name}`}
                   className={cn(
                     "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-600 border border-gray-200 hover:bg-red-50 hover:border-red-200",

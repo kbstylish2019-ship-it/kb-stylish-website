@@ -69,13 +69,14 @@ export interface CartItem {
 export interface PaymentIntentResponse {
   success: boolean;
   payment_intent_id?: string;
-  payment_method?: 'esewa' | 'khalti' | 'npx';
+  payment_method?: 'esewa' | 'khalti' | 'npx' | 'cod';
   payment_url?: string;
   form_fields?: Record<string, string>; // eSewa and NPX
   amount_cents?: number;
   expires_at?: string;
   error?: string;
   details?: string[];
+  redirect_to_success?: boolean; // For COD
 }
 
 export interface ShippingAddress {
@@ -91,7 +92,7 @@ export interface ShippingAddress {
 }
 
 export interface CreateOrderIntentRequest {
-  payment_method: 'esewa' | 'khalti' | 'npx';
+  payment_method: 'esewa' | 'khalti' | 'npx' | 'cod';
   shipping_address: ShippingAddress;
   metadata?: Record<string, any>;
 }
@@ -126,7 +127,7 @@ export class CartAPIClient {
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     this.anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    
+
     // Initialize browser client only if we have the required environment variables
     if (typeof window !== 'undefined' && this.baseUrl && this.anonKey) {
       try {
@@ -134,11 +135,11 @@ export class CartAPIClient {
           this.baseUrl,
           this.anonKey
         );
-        
+
         // Subscribe to auth changes to keep session updated
         this.browserClient.auth.onAuthStateChange((event: any, session: any) => {
           console.log('[CartAPIClient] Auth state changed in client:', event, session?.user?.id);
-          
+
           // Update cached session based on auth event
           if (event === 'SIGNED_OUT') {
             console.log('[CartAPIClient] User signed out, clearing cached session');
@@ -150,7 +151,7 @@ export class CartAPIClient {
             this.currentSession = session;
           }
         });
-        
+
         // Get initial session
         this.browserClient.auth.getSession().then(({ data }: any) => {
           this.currentSession = data.session;
@@ -182,7 +183,7 @@ export class CartAPIClient {
     clearGuestTokenUtil();
     console.log('[CartAPI] Guest token cleared (cookie + localStorage)');
   }
-  
+
   /**
    * Clear cached session - CRITICAL for logout
    */
@@ -192,7 +193,7 @@ export class CartAPIClient {
     this.clearGuestToken();
     console.log('[CartAPI] Session and guest token cleared');
   }
-  
+
   /**
    * Force refresh session from Supabase
    */
@@ -215,14 +216,14 @@ export class CartAPIClient {
   private async getAuthHeaders(): Promise<Record<string, string>> {
     // Use cached session if available, otherwise get fresh
     let session = this.currentSession;
-    
+
     if (!session && this.browserClient) {
       // Get fresh session if not cached
       const { data } = await this.browserClient.auth.getSession();
       session = data.session;
       this.currentSession = session;
     }
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -253,7 +254,7 @@ export class CartAPIClient {
       // Guest user - use anon key for auth
       headers['Authorization'] = `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`;
       console.log('[CartAPI] Using guest headers with token:', guestToken || 'none');
-      
+
       if (!guestToken) {
         console.warn('[CartAPI] No guest token available - cart operations may fail');
       }
@@ -289,7 +290,7 @@ export class CartAPIClient {
     try {
       console.log('[CartAPI] Getting cart...');
       const headers = await this.getAuthHeaders();
-      
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
@@ -300,12 +301,12 @@ export class CartAPIClient {
       });
 
       const data = await response.json();
-      
+
       // Log error responses for debugging
       if (!response.ok) {
         console.error('[CartAPI] getCart error response:', data);
       }
-      
+
       // Store guest token if provided
       if (data.guest_token) {
         setGuestTokenCookieUtil(data.guest_token);
@@ -327,9 +328,9 @@ export class CartAPIClient {
   async addToCart(variantId: string, quantity: number = 1): Promise<CartResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       console.log('[CartAPI] addToCart called with:', { variantId, quantity });
-      
+
       const response = await this.executeWithRetry(async () => {
         const body = JSON.stringify({
           action: 'add',
@@ -337,7 +338,7 @@ export class CartAPIClient {
           quantity,
         });
         console.log('[CartAPI] Sending request with body:', body);
-        
+
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
           headers,
@@ -347,15 +348,15 @@ export class CartAPIClient {
       });
 
       const data = await response.json();
-      
+
       // ALWAYS log response for debugging
       console.log('[CartAPI] addToCart response:', { ok: response.ok, status: response.status, data });
-      
+
       // Log error responses for debugging
       if (!response.ok) {
         console.error('[CartAPI] addToCart error response:', data);
       }
-      
+
       // Store guest token if provided
       if (data.guest_token) {
         setGuestTokenCookieUtil(data.guest_token);
@@ -383,11 +384,11 @@ export class CartAPIClient {
   async updateCartItem(itemIdOrVariantId: string, quantity: number): Promise<CartResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       // First, get the current cart to find the variant_id if needed
       const currentCart = await this.getCart();
       let variantId = itemIdOrVariantId;
-      
+
       if (currentCart.success && currentCart.cart) {
         const items = currentCart.cart.cart_items || currentCart.cart.items || [];
         const item = items.find((i: any) => i.id === itemIdOrVariantId || i.variant_id === itemIdOrVariantId);
@@ -395,7 +396,7 @@ export class CartAPIClient {
           variantId = item.variant_id;
         }
       }
-      
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
@@ -420,32 +421,22 @@ export class CartAPIClient {
   }
 
   /**
-   * Remove item from cart
-   * Note: The store passes itemId (cart_items.id), but we need to find the variant_id
+   * Remove item from cart by cart_item_id
+   * Note: Now uses cart_item_id directly for precise removal
    */
-  async removeFromCart(itemIdOrVariantId: string): Promise<CartResponse> {
+  async removeFromCart(itemId: string): Promise<CartResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
-      // First, get the current cart to find the variant_id if needed
-      const currentCart = await this.getCart();
-      let variantId = itemIdOrVariantId;
-      
-      if (currentCart.success && currentCart.cart) {
-        const items = currentCart.cart.cart_items || currentCart.cart.items || [];
-        const item = items.find((i: any) => i.id === itemIdOrVariantId || i.variant_id === itemIdOrVariantId);
-        if (item) {
-          variantId = item.variant_id;
-        }
-      }
-      
+
+      console.log('[CartAPI] Removing cart item by ID:', itemId);
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
             action: 'remove',
-            variant_id: variantId,
+            cart_item_id: itemId,  // Use cart_item_id for precise removal
           }),
           credentials: 'include',  // CRITICAL: Include cookies for cross-origin requests
         });
@@ -467,7 +458,7 @@ export class CartAPIClient {
   async clearCart(): Promise<CartResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
@@ -496,9 +487,9 @@ export class CartAPIClient {
   async addComboToCart(comboId: string): Promise<CartResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       console.log('[CartAPI] addComboToCart called with:', { comboId });
-      
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
@@ -513,7 +504,7 @@ export class CartAPIClient {
 
       const data = await response.json();
       console.log('[CartAPI] addComboToCart response:', { ok: response.ok, data });
-      
+
       if (data.guest_token) {
         setGuestTokenCookieUtil(data.guest_token);
       }
@@ -535,9 +526,9 @@ export class CartAPIClient {
   async removeComboFromCart(comboGroupId: string): Promise<CartResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       console.log('[CartAPI] removeComboFromCart called with:', { comboGroupId });
-      
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
@@ -569,7 +560,7 @@ export class CartAPIClient {
   async createOrderIntent(request: CreateOrderIntentRequest): Promise<PaymentIntentResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/create-order-intent`, {
           method: 'POST',
@@ -646,9 +637,9 @@ export class CartAPIClient {
   async updateComboQuantity(comboGroupId: string, quantity: number): Promise<CartResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       console.log('[CartAPI] updateComboQuantity called with:', { comboGroupId, quantity });
-      
+
       const response = await this.executeWithRetry(async () => {
         return await fetch(`${this.baseUrl}/functions/v1/cart-manager`, {
           method: 'POST',
@@ -673,6 +664,55 @@ export class CartAPIClient {
         error: 'Failed to update combo quantity',
       };
     }
+  }
+
+  /**
+   * Poll for order confirmation after COD checkout
+   * Waits for the order to be created in the database before returning
+   */
+  async pollOrderConfirmation(
+    paymentIntentId: string, 
+    maxAttempts: number = 10, 
+    intervalMs: number = 1000
+  ): Promise<{ success: boolean; orderId?: string; orderNumber?: string; error?: string }> {
+    if (!this.browserClient) {
+      return { success: false, error: 'Client not initialized' };
+    }
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`[CartAPI] Polling for order confirmation (attempt ${attempt}/${maxAttempts})`);
+        
+        // Query orders table for the payment_intent_id
+        const { data: order, error } = await this.browserClient
+          .from('orders')
+          .select('id, order_number, status')
+          .eq('payment_intent_id', paymentIntentId)
+          .single();
+        
+        if (order && !error) {
+          console.log(`[CartAPI] Order confirmed: ${order.order_number}`);
+          return {
+            success: true,
+            orderId: order.id,
+            orderNumber: order.order_number
+          };
+        }
+        
+        // Wait before next attempt
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, intervalMs));
+        }
+      } catch (err) {
+        console.error(`[CartAPI] Poll attempt ${attempt} error:`, err);
+      }
+    }
+    
+    // After all attempts, return failure (order might still be processing)
+    return {
+      success: false,
+      error: 'Order is being processed. You will receive a confirmation email shortly.'
+    };
   }
 
 }

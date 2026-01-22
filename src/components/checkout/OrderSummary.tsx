@@ -31,7 +31,6 @@ export default function OrderSummary({
 }: OrderSummaryProps) {
   const paymentBtns: { id: PaymentMethod; label: string }[] = [
     { id: "npx", label: "Nepal Payment (NPX)" },
-    { id: "khalti", label: "Khalti" },
     { id: "cod", label: "Cash on Delivery" },
   ];
 
@@ -65,19 +64,7 @@ export default function OrderSummary({
         </div>
       </div>
 
-      <div className="mt-4">
-        <label className="mb-1 block text-sm text-gray-600" htmlFor="discount">
-          Discount Code
-        </label>
-        <input
-          id="discount"
-          value={discountCode}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onDiscountCodeChange(e.target.value)}
-          placeholder="e.g., WELCOME100"
-          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#1976D2] focus:ring-1 focus:ring-[#1976D2] focus:outline-none"
-        />
-        <p className="mt-1 text-xs text-gray-500">Use WELCOME100 for demo.</p>
-      </div>
+      {/* Discount code feature - Coming soon */}
 
       <div className="mt-4">
         <div className="mb-2 text-sm font-medium text-gray-700">Payment Method</div>

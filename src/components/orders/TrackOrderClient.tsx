@@ -346,14 +346,14 @@ export default function TrackOrderClient() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
-                href="mailto:support@kbstylish.com"
+                href="mailto:kbstylish2019@gmail.com"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-foreground/80 hover:bg-white/10 transition"
               >
                 <Mail className="h-4 w-4" />
                 Email Platform Support
               </a>
               <a
-                href="tel:+9771234567890"
+                href="tel:+9779801227448"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-foreground/80 hover:bg-white/10 transition"
               >
                 <Phone className="h-4 w-4" />

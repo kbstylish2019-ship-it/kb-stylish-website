@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache';
 // Helper to create Supabase server client
 async function createClient() {
   const cookieStore = await cookies();
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -56,7 +56,7 @@ export async function updateFulfillmentStatus(
 
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return {
         success: false,
@@ -108,11 +108,11 @@ export async function updateFulfillmentStatus(
           `)
           .eq('id', params.orderItemId)
           .single();
-        
+
         if (orderItem?.orders) {
           // Get customer email from auth
           const { data: { user } } = await supabase.auth.admin.getUserById(orderItem.orders.user_id);
-          
+
           if (user?.email) {
             // Trigger send-email Edge Function
             await supabase.functions.invoke('send-email', {
@@ -159,33 +159,35 @@ export async function updateFulfillmentStatus(
               shipping_name,
               subtotal_cents,
               total_cents,
-              payment_status,
+              total_cents,
               order_items(
                 id,
                 product_name,
                 quantity,
-                price_at_purchase
+                unit_price_cents
               )
             )
           `)
           .eq('id', params.orderItemId)
           .single();
-        
+
         if (orderItem?.orders) {
           // Get customer email from auth
           const { data: { user } } = await supabase.auth.admin.getUserById(orderItem.orders.user_id);
-          
+
           if (user?.email) {
             // Build items array for email template
             const items = orderItem.orders.order_items.map((item: any) => ({
               name: item.product_name,
               quantity: item.quantity,
-              price: item.price_at_purchase,
+              price: item.unit_price_cents,
             }));
 
             // Determine refund info
-            const refundAmount = orderItem.orders.payment_status === 'captured' 
-              ? orderItem.orders.total_cents 
+            // Since payment_status doesn't exist, we'll assume captured if status is not pending/failed
+            const isCaptured = !['pending', 'failed', 'cancelled'].includes(orderItem.orders.status);
+            const refundAmount = isCaptured
+              ? orderItem.orders.total_cents
               : null;
 
             // Trigger send-email Edge Function
@@ -208,7 +210,7 @@ export async function updateFulfillmentStatus(
                   refundETA: '3-5 business days',
                   items: items,
                   subtotal: orderItem.orders.subtotal_cents,
-                  supportEmail: 'support@kbstylish.com.np',
+                  supportEmail: 'kbstylish2019@gmail.com',
                 },
               },
             });

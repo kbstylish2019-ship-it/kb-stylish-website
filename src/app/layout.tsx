@@ -31,8 +31,12 @@ export const metadata: Metadata = {
   title: "KB Stylish",
   description: "KB Stylish — Nepal's premier multi-vendor fashion and style marketplace.",
   icons: {
-    // Keep it simple: single .ico favicon
-    icon: [{ url: "/favicon.ico" }],
+    icon: [
+      { url: "/kbStylishlogo.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/kbStylishlogo.png" },
+    ],
   },
 };
 

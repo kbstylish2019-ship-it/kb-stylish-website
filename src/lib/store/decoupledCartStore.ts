@@ -879,7 +879,16 @@ export const useDecoupledCartStore = create<DecoupledCartState>()(
 // ============ Helper Functions ============
 
 function transformApiItemsToProducts(apiItems: any[]): CartProductItem[] {
+  console.log('[transformApiItemsToProducts] Received API items:', apiItems);
+  
   return apiItems.map(item => {
+    console.log('[transformApiItemsToProducts] Processing item:', {
+      id: item.id,
+      product_name: item.product_name,
+      variant_id: item.variant_id,
+      full_item: item
+    });
+    
     // Parse variant from SKU using the correct field name (variant_sku)
     const sku = item.variant_sku || item.sku || '';
     let variantName = '';

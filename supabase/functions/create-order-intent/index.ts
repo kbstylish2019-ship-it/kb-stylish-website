@@ -110,11 +110,12 @@ Deno.serve(async (req)=>{
     if (!requestData.payment_method || ![
       'esewa',
       'khalti',
-      'npx'
+      'npx',
+      'cod'
     ].includes(requestData.payment_method)) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Invalid payment method. Must be "esewa", "khalti", or "npx"'
+        error: 'Invalid payment method. Must be "esewa", "khalti", "npx", or "cod"'
       }), {
         status: 400,
         headers: {
@@ -297,6 +298,12 @@ Deno.serve(async (req)=>{
       
       // Store ProcessId in metadata for verification
       requestData.npx_process_id = processIdResult.processId;
+    } else if (paymentMethod === 'cod') {
+      // COD Integration
+      paymentIntentId = `pi_cod_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
+      externalTransactionId = `cod_${crypto.randomUUID().substring(0, 8)}`;
+      gatewayPaymentUrl = null;
+      formFields = null;
     } else {
       return new Response(JSON.stringify({
         success: false,
@@ -319,7 +326,7 @@ Deno.serve(async (req)=>{
       gateway_payment_url: gatewayPaymentUrl,
       amount_cents: total_cents,
       currency: 'NPR',
-      status: 'pending',
+      status: paymentMethod === 'cod' ? 'succeeded' : 'pending',
       provider: paymentMethod,
       metadata: {
         subtotal_cents,
@@ -373,6 +380,63 @@ Deno.serve(async (req)=>{
     console.log(`Payment intent created: ${paymentIntentId} for ${total_cents} paisa (${total_cents / 100} NPR)`);
     console.log(`External transaction ID: ${externalTransactionId}`);
     console.log(`Payment URL: ${gatewayPaymentUrl}`);
+
+    // ENQUEUE ORDER FINALIZATION FOR COD IMMEDIATELY
+    if (paymentMethod === 'cod') {
+      const idempotencyKey = `payment_cod_${externalTransactionId}`;
+      const { error: jobError } = await serviceClient.from('job_queue').insert({
+        job_type: 'finalize_order',
+        payload: {
+          payment_intent_id: paymentIntentId,
+          user_id: authenticatedUser.id,
+          cart_id: cart.id,
+          provider: 'cod',
+          external_transaction_id: externalTransactionId,
+          amount_cents: total_cents,
+          is_cod: true
+        },
+        priority: 1,
+        status: 'pending',
+        idempotency_key: idempotencyKey,
+        max_attempts: 3
+      });
+      
+      if (jobError) {
+        console.error('Failed to enqueue COD order job:', jobError);
+        // This is critical - if we can't enqueue the job, we should probably fail
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Failed to process COD order. Please try again or contact support.'
+        }), {
+          status: 500,
+          headers: {
+            ...dynCors,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      console.log('COD order finalization job enqueued:', idempotencyKey);
+
+      // IMMEDIATELY trigger order-worker to process COD orders without waiting for cron
+      // This eliminates the 2-minute delay from cron schedule
+      try {
+        const workerUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/order-worker`;
+        const workerResponse = await fetch(workerUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ max_jobs: 1 })
+        });
+        const workerResult = await workerResponse.json();
+        console.log('COD order-worker triggered immediately:', workerResult);
+      } catch (workerError) {
+        // Don't fail the request if worker trigger fails - cron will pick it up
+        console.error('Failed to trigger order-worker (cron will pick up):', workerError);
+      }
+    }
+
     // Return success response
     const response = {
       success: true,
@@ -381,7 +445,8 @@ Deno.serve(async (req)=>{
       payment_url: gatewayPaymentUrl,
       form_fields: formFields,
       amount_cents: total_cents,
-      expires_at: expires_at.toISOString()
+      expires_at: expires_at.toISOString(),
+      redirect_to_success: paymentMethod === 'cod'
     };
     return new Response(JSON.stringify(response), {
       status: 200,
