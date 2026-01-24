@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Phone, Mail, MapPin, Facebook, Instagram, Youtube } from "lucide-react";
+import { Phone, Mail, MapPin, Facebook, Youtube } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -13,25 +13,23 @@ export default function Footer() {
               <img 
                 src="/kbStylishlogo.png" 
                 alt="KB Stylish Logo" 
-                className="h-12 w-auto"
+                className="h-6 sm:h-7 md:h-8 w-auto"
               />
-              <div>
-                <span className="font-bold text-lg">KB Stylish</span>
-                <p className="text-xs text-gray-400">Friendly, hygienic and affordable</p>
-              </div>
             </div>
             <p className="text-sm text-gray-400 mb-4">
               Nepal&apos;s premier destination for professional salon and beauty products. 
               Quality products, trusted brands, delivered to your doorstep.
             </p>
             <div className="flex gap-3">
-              <a href="#" className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#1976D2] transition-colors">
+              <a href="https://www.facebook.com/kbstylish" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#1976D2] transition-colors">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#E1306C] transition-colors">
-                <Instagram className="h-4 w-4" />
+              <a href="https://www.tiktok.com/@kbstylishofficial?_r=1&_t=ZS-93KqXPZyLUCh" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center hover:bg-black transition-colors">
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                </svg>
               </a>
-              <a href="#" className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#FF0000] transition-colors">
+              <a href="https://youtube.com/@kbstylish?si=fRUyDYqYor6LpDqe" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#FF0000] transition-colors">
                 <Youtube className="h-4 w-4" />
               </a>
             </div>
@@ -108,6 +106,11 @@ export default function Footer() {
                   Refund Policy
                 </Link>
               </li>
+              <li>
+                <Link href="/legal/shipping" className="text-gray-400 hover:text-white transition-colors">
+                  Shipping Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -118,8 +121,7 @@ export default function Footer() {
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-[#1976D2] flex-shrink-0 mt-0.5" />
                 <span className="text-gray-400">
-                  Kathmandu, Nepal<br />
-                  Near Ratnapark
+                  Narephat, Kathmandu
                 </span>
               </li>
               <li className="flex items-center gap-3">

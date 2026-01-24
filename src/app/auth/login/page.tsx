@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/';
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +37,8 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push('/');
+        // Redirect to the specified page or home
+        router.push(redirectTo);
         router.refresh();
       }
     } catch (err) {
@@ -63,6 +67,10 @@ export default function LoginPage() {
       } else {
         setError(null);
         alert('Check your email for the confirmation link!');
+        // After signup, redirect to the same page as login would
+        if (redirectTo !== '/') {
+          alert(`After confirming your email, you'll be redirected to complete your order.`);
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -119,8 +127,8 @@ export default function LoginPage() {
               {mode === 'forgot' && 'Reset Password'}
             </h1>
             <p className="text-gray-500 mt-1">
-              {mode === 'login' && 'Sign in to your KB Stylish account'}
-              {mode === 'signup' && 'Join KB Stylish today'}
+              {mode === 'login' && (redirectTo === '/checkout' ? 'Sign in to complete your order' : 'Sign in to your KB Stylish account')}
+              {mode === 'signup' && (redirectTo === '/checkout' ? 'Create account to complete your order' : 'Join KB Stylish today')}
               {mode === 'forgot' && 'Enter your email to reset password'}
             </p>
           </div>

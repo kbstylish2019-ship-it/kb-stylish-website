@@ -151,24 +151,24 @@ export default function Header({ isAuthed = false }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Top Bar - Contact & Help */}
-      <div className="bg-[#1565C0] text-white text-xs">
-        <div className="max-w-7xl mx-auto px-4 py-1.5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="tel:+9779801227448" className="flex items-center gap-1 hover:text-yellow-300 transition-colors">
-              <Phone className="h-3 w-3" />
-              <span>+977 9801227448</span>
+      <div className="bg-[#1565C0] text-white text-sm sm:text-xs">
+        <div className="max-w-7xl mx-auto px-4 py-2 sm:py-1.5 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <a href="tel:+9779801227448" className="flex items-center gap-1.5 hover:text-yellow-300 transition-colors font-medium">
+              <Phone className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+              <span className="text-xs sm:text-xs">+977 9801227448</span>
             </a>
             <span className="hidden sm:inline text-white/50">|</span>
-            <span className="hidden sm:inline text-white/70">Free delivery on orders above Rs. 2000</span>
+            <span className="hidden sm:inline text-white/80 text-xs">Free delivery on orders above Rs. 2000</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/book-a-stylist" className="hover:text-yellow-300 transition-colors">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-xs">
+            <Link href="/book-a-stylist" className="hover:text-yellow-300 transition-colors font-medium">
               Book a Stylist
             </Link>
-            <Link href="/vendor/apply" className="hover:text-yellow-300 transition-colors">
+            <Link href="/vendor/apply" className="hover:text-yellow-300 transition-colors font-medium hidden sm:inline">
               Become a Seller
             </Link>
-            <Link href="/support" className="hover:text-yellow-300 transition-colors">
+            <Link href="/support" className="hover:text-yellow-300 transition-colors font-medium hidden md:inline">
               Help & Support
             </Link>
           </div>
@@ -177,44 +177,51 @@ export default function Header({ isAuthed = false }: HeaderProps) {
 
       {/* Main Header */}
       <div className="bg-[#1976D2]">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-4 lg:gap-8">
-            {/* Logo */}
-            <Link href="/" className="flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-4 py-2.5 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-4 lg:gap-8">
+            {/* Logo - Hidden on mobile when search is focused */}
+            <Link href="/" className="hidden sm:flex flex-shrink-0">
               <div className="flex items-center gap-3">
                 <img 
                   src="/kbStylishlogo.png" 
                   alt="KB Stylish Logo" 
-                  className="h-14 w-auto"
+                  className="h-8 md:h-9 w-auto"
                 />
-                <div className="hidden sm:block">
-                  <span className="text-white font-bold text-xl">KB Stylish</span>
-                  <p className="text-white/70 text-[10px] -mt-1">Friendly, hygienic and affordable</p>
-                </div>
               </div>
             </Link>
 
-            {/* Search Bar */}
+            {/* Mobile Logo - Compact version for mobile only */}
+            <Link href="/" className="sm:hidden flex-shrink-0 transition-all duration-200 search-unfocused:block search-focused:hidden">
+              <div className="flex items-center">
+                <img 
+                  src="/kbStylishlogo.png" 
+                  alt="KB Stylish" 
+                  className="h-7 w-auto max-w-[70px] object-contain"
+                />
+              </div>
+            </Link>
+
+            {/* Search Bar - Expands on mobile when focused */}
             <form onSubmit={handleSearch} className="flex-1 max-w-3xl">
               <div className="relative flex">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for facial kits, hair care, salon products..."
-                  className="w-full h-11 pl-4 pr-12 rounded-l-lg bg-white text-gray-800 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="Search for facial kits, hair care..."
+                  className="w-full h-9 sm:h-10 pl-3 sm:pl-4 pr-10 sm:pr-12 rounded-l-lg bg-white text-gray-800 placeholder-gray-500 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
                 />
                 <button
                   type="submit"
-                  className="px-6 h-11 bg-[#FFD400] hover:bg-[#FFC107] rounded-r-lg transition-colors flex items-center justify-center"
+                  className="px-3 sm:px-5 h-9 sm:h-10 bg-[#FFD400] hover:bg-[#FFC107] rounded-r-lg transition-colors flex items-center justify-center flex-shrink-0"
                 >
-                  <Search className="h-5 w-5 text-gray-800" />
+                  <Search className="h-4 sm:h-5 w-4 sm:w-5 text-gray-800" />
                 </button>
               </div>
             </form>
 
-            {/* Right Side Actions */}
-            <div className="flex items-center gap-2 lg:gap-4">
+            {/* Right Side Actions - Compact on mobile */}
+            <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
               {/* User Menu */}
               {isAuthed ? (
                 <div className="relative" ref={userMenuRef}>
@@ -306,20 +313,20 @@ export default function Header({ isAuthed = false }: HeaderProps) {
                 </Link>
               )}
 
-              {/* Cart - Highlighted with yellow */}
+              {/* Cart - Compact on mobile */}
               <Link
                 href="/checkout"
-                className="relative flex items-center gap-2 bg-[#FFD400] text-gray-900 px-3 py-1.5 rounded-lg hover:bg-[#FFC107] transition-colors"
+                className="relative flex items-center gap-1 bg-[#FFD400] text-gray-900 px-1.5 sm:px-3 py-1.5 rounded-lg hover:bg-[#FFC107] transition-colors flex-shrink-0"
                 data-testid="cart-button"
               >
                 <div className="relative">
-                  <ShoppingCart className="h-6 w-6" />
+                  <ShoppingCart className="h-5 sm:h-6 w-5 sm:w-6" />
                   {totalItems > 0 && (
                     <span
                       data-testid="cart-badge"
-                      className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
+                      className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 h-4 w-4 sm:h-5 sm:w-5 bg-red-500 text-white text-[9px] sm:text-xs font-bold rounded-full flex items-center justify-center"
                     >
-                      {totalItems > 99 ? "99+" : totalItems}
+                      {totalItems > 9 ? "9+" : totalItems}
                     </span>
                   )}
                 </div>
@@ -329,11 +336,11 @@ export default function Header({ isAuthed = false }: HeaderProps) {
               {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 text-white hover:text-yellow-300 transition-colors"
+                className="lg:hidden p-1 sm:p-2 text-white hover:text-yellow-300 transition-colors flex-shrink-0"
                 aria-label="Toggle menu"
                 aria-expanded={mobileMenuOpen}
               >
-                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {mobileMenuOpen ? <X className="h-5 sm:h-6 w-5 sm:w-6" /> : <Menu className="h-5 sm:h-6 w-5 sm:w-6" />}
               </button>
             </div>
           </div>

@@ -57,7 +57,7 @@ export function validateAddress(a: Address): boolean {
 export function calculateCosts(products: CartProductItem[], bookingPrice: number, discount: number): OrderCosts {
   const productSubtotal = products.reduce((s, p) => s + p.price * p.quantity, 0);
   const serviceFees = bookingPrice;
-  const shipping = productSubtotal >= 2000 ? 0 : (products.length > 0 ? 99 : 0);
+  const shipping = 0; // Free shipping for launch period
   const discountApplied = Math.min(discount, productSubtotal + serviceFees);
   const total = productSubtotal + serviceFees + shipping - discountApplied;
   return { productSubtotal, serviceFees, shipping, discount: discountApplied, total, currency: "NPR" };

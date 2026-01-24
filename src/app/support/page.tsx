@@ -66,11 +66,11 @@ export default async function SupportPage() {
           <div className="inline-flex items-center gap-2 mb-4">
             <MessageCircle className="h-8 w-8 text-[var(--kb-accent-gold)]" />
             <h1 className="text-3xl font-bold text-foreground">
-              Contact Support
+              Help & Support
             </h1>
           </div>
           <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
-            Need help? We're here to assist you. Submit a support ticket and our team will respond within 24 hours.
+            Need help with an order, have a question, or want to suggest a product? We're here for you! Submit your request and our team will respond within 24 hours.
           </p>
         </div>
 
@@ -78,9 +78,12 @@ export default async function SupportPage() {
           {/* Support Form */}
           <div className="lg:col-span-2">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
-              <h2 className="text-xl font-semibold text-foreground mb-6">
-                Submit a Support Request
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                How Can We Help You?
               </h2>
+              <p className="text-sm text-foreground/60 mb-6">
+                Whether it's a support issue, general inquiry, or product suggestion - we're all ears!
+              </p>
               <SupportForm categories={supportCategories} />
             </div>
           </div>

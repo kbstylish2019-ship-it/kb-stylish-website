@@ -69,7 +69,7 @@ export default function HeroBanner() {
   const banner = banners[currentSlide];
 
   return (
-    <div className="relative h-[300px] sm:h-[350px] lg:h-[400px] rounded-lg overflow-hidden group">
+    <div className="relative h-[240px] sm:h-[260px] lg:h-[280px] rounded-lg overflow-hidden group">
       {/* Background Gradient */}
       <div className={`absolute inset-0 bg-gradient-to-r ${banner.bgColor}`} />
 

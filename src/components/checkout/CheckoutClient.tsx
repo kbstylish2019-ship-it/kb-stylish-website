@@ -22,11 +22,6 @@ import {
 
 export default function CheckoutClient() {
   const router = useRouter();
-  // Lazy load AuthModal locally so we can open it from checkout
-  const AuthModal = React.useMemo(
-    () => dynamic(() => import("@/components/features/AuthModal"), { ssr: false, loading: () => null }),
-    []
-  );
   // Use the new decoupled store with separated products and bookings
   const productItems = useDecoupledCartStore((state) => state.productItems);
   const bookingItems = useDecoupledCartStore((state) => state.bookingItems);
@@ -67,7 +62,6 @@ export default function CheckoutClient() {
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderTotal, setOrderTotal] = useState<number>(0); // Store the total before clearing cart
-  const [authOpen, setAuthOpen] = useState(false);
 
   // Change appointment modal state
   const [changeModalOpen, setChangeModalOpen] = useState(false);
@@ -299,7 +293,12 @@ export default function CheckoutClient() {
         } else if (response.error?.includes('Cart is empty')) {
           setOrderError('Your cart is empty. Please add items to continue.');
         } else if (hasAuthError) {
-          setOrderError('Payment gateway authentication failed. Please try again or contact support.');
+          // Guest user trying to checkout - redirect to login page
+          console.log('[CheckoutClient] Guest user detected, redirecting to login');
+          setIsProcessingOrder(false);
+          // Redirect to login page with return URL
+          router.push('/auth/login?redirect=/checkout');
+          return;
         } else {
           setOrderError(response.error || 'Failed to process order. Please try again.');
         }
@@ -623,10 +622,7 @@ export default function CheckoutClient() {
         />
       )}
 
-      {/* Auth Modal (opened when checkout requires login) */}
-      {authOpen && (
-        <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-      )}
+      {/* Auth Modal - Removed, using page redirect instead */}
     </div>
   );
 }

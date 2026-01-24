@@ -215,7 +215,7 @@ export default function SupportForm({ categories }: SupportFormProps) {
           type="text"
           value={formData.subject}
           onChange={(e) => handleInputChange('subject', e.target.value)}
-          placeholder="Brief description of your issue"
+          placeholder="e.g., Order issue, Product suggestion, General inquiry"
           className="bg-white/5 border-white/20 text-foreground placeholder:text-foreground/50"
           maxLength={200}
         />
@@ -246,7 +246,7 @@ export default function SupportForm({ categories }: SupportFormProps) {
         <Textarea
           value={formData.message}
           onChange={(e) => handleInputChange('message', e.target.value)}
-          placeholder="Please describe your issue in detail..."
+          placeholder="Describe your issue, question, or product suggestion in detail..."
           className="bg-white/5 border-white/20 text-foreground placeholder:text-foreground/50 min-h-[120px]"
           maxLength={5000}
         />
@@ -274,10 +274,14 @@ export default function SupportForm({ categories }: SupportFormProps) {
         ) : (
           <>
             <Send className="h-4 w-4 mr-2" />
-            Submit Support Ticket
+            Submit Request
           </>
         )}
       </Button>
+      
+      <p className="text-xs text-center text-foreground/50">
+        💡 Tip: For product suggestions, just describe what you'd like to see in our store!
+      </p>
     </form>
   );
 }

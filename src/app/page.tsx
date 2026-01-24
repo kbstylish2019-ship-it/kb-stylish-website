@@ -81,20 +81,28 @@ export default async function HomePage() {
 
           {/* Side Promotions - Takes 1 column */}
           <div className="hidden lg:flex flex-col gap-4">
-            {/* App Coming Soon Card */}
-            <div className="bg-gradient-to-br from-[#1976D2] to-[#0d47a1] rounded-lg p-4 text-white flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-5 w-5 text-yellow-300" />
-                <span className="text-sm font-medium">KB Stylish App</span>
+            {/* App Coming Soon Card - Simplified */}
+            <div className="bg-gradient-to-br from-[#1976D2] to-[#0d47a1] rounded-lg p-6 text-white h-full flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="h-6 w-6 text-yellow-300" />
+                  <span className="text-base font-semibold">KB Stylish App</span>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Download Our App Soon!</h3>
+                <p className="text-sm text-white/90 mb-4">
+                  Get exclusive deals, easy ordering, and track your deliveries in real-time
+                </p>
               </div>
-              <p className="text-xs text-white/80 mb-2">Exclusive deals & easy ordering</p>
-              <div className="bg-white/10 rounded-lg px-3 py-2 text-center">
-                <span className="text-sm font-semibold text-yellow-300">🚀 Coming Soon!</span>
+              
+              {/* Coming Soon Badge */}
+              <div className="bg-white rounded-lg px-4 py-3 text-center shadow-md">
+                <span className="text-base font-bold text-yellow-500">🚀 Coming Soon!</span>
+                <p className="text-xs text-gray-900 mt-1">Available on iOS & Android</p>
               </div>
             </div>
 
-            {/* Special Offer Card */}
-            <div className="bg-gradient-to-br from-[#E31B23] to-[#b71c1c] rounded-lg p-4 text-white flex-1">
+            {/* Special Offer Card - COMMENTED OUT FOR LAUNCH */}
+            {/* <div className="bg-gradient-to-br from-[#E31B23] to-[#b71c1c] rounded-lg p-4 text-white flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <Gift className="h-5 w-5 text-yellow-300" />
                 <span className="text-sm font-medium">Launch Offer!</span>
@@ -107,7 +115,7 @@ export default async function HomePage() {
               >
                 Shop Now
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -119,8 +127,8 @@ export default async function HomePage() {
         </Suspense>
       </section>
 
-      {/* Flash Sale / Hot Deals Section */}
-      <section className="max-w-7xl mx-auto px-4 mt-6">
+      {/* Flash Sale / Hot Deals Section - COMMENTED OUT FOR LAUNCH */}
+      {/* <section className="max-w-7xl mx-auto px-4 mt-6">
         <div className="bg-gradient-to-r from-[#E31B23] to-[#ff5722] rounded-lg p-4 text-white">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -138,7 +146,7 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Trending Products Section */}
       <section className="max-w-7xl mx-auto px-4 mt-6">
@@ -152,12 +160,12 @@ export default async function HomePage() {
         </Suspense>
       </section>
 
-      {/* Promotional Banners */}
-      <section className="max-w-7xl mx-auto px-4 mt-6">
+      {/* Promotional Banners - COMMENTED OUT FOR LAUNCH (Facial Kits, Hair Care, Combo Deals) */}
+      {/* <section className="max-w-7xl mx-auto px-4 mt-6">
         <Suspense fallback={<div className="h-48 bg-gray-100 animate-pulse rounded-lg" />}>
           <PromoBanners />
         </Suspense>
-      </section>
+      </section> */}
 
       {/* Skincare Category - Dynamic from DB */}
       {skinCareProducts.length > 0 && (
@@ -204,8 +212,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Combo Deals Section */}
-      {activeCombos.length > 0 && (
+      {/* Combo Deals Section - COMMENTED OUT FOR LAUNCH (Testing Phase) */}
+      {/* {activeCombos.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 mt-6">
           <div className="bg-gradient-to-r from-[#FFD400] to-[#FFC107] rounded-lg p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
@@ -220,7 +228,6 @@ export default async function HomePage() {
                 View All <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
-            {/* Horizontal scroll on mobile, grid on desktop */}
             <div className="flex md:grid md:grid-cols-4 gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
               {activeCombos.map((combo) => {
                 const comboPrice = combo.combo_price_cents / 100;
@@ -248,13 +255,11 @@ export default async function HomePage() {
                           <Package className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
                         </div>
                       )}
-                      {/* Savings Badge */}
                       {savingsPercent > 0 && (
                         <span className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                           -{savingsPercent}%
                         </span>
                       )}
-                      {/* Limited Stock Badge */}
                       {remaining !== null && remaining <= 5 && remaining > 0 && (
                         <span className="absolute bottom-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                           Only {remaining} left!
@@ -271,7 +276,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Call to Action - Book a Stylist */}
       <section className="max-w-7xl mx-auto px-4 mt-6 mb-8">
@@ -335,7 +340,9 @@ export default async function HomePage() {
             <h3 className="text-lg font-bold mb-2">Call or WhatsApp</h3>
             <p className="text-xs text-white/60 mb-2">FOR ORDER</p>
             <a
-              href="tel:+9779801227448"
+              href="https://wa.me/9779801227448"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-[#25D366] text-white text-lg font-bold px-4 py-2 rounded-full hover:bg-[#128C7E] transition-colors"
             >
               📞 9801227448

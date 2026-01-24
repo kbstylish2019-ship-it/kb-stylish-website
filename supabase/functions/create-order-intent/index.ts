@@ -202,7 +202,7 @@ Deno.serve(async (req)=>{
     // TODO: Add tax calculation when frontend displays it
     // For now, match frontend calculation (no tax, just shipping)
     const tax_cents = 0; // Tax not displayed in frontend yet
-    const shipping_cents = 9900; // NPR 99 = 9900 paisa (flat rate for MVP)
+    const shipping_cents = 0; // Free shipping for launch period
     const total_cents = subtotal_cents + tax_cents + shipping_cents;
     // ========================================================================
     // PAYMENT GATEWAY INTEGRATION
