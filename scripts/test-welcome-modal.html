@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome Modal Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6 text-gray-800">Welcome Modal Test Suite</h1>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Test Controls</h2>
+      
+      <div class="space-y-3">
+        <button onclick="clearSession()" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+          Clear Session & Reload (Show Modal)
+        </button>
+        
+        <button onclick="checkSession()" class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+          Check Session Status
+        </button>
+        
+        <button onclick="openDevTools()" class="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">
+          Open DevTools Console
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Test Checklist</h2>
+      
+      <div class="space-y-2">
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Modal appears after 800ms on first visit</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Close button (X) works</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Clicking backdrop closes modal</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>ESC key closes modal</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>"Explore Products" button closes modal</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Modal doesn't appear on page refresh (same session)</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Responsive on mobile (test with DevTools)</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Smooth animations (fade-in/scale)</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Body scroll locked when modal open</span>
+        </label>
+        
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" class="w-5 h-5 text-blue-600">
+          <span>Image loads correctly</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Session Info</h2>
+      <div id="sessionInfo" class="bg-gray-50 p-4 rounded font-mono text-sm">
+        Click "Check Session Status" to view
+      </div>
+    </div>
+
+    <div class="mt-6 bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+      <h3 class="font-semibold text-blue-900 mb-2">Testing Instructions</h3>
+      <ol class="list-decimal list-inside space-y-1 text-sm text-blue-800">
+        <li>Open your KB Stylish site in a new incognito window</li>
+        <li>Wait for the modal to appear (should take ~800ms)</li>
+        <li>Test all close methods (X button, backdrop, ESC key, CTA button)</li>
+        <li>Refresh the page - modal should NOT appear again</li>
+        <li>Use "Clear Session & Reload" button to test again</li>
+        <li>Test responsive design using DevTools device emulation</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    function clearSession() {
+      sessionStorage.removeItem('kb_welcome_modal_seen');
+      alert('Session cleared! Reloading page...');
+      location.reload();
+    }
+
+    function checkSession() {
+      const hasSeenModal = sessionStorage.getItem('kb_welcome_modal_seen');
+      const info = {
+        'Modal Seen': hasSeenModal ? 'Yes' : 'No',
+        'Session Storage Key': 'kb_welcome_modal_seen',
+        'Value': hasSeenModal || 'null',
+        'Timestamp': new Date().toLocaleString()
+      };
+      
+      document.getElementById('sessionInfo').innerHTML = 
+        Object.entries(info)
+          .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+          .join('');
+    }
+
+    function openDevTools() {
+      alert('Press F12 or Ctrl+Shift+I (Cmd+Option+I on Mac) to open DevTools');
+    }
+
+    // Auto-check session on load
+    window.addEventListener('load', checkSession);
+  </script>
+</body>
+</html>
