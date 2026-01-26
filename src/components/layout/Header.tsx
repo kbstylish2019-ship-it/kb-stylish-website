@@ -159,7 +159,7 @@ export default function Header({ isAuthed = false }: HeaderProps) {
               <span className="text-xs sm:text-xs">+977 9801227448</span>
             </a>
             <span className="hidden sm:inline text-white/50">|</span>
-            <span className="hidden sm:inline text-white/80 text-xs">Free delivery on orders above Rs. 2000</span>
+            <span className="hidden sm:inline text-white/80 text-xs">Free delivery on orders inside kathmandu</span>
           </div>
           <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-xs">
             <Link href="/book-a-stylist" className="hover:text-yellow-300 transition-colors font-medium">
