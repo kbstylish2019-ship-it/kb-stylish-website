@@ -46,6 +46,8 @@ export interface CreateTicketRequest {
   message: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   order_reference?: string;
+  customer_email: string;  // NEW: Required for public submissions
+  customer_name: string;   // NEW: Required for public submissions
 }
 
 export interface TicketListResponse {

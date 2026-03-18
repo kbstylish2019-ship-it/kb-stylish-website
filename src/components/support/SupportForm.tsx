@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Send, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface SupportFormProps {
   categories: SupportCategory[];
+  user?: User | null;  // NEW: Optional user for public access
 }
 
 interface FormData {
@@ -20,23 +22,29 @@ interface FormData {
   message: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   order_reference: string;
+  customer_email: string;  // NEW: For public submissions
+  customer_name: string;   // NEW: For public submissions
 }
 
 interface FormErrors {
   category_id?: string;
   subject?: string;
   message?: string;
+  customer_email?: string;  // NEW
+  customer_name?: string;   // NEW
   general?: string;
 }
 
-export default function SupportForm({ categories }: SupportFormProps) {
+export default function SupportForm({ categories, user }: SupportFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     category_id: '',
     subject: '',
     message: '',
     priority: 'medium',
-    order_reference: ''
+    order_reference: '',
+    customer_email: user?.email || '',  // Auto-fill if authenticated
+    customer_name: user?.user_metadata?.display_name || ''  // Auto-fill if authenticated
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +53,20 @@ export default function SupportForm({ categories }: SupportFormProps) {
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
+
+    // Validate email for public users
+    if (!user && !formData.customer_email.trim()) {
+      newErrors.customer_email = 'Email is required';
+    } else if (!user && !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.customer_email)) {
+      newErrors.customer_email = 'Please enter a valid email address';
+    }
+
+    // Validate name for public users
+    if (!user && !formData.customer_name.trim()) {
+      newErrors.customer_name = 'Name is required';
+    } else if (!user && formData.customer_name.trim().length < 2) {
+      newErrors.customer_name = 'Name must be at least 2 characters';
+    }
 
     if (!formData.subject.trim()) {
       newErrors.subject = 'Subject is required';
@@ -73,24 +95,21 @@ export default function SupportForm({ categories }: SupportFormProps) {
     setErrors({});
 
     try {
-      // Get access token from client-side Supabase
+      // Get access token if authenticated (optional for public users)
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setErrors({ general: 'Please log in to submit a support ticket' });
-        return;
-      }
 
       const ticketData: CreateTicketRequest = {
         category_id: formData.category_id || undefined,
         subject: formData.subject.trim(),
         message: formData.message.trim(),
         priority: formData.priority,
-        order_reference: formData.order_reference.trim() || undefined
+        order_reference: formData.order_reference.trim() || undefined,
+        customer_email: formData.customer_email.trim(),  // NEW: Required for public
+        customer_name: formData.customer_name.trim()     // NEW: Required for public
       };
 
-      const result = await createSupportTicket(ticketData, session.access_token);
+      const result = await createSupportTicket(ticketData, session?.access_token);
 
       if (result.success && result.ticket_id) {
         setIsSuccess(true);
@@ -102,7 +121,9 @@ export default function SupportForm({ categories }: SupportFormProps) {
           subject: '',
           message: '',
           priority: 'medium',
-          order_reference: ''
+          order_reference: '',
+          customer_email: user?.email || '',
+          customer_name: user?.user_metadata?.display_name || ''
         });
       } else {
         setErrors({ general: result.error || 'Failed to create support ticket' });
@@ -168,6 +189,56 @@ export default function SupportForm({ categories }: SupportFormProps) {
             {errors.general}
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Public User Notice */}
+      {!user && (
+        <Alert className="border-blue-500/20 bg-blue-500/10">
+          <Info className="h-4 w-4 text-blue-400" />
+          <AlertDescription className="text-blue-300">
+            <strong>No account needed!</strong> Just provide your email and we'll get back to you within 24 hours.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Email Field (for public users) */}
+      {!user && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            Your Email *
+          </label>
+          <Input
+            type="email"
+            value={formData.customer_email}
+            onChange={(e) => handleInputChange('customer_email', e.target.value)}
+            placeholder="your.email@example.com"
+            required
+            className="bg-white/5 border-white/20 text-foreground placeholder:text-foreground/50"
+          />
+          {errors.customer_email && (
+            <p className="text-sm text-red-400">{errors.customer_email}</p>
+          )}
+        </div>
+      )}
+
+      {/* Name Field (for public users) */}
+      {!user && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            Your Name *
+          </label>
+          <Input
+            type="text"
+            value={formData.customer_name}
+            onChange={(e) => handleInputChange('customer_name', e.target.value)}
+            placeholder="Your full name"
+            required
+            className="bg-white/5 border-white/20 text-foreground placeholder:text-foreground/50"
+          />
+          {errors.customer_name && (
+            <p className="text-sm text-red-400">{errors.customer_name}</p>
+          )}
+        </div>
       )}
 
       {/* Category Selection */}

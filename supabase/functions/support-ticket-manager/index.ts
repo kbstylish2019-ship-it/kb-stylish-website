@@ -23,6 +23,8 @@ interface CreateTicketRequest {
   message: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   order_reference?: string;
+  customer_email: string;  // NEW: Required for public submissions
+  customer_name: string;   // NEW: Required for public submissions
 }
 
 interface AddMessageRequest {
@@ -48,13 +50,8 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     const { userClient, serviceClient } = createDualClients(authHeader);
-    const authenticatedUser = await verifyUser(authHeader, userClient);
     
-    if (!authenticatedUser) {
-      console.warn('[Support Ticket Manager] No authenticated user');
-      return errorResponse('Authentication required', 'AUTH_REQUIRED', 401, cors);
-    }
-    
+    // For public ticket creation, authentication is optional
     const url = new URL(req.url);
     const pathSegments = url.pathname.split('/').filter(Boolean);
     
@@ -66,6 +63,20 @@ Deno.serve(async (req) => {
     const action = pathSegments[0] || 'tickets';
     const method = req.method;
     
+    // Allow public access to POST /create
+    if (method === 'POST' && action === 'create') {
+      console.log('[Support Ticket Manager] Public ticket creation request');
+      return await handleCreateTicket(req, userClient, cors, authHeader);
+    }
+    
+    // All other routes require authentication
+    const authenticatedUser = await verifyUser(authHeader, userClient);
+    
+    if (!authenticatedUser) {
+      console.warn('[Support Ticket Manager] No authenticated user');
+      return errorResponse('Authentication required', 'AUTH_REQUIRED', 401, cors);
+    }
+    
     console.log('[Support Ticket Manager] Request:', {
       method,
       action,
@@ -76,9 +87,6 @@ Deno.serve(async (req) => {
     
     // Route handling
     switch (`${method}:${action}`) {
-      case 'POST:create':
-        return await handleCreateTicket(req, userClient, cors);
-        
       case 'GET:tickets':
         return await handleGetUserTickets(url, userClient, cors);
         
@@ -134,16 +142,26 @@ Deno.serve(async (req) => {
 // CUSTOMER HANDLERS
 // ============================================================================
 
-async function handleCreateTicket(req: Request, userClient: any, cors: any) {
+async function handleCreateTicket(req: Request, userClient: any, cors: any, authHeader?: string | null) {
   try {
     const payload: CreateTicketRequest = await req.json();
+    
+    const isPublicSubmission = !authHeader || authHeader === 'Bearer null' || authHeader === 'Bearer undefined';
+    
+    console.log('[Support Ticket Manager] Create ticket:', {
+      isPublic: isPublicSubmission,
+      hasEmail: !!payload.customer_email,
+      hasName: !!payload.customer_name
+    });
     
     const { data, error } = await userClient.rpc('create_support_ticket', {
       p_category_id: payload.category_id || null,
       p_subject: payload.subject,
       p_message_text: payload.message,
       p_priority: payload.priority || 'medium',
-      p_order_reference: payload.order_reference || null
+      p_order_reference: payload.order_reference || null,
+      p_customer_email: payload.customer_email || null,  // NEW
+      p_customer_name: payload.customer_name || null     // NEW
     });
     
     if (error) {
@@ -155,10 +173,13 @@ async function handleCreateTicket(req: Request, userClient: any, cors: any) {
       return errorResponse(data.error || 'Failed to create ticket', data.code || 'CREATE_FAILED', 400, cors);
     }
     
-    console.log('[Support Ticket Manager] Ticket created:', data.ticket_id);
+    console.log('[Support Ticket Manager] Ticket created:', {
+      ticketId: data.ticket_id,
+      isPublic: data.is_public
+    });
     
     // TODO: Send confirmation email
-    // await sendTicketConfirmationEmail(data.ticket_id);
+    // await sendTicketConfirmationEmail(data.ticket_id, payload.customer_email);
     
     return new Response(JSON.stringify({
       success: true,

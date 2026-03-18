@@ -41,15 +41,11 @@ async function createServerSupabaseClient() {
 }
 
 export default async function SupportPage() {
-  // Check authentication
+  // Get user (may be null for public access)
   const supabase = await createServerSupabaseClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   
-  if (userError || !user) {
-    redirect('/auth/login?redirect=/support');
-  }
-  
-  // Fetch support categories from database directly
+  // Fetch support categories from database directly (public access via RLS)
   const { data: categories, error: categoriesError } = await supabase
     .from('support_categories')
     .select('*')
@@ -84,7 +80,7 @@ export default async function SupportPage() {
               <p className="text-sm text-foreground/60 mb-6">
                 Whether it's a support issue, general inquiry, or product suggestion - we're all ears!
               </p>
-              <SupportForm categories={supportCategories} />
+              <SupportForm categories={supportCategories} user={user} />
             </div>
           </div>
 

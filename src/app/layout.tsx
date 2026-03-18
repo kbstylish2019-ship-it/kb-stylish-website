@@ -20,9 +20,6 @@ const Footer = dynamic(() => import("@/components/layout/Footer"), {
   loading: () => <div className="h-64 mt-10 animate-pulse bg-gray-100" />,
 });
 
-// Welcome Modal for first-time visitors (client-side only)
-const WelcomeModal = dynamic(() => import("@/components/WelcomeModalWrapper"));
-
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -157,9 +154,6 @@ export default async function RootLayout({
 
         {/* CRITICAL: Manage auth session changes for cart */}
         <AuthSessionManager />
-
-        {/* Welcome Modal - First-time visitor experience */}
-        <WelcomeModal />
 
         {/* Header now gets cart data from the store */}
         <Header isAuthed={isAuthenticated} />
