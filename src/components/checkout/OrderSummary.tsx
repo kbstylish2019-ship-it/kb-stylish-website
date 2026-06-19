@@ -31,6 +31,7 @@ export default function OrderSummary({
 }: OrderSummaryProps) {
   const paymentBtns: { id: PaymentMethod; label: string }[] = [
     { id: "npx", label: "Nepal Payment (NPX)" },
+    { id: "khalti", label: "Khalti" },
     { id: "cod", label: "Cash on Delivery" },
   ];
 

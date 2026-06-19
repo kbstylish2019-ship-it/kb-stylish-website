@@ -48,14 +48,14 @@ export default function ProductSection({
         <div className="flex items-center gap-2">
           <button
             onClick={() => scroll('left')}
-            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+            className="hidden sm:flex w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full items-center justify-center transition-colors"
             aria-label="Scroll left"
           >
             <ChevronLeft className="h-5 w-5 text-gray-600" />
           </button>
           <button
             onClick={() => scroll('right')}
-            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+            className="hidden sm:flex w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full items-center justify-center transition-colors"
             aria-label="Scroll right"
           >
             <ChevronRight className="h-5 w-5 text-gray-600" />
@@ -72,10 +72,10 @@ export default function ProductSection({
       {/* Products Grid/Scroll */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory"
+        className="grid grid-cols-2 gap-3 sm:flex sm:gap-4 sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide sm:snap-x sm:snap-mandatory"
       >
         {products.map((product) => (
-          <div key={product.product_id} className="flex-shrink-0 w-[200px] snap-start">
+          <div key={product.product_id} className="w-full sm:flex-shrink-0 sm:w-[200px] sm:snap-start">
             <MarketplaceProductCard
               id={product.product_id}
               name={product.name}

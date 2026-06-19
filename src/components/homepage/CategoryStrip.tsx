@@ -99,8 +99,8 @@ export default function CategoryStrip() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="bg-white rounded-lg shadow-sm px-2 py-1.5">
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
         {categories.slice(0, 10).map((cat) => {
           const config = categoryConfig[cat.slug] || defaultConfig;
           const IconComponent = config.icon;
@@ -110,7 +110,7 @@ export default function CategoryStrip() {
             <Link
               key={cat.id}
               href={`/shop?category=${cat.slug}`}
-              className="flex flex-col items-center gap-2 min-w-[80px] p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              className="flex flex-col items-center gap-1.5 min-w-[72px] px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors group"
             >
               {hasImage ? (
                 <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-[#1976D2] group-hover:scale-110 transition-all">
