@@ -48,6 +48,7 @@ export default function AdminSidebar() {
       items: [
         { id: "users", label: "Users", href: "/admin/users" },
         { id: "vendors", label: "Vendors", href: "/admin/vendors" },
+        { id: "crm", label: "CRM & Loyalty", href: "/admin/crm" },
       ]
     },
     {

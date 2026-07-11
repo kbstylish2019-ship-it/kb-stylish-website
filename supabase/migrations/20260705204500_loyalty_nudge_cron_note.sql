@@ -1,0 +1,5 @@
+-- NOTE (2026-07-05): pg_cron job 'loyalty-nudge-daily' (id 12) was created directly on the
+-- live DB: schedule '15 3 * * *' (= 09:00 Asia/Kathmandu) POSTing to
+-- /functions/v1/loyalty-nudge-worker with the service-role key (same pattern as
+-- booking-reminder-hourly). Recorded here for history; do not re-run blindly (would duplicate).
+-- SELECT cron.schedule('loyalty-nudge-daily', '15 3 * * *', ...);

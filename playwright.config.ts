@@ -7,7 +7,7 @@ export default defineConfig({
   // Set to 'tests' so only files in tests folder are scanned
   testDir: './tests',
   // Only run our Playwright E2E spec here
-  testMatch: ['trust-engine.spec.ts'],
+  testMatch: ['trust-engine.spec.ts', 'loyalty-crm.spec.ts'],
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
