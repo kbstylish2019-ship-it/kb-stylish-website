@@ -31,12 +31,15 @@ export const metadata: Metadata = {
   title: "KB Stylish",
   description: "KB Stylish — Nepal's premier multi-vendor fashion and style marketplace.",
   icons: {
+    // Square icons only - browser shortcut tiles ignore non-square images
+    // (the wide wordmark logo was why tiles fell back to the grey globe).
     icon: [
-      { url: "/favicon.ico", type: "image/x-icon" },
-      { url: "/kbStylishlogo.png", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "48x48" },
+      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
     apple: [
-      { url: "/kbStylishlogo.png" },
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
     ],
   },
 };
