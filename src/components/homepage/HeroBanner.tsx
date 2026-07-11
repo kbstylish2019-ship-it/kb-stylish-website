@@ -5,7 +5,28 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+// Campaign slides show the client's designed poster WHOLE (object-contain, right side)
+// on a matching brand gradient — never as a cropped/faded background, so the poster's
+// own text stays readable on every screen size.
 const banners = [
+  {
+    id: 5,
+    title: "Unlock Your Winter Glow",
+    subtitle: "Herbal Gold 5-Step Facial at Rs 999 — FREE Haircut & Beard Trim",
+    cta: "Book Your Glow",
+    href: "/book-a-stylist",
+    bgColor: "from-[#0d2440] via-[#1e3a5f] to-[#2a5b8f]",
+    poster: "/banners/winter-glow-offer.jpeg",
+  },
+  {
+    id: 6,
+    title: "Get Groomed Look",
+    subtitle: "Metallic Silver Colour at only Rs 1,200 — Limited Time Offer",
+    cta: "Book a Stylist",
+    href: "/book-a-stylist",
+    bgColor: "from-[#132f66] to-[#2151a1]",
+    poster: "/banners/groomed-look-offer.jpeg",
+  },
   {
     id: 1,
     title: "Professional Salon Products",
@@ -67,35 +88,53 @@ export default function HeroBanner() {
   };
 
   const banner = banners[currentSlide];
+  const hasPoster = 'poster' in banner && !!banner.poster;
 
   return (
     <div className="relative h-[240px] sm:h-[260px] lg:h-[280px] rounded-lg overflow-hidden group">
       {/* Background Gradient */}
       <div className={`absolute inset-0 bg-gradient-to-r ${banner.bgColor}`} />
 
-      {/* Background Image */}
-      <div className="absolute inset-0 opacity-30">
-        <Image
-          src={banner.image}
-          alt={banner.title}
-          fill
-          className="object-cover"
-          priority
-        />
-      </div>
+      {/* Background Image (stock slides) */}
+      {'image' in banner && banner.image && (
+        <div className="absolute inset-0 opacity-30">
+          <Image
+            src={banner.image}
+            alt={banner.title}
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+      )}
+
+      {/* Campaign poster (shown whole, right side) */}
+      {hasPoster && (
+        <div className="absolute right-1 sm:right-4 lg:right-8 inset-y-2">
+          <div className="relative h-full w-[160px] sm:w-[180px] lg:w-[200px]">
+            <Image
+              src={banner.poster}
+              alt={banner.title}
+              fill
+              className="object-contain object-right drop-shadow-xl rounded"
+              priority
+            />
+          </div>
+        </div>
+      )}
 
       {/* Content */}
-      <div className="relative h-full flex items-center px-8 lg:px-12">
+      <div className={`relative h-full flex items-center ${hasPoster ? 'px-4 sm:px-8 lg:px-12 pr-[170px] sm:pr-[200px] lg:pr-[230px]' : 'px-8 lg:px-12'}`}>
         <div className="max-w-lg">
-          <h2 className={`text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 ${banner.bgColor.includes('FFD400') ? 'text-gray-800' : 'text-white'}`}>
+          <h2 className={`${hasPoster ? 'text-lg sm:text-3xl lg:text-4xl mb-1.5 sm:mb-3' : 'text-3xl sm:text-4xl lg:text-5xl mb-3'} font-bold ${banner.bgColor.includes('FFD400') ? 'text-gray-800' : 'text-white'}`}>
             {banner.title}
           </h2>
-          <p className={`text-lg sm:text-xl mb-6 ${banner.bgColor.includes('FFD400') ? 'text-gray-700' : 'text-white/90'}`}>
+          <p className={`${hasPoster ? 'text-xs sm:text-base lg:text-lg mb-3 sm:mb-5' : 'text-lg sm:text-xl mb-6'} ${banner.bgColor.includes('FFD400') ? 'text-gray-700' : 'text-white/90'}`}>
             {banner.subtitle}
           </p>
           <Link
             href={banner.href}
-            className={`inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all hover:scale-105 ${
+            className={`inline-flex items-center gap-2 ${hasPoster ? 'px-4 py-2 text-sm sm:px-6 sm:py-3 sm:text-base' : 'px-6 py-3'} rounded-full font-semibold transition-all hover:scale-105 ${
               banner.bgColor.includes('FFD400')
                 ? 'bg-gray-800 text-white hover:bg-gray-700'
                 : 'bg-[#FFD400] text-gray-800 hover:bg-yellow-300'
