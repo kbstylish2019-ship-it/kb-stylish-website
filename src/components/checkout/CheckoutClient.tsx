@@ -248,6 +248,10 @@ export default function CheckoutClient() {
     setOrderError(null);
 
     try {
+      const bookingReservationIds = bookingItems
+        .map((item) => item.reservation_id || item.id)
+        .filter(Boolean);
+
       // Step 1: Create order intent with backend (includes payment gateway integration)
       console.log('[CheckoutClient] Creating order intent with payment method:', payment);
       const response = await cartAPI.createOrderIntent({
@@ -263,6 +267,7 @@ export default function CheckoutClient() {
           country: 'Nepal',
           notes: address.notes || undefined  // Delivery instructions
         },
+        bookingReservationIds,
         metadata: {
           discount_code: discountCode || undefined,
         }
@@ -300,7 +305,11 @@ export default function CheckoutClient() {
           router.push('/auth/login?redirect=/checkout');
           return;
         } else {
-          setOrderError(response.error || 'Failed to process order. Please try again.');
+          // Surface the gateway's own message when there is one. Without this the
+          // customer only ever sees "Failed to initiate <gateway> payment", which
+          // hides actionable reasons like Khalti's Rs 10 live-mode minimum.
+          const base = response.error || 'Failed to process order. Please try again.';
+          setOrderError(detailsStr ? `${base} — ${detailsStr}` : base);
         }
         setIsProcessingOrder(false);
         return;

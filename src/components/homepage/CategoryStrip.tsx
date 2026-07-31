@@ -110,7 +110,9 @@ export default function CategoryStrip() {
             <Link
               key={cat.id}
               href={`/shop?category=${cat.slug}`}
-              className="flex flex-col items-center gap-2 w-[104px] sm:w-[124px] shrink-0 rounded-lg transition-colors group"
+              // Tight image-to-label gap on purpose: less air between the circle and
+              // its name makes the tile read as one larger object.
+              className="flex flex-col items-center gap-1 w-[104px] sm:w-[124px] shrink-0 rounded-lg transition-colors group"
             >
               {hasImage ? (
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-[#1976D2] group-hover:scale-110 transition-all">
