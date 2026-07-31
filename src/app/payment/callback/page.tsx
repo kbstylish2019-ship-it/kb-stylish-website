@@ -2,8 +2,27 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
 import { cartAPI } from '@/lib/api/cartClient';
 import { useDecoupledCartStore } from '@/lib/store/decoupledCartStore';
+
+/**
+ * The gateway returns here cross-site, where the cookie session is often not
+ * visible to our server routes. The browser session still holds a valid access
+ * token, so poll with it explicitly rather than relying on cookies.
+ */
+async function getAccessToken(): Promise<string | null> {
+  try {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function PaymentCallbackContent() {
   const searchParams = useSearchParams();
@@ -24,13 +43,16 @@ function PaymentCallbackContent() {
     
     const maxAttempts = 60; // Poll for up to 120 seconds (60 x 2s) - cron runs every 2 mins
     let attempts = 0;
-    
+    const accessToken = await getAccessToken();
+
     while (attempts < maxAttempts) {
       attempts++;
-      
+
       try {
         // Check if order exists using Supabase client directly
-        const response = await fetch(`/api/orders/check-status?payment_intent_id=${paymentIntentId}`);
+        const response = await fetch(`/api/orders/check-status?payment_intent_id=${paymentIntentId}`, {
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        });
         const data = await response.json();
         
         if (data.exists && data.order_number) {
@@ -73,10 +95,13 @@ function PaymentCallbackContent() {
       }
     }
     
-    // Timeout after 60 seconds
-    console.error('[PaymentCallback] Order creation timeout');
-    setStatus('error');
-    setError('Order is taking longer than expected. Please check your order history.');
+    // Timed out waiting for the order row to become visible.
+    // The payment is already verified by this point, so never show a failure
+    // screen here — it would tell a customer whose money left their wallet that
+    // verification failed. Send them to the confirmation page, which resolves
+    // the order by payment intent.
+    console.error('[PaymentCallback] Order visibility timeout; payment is verified, forwarding to confirmation');
+    router.push(`/order-confirmation?payment_intent_id=${paymentIntentId}`);
   }
 
   async function verifyPayment() {

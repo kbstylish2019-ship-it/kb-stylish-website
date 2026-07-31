@@ -18,6 +18,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Auth: prefer the caller's bearer token, fall back to cookies.
+    //
+    // The payment callback runs right after a cross-site return from the gateway,
+    // where the cookie session is often not visible to this route. The rest of the
+    // app authenticates with the browser session's access token (see cartClient's
+    // getAuthHeaders), and verify-payment succeeds on that same token. Without this,
+    // RLS ("auth.uid() = user_id") matched no rows, the poll reported "order not
+    // created" for its full 120s window, and the customer sat on "Finalizing Your
+    // Order" while their paid order existed the whole time.
+    const authHeader = request.headers.get('Authorization') ?? '';
+    const bearerToken = authHeader.toLowerCase().startsWith('bearer ')
+      ? authHeader.slice(7).trim()
+      : '';
+    const isUserToken = bearerToken && bearerToken !== process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,6 +46,9 @@ export async function GET(request: NextRequest) {
             });
           },
         },
+        ...(isUserToken
+          ? { global: { headers: { Authorization: `Bearer ${bearerToken}` } } }
+          : {}),
       }
     );
 
