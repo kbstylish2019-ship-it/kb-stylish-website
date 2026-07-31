@@ -110,26 +110,26 @@ export default function CategoryStrip() {
             <Link
               key={cat.id}
               href={`/shop?category=${cat.slug}`}
-              className="flex flex-col items-center gap-2 w-[92px] sm:w-[116px] shrink-0 rounded-lg transition-colors group"
+              className="flex flex-col items-center gap-2 w-[104px] sm:w-[124px] shrink-0 rounded-lg transition-colors group"
             >
               {hasImage ? (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-[#1976D2] group-hover:scale-110 transition-all">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-[#1976D2] group-hover:scale-110 transition-all">
                   <Image
                     src={cat.image_url!}
                     alt={cat.name}
-                    width={96}
-                    height={96}
+                    width={112}
+                    height={112}
                     className="w-full h-full object-cover"
                   />
                 </div>
               ) : (
-                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <IconComponent className="h-9 w-9 sm:h-10 sm:w-10" />
+                <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <IconComponent className="h-11 w-11 sm:h-12 sm:w-12" />
                 </div>
               )}
               {/* Labels wrap to 2 lines instead of nowrap — at this larger type size
                   long names like "Beauty & Spa Equipment" would collide with the next tile. */}
-              <span className="text-sm sm:text-[15px] font-medium leading-tight text-gray-800 text-center">
+              <span className="text-[15px] sm:text-base font-medium leading-tight text-gray-800 text-center">
                 {cat.name}
               </span>
             </Link>

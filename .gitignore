@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# scratch notes file — held live gateway credentials (Khalti / NPX) in plaintext.
+# Untracked 2026-07-31; keys must live in Supabase Edge Function secrets, not here.
+.md
+
 # vercel
 .vercel
 
