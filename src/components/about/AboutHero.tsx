@@ -30,8 +30,13 @@ export default function AboutHero() {
             </span>
           </h1>
           <p className="mt-4 text-base text-white/90 sm:text-lg leading-relaxed">
-            KB Stylish is a full-service beauty salon dedicated to consistently providing high client satisfaction 
-            by rendering excellent service, quality products, and furnishing an enjoyable atmosphere at an 
+            KB Stylish is Nepal&apos;s first integrated hair and beauty platform, offering salon services,
+            at-home beauty services, and a B2B/B2C e-commerce marketplace&mdash;all with a commitment to
+            quality, hygiene, and affordability.
+          </p>
+          <p className="mt-3 text-base text-white/80 sm:text-lg leading-relaxed">
+            We are a full-service beauty salon dedicated to consistently providing high client satisfaction
+            by rendering excellent service, quality products, and furnishing an enjoyable atmosphere at an
             acceptable price/value relationship.
           </p>
           <p className="mt-3 text-sm text-white/70">

@@ -8,6 +8,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // Campaign slides show the client's designed poster WHOLE (object-contain, right side)
 // on a matching brand gradient — never as a cropped/faded background, so the poster's
 // own text stays readable on every screen size.
+// EVERY slide must carry a client poster. Stock-photo slides were removed 2026-07-31 —
+// if a new slide has no artwork, don't add it, add the artwork first.
 const banners = [
   {
     id: 5,
@@ -28,40 +30,22 @@ const banners = [
     poster: "/banners/groomed-look-offer.jpeg",
   },
   {
-    id: 1,
-    title: "Professional Salon Products",
-    subtitle: "Up to 40% OFF on Premium Brands",
-    cta: "Shop Now",
-    href: "/shop",
-    bgColor: "from-[#1976D2] to-[#0d47a1]",
-    image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",
+    id: 7,
+    title: "The Weekly Confidence Reset",
+    subtitle: "Fresh Haircut. Fresh Mindset. Fresh Week.",
+    cta: "Book a Stylist",
+    href: "/book-a-stylist",
+    bgColor: "from-[#0b3a8f] to-[#062a6b]",
+    poster: "/banners/weekly-confidence-reset.jpeg",
   },
   {
-    id: 2,
-    title: "Facial Kits Collection",
-    subtitle: "Gold, Wine, Diamond & More",
-    cta: "Explore",
-    href: "/shop?category=facial-kits",
-    bgColor: "from-[#E31B23] to-[#b71c1c]",
-    image: "https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=800&q=80",
-  },
-  {
-    id: 3,
-    title: "Hair Care Essentials",
-    subtitle: "Shampoos, Serums & Treatments",
-    cta: "Shop Hair Care",
-    href: "/shop?category=hair-care",
-    bgColor: "from-[#7b1fa2] to-[#4a148c]",
-    image: "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800&q=80",
-  },
-  {
-    id: 4,
-    title: "Launch Special Combos",
-    subtitle: "Save up to 50% on Bundles",
-    cta: "View Combos",
-    href: "/shop?category=combos",
-    bgColor: "from-[#FFD400] to-[#FFC107]",
-    image: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=800&q=80",
+    id: 8,
+    title: "Professional Grooming",
+    subtitle: "Sharp cuts. Clean fades. Confident style.",
+    cta: "Book Now",
+    href: "/book-a-stylist",
+    bgColor: "from-[#12121a] to-[#2a2418]",
+    poster: "/banners/professional-grooming.jpeg",
   },
 ];
 
@@ -95,19 +79,6 @@ export default function HeroBanner() {
       {/* Background Gradient */}
       <div className={`absolute inset-0 bg-gradient-to-r ${banner.bgColor}`} />
 
-      {/* Background Image (stock slides) */}
-      {'image' in banner && banner.image && (
-        <div className="absolute inset-0 opacity-30">
-          <Image
-            src={banner.image}
-            alt={banner.title}
-            fill
-            className="object-cover"
-            priority
-          />
-        </div>
-      )}
-
       {/* Campaign poster (shown whole, right side) */}
       {hasPoster && (
         <div className="absolute right-1 sm:right-4 lg:right-8 inset-y-2">
@@ -126,19 +97,15 @@ export default function HeroBanner() {
       {/* Content */}
       <div className={`relative h-full flex items-center ${hasPoster ? 'px-4 sm:px-8 lg:px-12 pr-[170px] sm:pr-[200px] lg:pr-[230px]' : 'px-8 lg:px-12'}`}>
         <div className="max-w-lg">
-          <h2 className={`${hasPoster ? 'text-lg sm:text-3xl lg:text-4xl mb-1.5 sm:mb-3' : 'text-3xl sm:text-4xl lg:text-5xl mb-3'} font-bold ${banner.bgColor.includes('FFD400') ? 'text-gray-800' : 'text-white'}`}>
+          <h2 className={`${hasPoster ? 'text-lg sm:text-3xl lg:text-4xl mb-1.5 sm:mb-3' : 'text-3xl sm:text-4xl lg:text-5xl mb-3'} font-bold text-white`}>
             {banner.title}
           </h2>
-          <p className={`${hasPoster ? 'text-xs sm:text-base lg:text-lg mb-3 sm:mb-5' : 'text-lg sm:text-xl mb-6'} ${banner.bgColor.includes('FFD400') ? 'text-gray-700' : 'text-white/90'}`}>
+          <p className={`${hasPoster ? 'text-xs sm:text-base lg:text-lg mb-3 sm:mb-5' : 'text-lg sm:text-xl mb-6'} text-white/90`}>
             {banner.subtitle}
           </p>
           <Link
             href={banner.href}
-            className={`inline-flex items-center gap-2 ${hasPoster ? 'px-4 py-2 text-sm sm:px-6 sm:py-3 sm:text-base' : 'px-6 py-3'} rounded-full font-semibold transition-all hover:scale-105 ${
-              banner.bgColor.includes('FFD400')
-                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                : 'bg-[#FFD400] text-gray-800 hover:bg-yellow-300'
-            }`}
+            className={`inline-flex items-center gap-2 ${hasPoster ? 'px-4 py-2 text-sm sm:px-6 sm:py-3 sm:text-base' : 'px-6 py-3'} rounded-full font-semibold transition-all hover:scale-105 bg-[#FFD400] text-gray-800 hover:bg-yellow-300`}
           >
             {banner.cta}
             <ChevronRight className="h-5 w-5" />

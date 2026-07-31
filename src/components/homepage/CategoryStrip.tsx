@@ -90,17 +90,17 @@ export default function CategoryStrip() {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="flex items-center justify-center h-20">
-          <Loader2 className="h-6 w-6 animate-spin text-[#1976D2]" />
-        </div>
+      <div className="flex items-center justify-center h-28">
+        <Loader2 className="h-6 w-6 animate-spin text-[#1976D2]" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm px-2 py-1.5">
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+    // No card chrome: the strip sits directly on the page background so the
+    // circles read as the section itself rather than content padded inside a box.
+    <div>
+      <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide">
         {categories.slice(0, 10).map((cat) => {
           const config = categoryConfig[cat.slug] || defaultConfig;
           const IconComponent = config.icon;
@@ -110,24 +110,26 @@ export default function CategoryStrip() {
             <Link
               key={cat.id}
               href={`/shop?category=${cat.slug}`}
-              className="flex flex-col items-center gap-1.5 min-w-[72px] px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors group"
+              className="flex flex-col items-center gap-2 w-[92px] sm:w-[116px] shrink-0 rounded-lg transition-colors group"
             >
               {hasImage ? (
-                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-[#1976D2] group-hover:scale-110 transition-all">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-[#1976D2] group-hover:scale-110 transition-all">
                   <Image
                     src={cat.image_url!}
                     alt={cat.name}
-                    width={56}
-                    height={56}
+                    width={96}
+                    height={96}
                     className="w-full h-full object-cover"
                   />
                 </div>
               ) : (
-                <div className={`w-14 h-14 rounded-full ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <IconComponent className="h-6 w-6" />
+                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <IconComponent className="h-9 w-9 sm:h-10 sm:w-10" />
                 </div>
               )}
-              <span className="text-xs font-medium text-gray-700 text-center whitespace-nowrap">
+              {/* Labels wrap to 2 lines instead of nowrap — at this larger type size
+                  long names like "Beauty & Spa Equipment" would collide with the next tile. */}
+              <span className="text-sm sm:text-[15px] font-medium leading-tight text-gray-800 text-center">
                 {cat.name}
               </span>
             </Link>

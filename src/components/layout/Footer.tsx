@@ -17,10 +17,9 @@ export default function Footer() {
               />
             </div>
             <p className="text-sm text-gray-400 mb-4">
-              KB Stylish delivers expert hair and beauty services with personalization, hygiene, affordability, and comfort at the core. We are Nepal’s first integrated home-service and B2B/B2C e-commerce platform for salon, beauty, and personal care products.
-
-
-              
+              KB Stylish is Nepal’s first integrated hair and beauty platform, offering salon services,
+              at-home beauty services, and a B2B/B2C e-commerce marketplace—all with a commitment to
+              quality, hygiene, and affordability.
             </p>
             <div className="flex gap-3">
               <a href="https://www.facebook.com/kbstylish" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#1976D2] transition-colors">

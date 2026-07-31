@@ -461,7 +461,7 @@ export default function OnboardingWizardClient() {
         </div>
         <div className="flex gap-3 justify-center">
           <button
-            onClick={() => window.location.href = `/admin/stylists/schedules/manage`}
+            onClick={() => window.location.href = `/admin/schedules/manage`}
             className="rounded-lg bg-[var(--kb-primary-brand)] px-6 py-2 font-medium text-white hover:opacity-90 transition-opacity"
           >
             Setup Schedule →
