@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import FocusTrap from "focus-trap-react";
-import { CalendarDays, Clock, Scissors, X, Loader2, AlertCircle } from "lucide-react";
+import { CalendarDays, Clock, Scissors, X, Loader2, AlertCircle, Check, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useDecoupledCartStore } from "@/lib/store/decoupledCartStore";
 import { 
@@ -40,7 +40,11 @@ export default function BookingModal({
   const router = useRouter();
   // Use individual selectors to avoid infinite loop
   const addBookingItem = useDecoupledCartStore((state) => state.addBookingItem);
+  const removeBookingItem = useDecoupledCartStore((state) => state.removeBookingItem);
   const isAddingBooking = useDecoupledCartStore((state) => state.isAddingBooking);
+  // The cart store is the single source of truth for what will reach checkout, so
+  // read the running list from it rather than mirroring it in local state.
+  const bookingItems = useDecoupledCartStore((state) => state.bookingItems);
   const [selectedService, setSelectedService] = React.useState<BookingService | null>(null);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = React.useState<AvailableSlot | null>(null);
@@ -48,6 +52,7 @@ export default function BookingModal({
   const [isLoadingSlots, setIsLoadingSlots] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [bookingError, setBookingError] = React.useState<string | null>(null);
+  const [justAdded, setJustAdded] = React.useState<string | null>(null);
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
@@ -57,6 +62,7 @@ export default function BookingModal({
       setSelectedSlot(null);
       setAvailableSlots([]);
       setBookingError(null);
+      setJustAdded(null);
     } else if (closeButtonRef.current) {
       closeButtonRef.current.focus();
     }
@@ -153,11 +159,13 @@ export default function BookingModal({
         });
         
         if (success) {
-          // WORLD-CLASS FUNNEL: Navigate directly to checkout
-          console.log('[BookingModal] Successfully added booking to cart, navigating to checkout...');
-          onClose();
-          // Seamless navigation to checkout page
-          router.push('/checkout');
+          // Stay in the modal so several services can be reserved in one visit.
+          // Each add creates its own reservation; checkout receives them together.
+          setJustAdded(reservationResponse.service_name || selectedService.name);
+          setSelectedService(null);
+          setSelectedDate(null);
+          setSelectedSlot(null);
+          setAvailableSlots([]);
         } else {
           setBookingError('Failed to add booking to cart. Please try again.');
         }
@@ -237,7 +245,10 @@ export default function BookingModal({
                       name="service"
                       className="sr-only"
                       checked={active}
-                      onChange={() => setSelectedService(svc)}
+                      onChange={() => {
+                        setSelectedService(svc);
+                        setJustAdded(null);
+                      }}
                       aria-label={`Service ${svc.name}`}
                     />
                     <div>
@@ -361,9 +372,58 @@ export default function BookingModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/10 px-5 py-4">
+        {/* Appointments reserved so far. Each one is a separate reservation; they
+            all travel to checkout together. */}
+        {bookingItems.length > 0 && (
+          <div className="flex-shrink-0 border-t border-white/10 bg-white/[0.02] px-5 py-3" data-testid="booking-cart-summary">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-sm font-medium">
+                {bookingItems.length} appointment{bookingItems.length === 1 ? "" : "s"} ready
+              </div>
+              <div className="text-sm font-semibold">
+                NPR {bookingItems.reduce((sum, b) => sum + b.price, 0).toLocaleString("en-NP")}
+              </div>
+            </div>
+            <ul className="space-y-1">
+              {bookingItems.map((b) => (
+                <li key={b.reservation_id} className="flex items-center justify-between gap-3 text-xs text-foreground/70">
+                  <span className="truncate">
+                    {b.service_name}
+                    {b.start_time && (
+                      <span className="text-foreground/50">
+                        {" · "}
+                        {new Date(b.start_time).toLocaleString("en-GB", {
+                          timeZone: "Asia/Kathmandu",
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeBookingItem(b.reservation_id)}
+                    className="rounded p-1 text-foreground/50 hover:bg-white/10 hover:text-red-400"
+                    aria-label={`Remove ${b.service_name}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 border-t border-white/10 px-5 py-4">
           <div className="text-sm text-foreground/70">
-            {selectedService ? (
+            {justAdded ? (
+              <span className="inline-flex items-center gap-1.5 text-emerald-400">
+                <Check className="h-4 w-4" />
+                {justAdded} added — pick another service or check out
+              </span>
+            ) : selectedService ? (
               <>
                 {selectedService.name} • {selectedService.durationMinutes} mins
               </>
@@ -371,14 +431,29 @@ export default function BookingModal({
               <>Select service, date and time</>
             )}
           </div>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={!canConfirm}
-            className="inline-flex items-center justify-center rounded-lg bg-[var(--kb-primary-brand)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Confirm & Add to Cart
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={!canConfirm}
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--kb-primary-brand)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {bookingItems.length > 0 ? "Add Another" : "Confirm & Add to Cart"}
+            </button>
+            {bookingItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  router.push("/checkout");
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-[var(--kb-accent-gold)] px-4 py-2 text-sm font-medium text-black"
+                data-testid="booking-go-to-checkout"
+              >
+                Go to Checkout ({bookingItems.length})
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
