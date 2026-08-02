@@ -60,7 +60,7 @@ interface Booking {
 type FilterType = 'all' | 'upcoming' | 'past' | 'cancelled';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-[var(--kb-accent-gold)]/15 text-[var(--kb-accent-gold)] ring-[var(--kb-accent-gold)]/30',
+  pending: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-[var(--kb-accent-gold)]/15 dark:text-[var(--kb-accent-gold)] dark:ring-[var(--kb-accent-gold)]/30',
   confirmed: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
   in_progress: 'bg-[var(--kb-primary-brand)]/15 text-[var(--kb-primary-brand)] ring-[var(--kb-primary-brand)]/30',
   completed: 'bg-green-500/15 text-green-300 ring-green-500/30',
@@ -325,7 +325,7 @@ export default function MyBookingsClient({ userId }: { userId: string }) {
           <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium text-red-300">Error loading bookings</p>
-            <p className="text-sm text-red-200/80 mt-1">{error}</p>
+            <p className="text-sm text-red-800 dark:text-red-200/80 mt-1">{error}</p>
             <Button onClick={fetchBookings} size="sm" variant="outline" className="mt-2">
               Retry
             </Button>

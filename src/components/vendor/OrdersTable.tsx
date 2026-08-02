@@ -14,8 +14,8 @@ function formatCurrency(npr: number) {
 function StatusBadge({ label }: { label: Order["status"] }) {
   const map: Record<Order["status"], string> = {
     Pending: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-    Processing: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-    Shipped: "bg-indigo-500/15 text-indigo-300 ring-indigo-500/30",
+    Processing: "bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
+    Shipped: "bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-500/30",
     Delivered: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
     Cancelled: "bg-red-500/15 text-red-300 ring-red-500/30",
   };

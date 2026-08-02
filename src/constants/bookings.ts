@@ -95,11 +95,16 @@ export const PAGINATION = {
   MAX_LIMIT: 1000
 } as const;
 
+// Light-first with explicit dark: pairs. These badges render inside the stylist
+// dashboard, which is light. The previous values used `-400` text on `bg-*-500/20`
+// -- neither shade appears in the globals.css override list, so five of the six
+// states rendered at roughly 1.5:1 and were unreadable. Only CANCELLED worked,
+// because `text-red-400` happens to be one of the patched classes.
 export const STATUS_COLORS = {
-  [BOOKING_STATUS.PENDING]: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  [BOOKING_STATUS.CONFIRMED]: 'bg-green-500/20 text-green-400 border-green-500/30',
-  [BOOKING_STATUS.IN_PROGRESS]: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  [BOOKING_STATUS.COMPLETED]: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  [BOOKING_STATUS.CANCELLED]: 'bg-red-500/20 text-red-400 border-red-500/30',
-  [BOOKING_STATUS.NO_SHOW]: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+  [BOOKING_STATUS.PENDING]: 'bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/30',
+  [BOOKING_STATUS.CONFIRMED]: 'bg-green-50 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30',
+  [BOOKING_STATUS.IN_PROGRESS]: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30',
+  [BOOKING_STATUS.COMPLETED]: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30',
+  [BOOKING_STATUS.CANCELLED]: 'bg-red-50 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30',
+  [BOOKING_STATUS.NO_SHOW]: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/30'
 } as const;

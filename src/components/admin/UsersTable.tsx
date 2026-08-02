@@ -15,9 +15,11 @@ function formatCurrency(npr?: number) {
 function RoleBadge({ role }: { role: AdminUser["role"] }) {
   const map: Record<AdminUser["role"], string> = {
     guest: "bg-white/10 text-foreground/70 ring-white/10",
-    customer: "bg-indigo-500/15 text-indigo-300 ring-indigo-500/30",
-    vendor: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-    admin: "bg-violet-500/15 text-violet-300 ring-violet-500/30",
+    customer: "bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-500/30",
+    vendor: "bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
+    stylist: "bg-teal-50 text-teal-800 ring-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:ring-teal-500/30",
+    support: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+    admin: "bg-violet-50 text-violet-800 ring-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-500/30",
   };
   return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1", map[role])}>{role}</span>;
 }

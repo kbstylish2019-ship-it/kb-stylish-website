@@ -115,15 +115,10 @@ export default function ApplicationForm({
       try {
         // Get Supabase session for auth
         const supabase = createClient();
-        
-        // DEBUG: Check if user is authenticated
-        console.log('[ApplicationForm] Checking authentication...');
-        
+
         // CRITICAL FIX: Use getUser() which validates the JWT and refreshes if needed
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        console.log('[ApplicationForm] User:', user ? user.email : 'NULL', 'Error:', userError);
-        
+
         if (userError || !user) {
           console.error('[ApplicationForm] User not authenticated:', userError);
           throw new Error('You must be logged in to submit an application. Please refresh the page and try again.');
@@ -131,9 +126,7 @@ export default function ApplicationForm({
         
         // Now get the session (which should be available after getUser())
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        console.log('[ApplicationForm] Session after getUser():', session ? 'Found' : 'NULL');
-        
+
         if (!session || !session.access_token) {
           console.error('[ApplicationForm] No session after getUser()');
           throw new Error('Session expired. Please refresh the page and try again.');
@@ -218,7 +211,6 @@ export default function ApplicationForm({
     } catch (error) {
       // Retry on network errors
       if (attempt < 3) {
-        console.log(`Retrying submission (attempt ${attempt + 1}/3)...`);
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));  // Exponential backoff
         return submitWithRetry(application, accessToken, attempt + 1);
       }
@@ -252,7 +244,7 @@ export default function ApplicationForm({
             <StepIndicator step={currentStep} />
 
             {errors.length > 0 && (
-              <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+              <div className="mb-3 rounded-lg border border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 p-3 text-sm">
                 <ul className="list-disc space-y-1 pl-5">
                   {errors.map((e, i) => (
                     <li key={i}>{e}</li>
@@ -434,7 +426,7 @@ export default function ApplicationForm({
               />
             </div>
             {documentError && (
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+              <div className="rounded-lg border border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 p-3 text-sm">
                 {documentError}
               </div>
             )}

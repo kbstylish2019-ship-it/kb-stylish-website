@@ -373,20 +373,23 @@ export default function ChangeAppointmentModal({
                     
                     switch(status) {
                       case 'available':
+                        // Identical to BookingModal: `text-white` on a translucent white
+                        // chip is white-on-white here, because the checkout page renders
+                        // light. Keep both files keyed to --foreground.
                         slotClassName += active
                           ? "bg-[var(--kb-primary-brand)] text-white shadow-lg ring-2 ring-[var(--kb-primary-brand)]/50"
-                          : "bg-white/5 text-white hover:bg-white/10 ring-1 ring-white/10";
+                          : "bg-foreground/[0.04] text-foreground hover:bg-foreground/10 ring-1 ring-foreground/15";
                         break;
                       case 'booked':
-                        slotClassName += "bg-red-500/10 text-red-400/50 cursor-not-allowed ring-1 ring-red-500/20";
+                        slotClassName += "bg-red-500/10 text-red-700 dark:text-red-300/70 cursor-not-allowed ring-1 ring-red-500/20";
                         statusIcon = <span className="absolute top-0 right-0 -mt-1 -mr-1 text-xs">🔒</span>;
                         break;
                       case 'in_break':
-                        slotClassName += "bg-yellow-500/10 text-yellow-400/50 cursor-not-allowed ring-1 ring-yellow-500/20";
+                        slotClassName += "bg-yellow-500/10 text-yellow-800 dark:text-yellow-300/70 cursor-not-allowed ring-1 ring-yellow-500/20";
                         statusIcon = <span className="absolute top-0 right-0 -mt-1 -mr-1 text-xs">☕</span>;
                         break;
                       case 'unavailable':
-                        slotClassName += "bg-gray-500/5 text-gray-400/30 cursor-not-allowed ring-1 ring-gray-500/10";
+                        slotClassName += "bg-foreground/[0.03] text-foreground/40 cursor-not-allowed ring-1 ring-foreground/10";
                         break;
                     }
                     
