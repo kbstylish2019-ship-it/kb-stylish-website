@@ -221,7 +221,7 @@ export default function ScheduleModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] bg-[var(--kb-surface-dark)] border-white/10 flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] bg-[var(--kb-surface-dark)] border-foreground/10 flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Calendar className="w-5 h-5" />
@@ -231,29 +231,34 @@ export default function ScheduleModal({
 
         <form onSubmit={handleSubmit} className="space-y-4 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            {/* Colours are written light-first with explicit dark: pairs. globals.css
+                patches dark utility classes to light values, but only for exact class
+                names under main/aside -- an opacity modifier like text-amber-200/80
+                compiles to a different class and silently escapes every override,
+                rendering pale-on-white. Do not reintroduce /NN opacity on text here. */}
             {isEdit ? (
-              <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-sm">
-                <p className="font-medium text-amber-300">Editing the current schedule</p>
-                <p className="text-amber-200/80 text-xs">
+              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3 rounded-lg text-sm">
+                <p className="font-semibold text-amber-900 dark:text-amber-200">Editing the current schedule</p>
+                <p className="text-amber-800 dark:text-amber-100 text-xs">
                   Saving replaces this stylist&apos;s whole week. Unticking a day removes it;
                   ticking one adds it.
                 </p>
-                <p className="text-amber-200/60 text-xs mt-1">
+                <p className="text-amber-700 dark:text-amber-200 text-xs mt-1">
                   Currently {workingDayCount} working {workingDayCount === 1 ? 'day' : 'days'}
                 </p>
               </div>
             ) : (
-              <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm">
-                <p className="font-medium text-blue-300">Default Schedule Applied</p>
-                <p className="text-blue-200/80 text-xs">Mon-Fri: 9am-5pm | Sat-Sun: Off</p>
-                <p className="text-blue-200/60 text-xs mt-1">Customize below as needed</p>
+              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-3 rounded-lg text-sm">
+                <p className="font-semibold text-blue-900 dark:text-blue-200">Default Schedule Applied</p>
+                <p className="text-blue-800 dark:text-blue-100 text-xs">Mon-Fri: 9am-5pm | Sat-Sun: Off</p>
+                <p className="text-blue-700 dark:text-blue-200 text-xs mt-1">Customize below as needed</p>
               </div>
             )}
 
             <div>
             <table className="w-full">
               <thead className="sticky top-0 bg-[var(--kb-surface-dark)]">
-                <tr className="border-b border-white/10">
+                <tr className="border-b border-foreground/10">
                   <th className="text-left py-2 px-2 text-sm text-foreground/80">Day</th>
                   <th className="text-left py-2 px-2 text-sm text-foreground/80">Start Time</th>
                   <th className="text-left py-2 px-2 text-sm text-foreground/80">End Time</th>
@@ -262,7 +267,7 @@ export default function ScheduleModal({
               </thead>
               <tbody>
                 {DAYS.map(day => (
-                  <tr key={day.value} className="border-b border-white/5">
+                  <tr key={day.value} className="border-b border-foreground/5">
                     <td className="py-2 px-2 font-medium text-sm text-foreground">{day.label}</td>
                     <td className="py-2 px-2">
                       <input
@@ -271,7 +276,7 @@ export default function ScheduleModal({
                         value={schedule[day.value].start_time}
                         onChange={(e) => updateDay(day.value, 'start_time', e.target.value)}
                         disabled={schedule[day.value].isOff}
-                        className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-foreground disabled:opacity-50 disabled:bg-white/5 focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
+                        className="w-full rounded border border-foreground/10 bg-foreground/5 px-2 py-1 text-sm text-foreground disabled:opacity-50 disabled:bg-foreground/5 focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
                       />
                     </td>
                     <td className="py-2 px-2">
@@ -281,7 +286,7 @@ export default function ScheduleModal({
                         value={schedule[day.value].end_time}
                         onChange={(e) => updateDay(day.value, 'end_time', e.target.value)}
                         disabled={schedule[day.value].isOff}
-                        className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-foreground disabled:opacity-50 disabled:bg-white/5 focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
+                        className="w-full rounded border border-foreground/10 bg-foreground/5 px-2 py-1 text-sm text-foreground disabled:opacity-50 disabled:bg-foreground/5 focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -300,13 +305,13 @@ export default function ScheduleModal({
           </div>
 
           {/* Effective Dates Section */}
-          <div className="border-t border-white/10 pt-4 mt-4">
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
+          <div className="border-t border-foreground/10 pt-4 mt-4">
+            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg p-3 mb-4">
               <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-blue-300" />
-                <span className="font-medium text-blue-300">Optional: Set Effective Dates</span>
+                <Calendar className="w-4 h-4 text-blue-700 dark:text-blue-300" />
+                <span className="font-semibold text-blue-900 dark:text-blue-200">Optional: Set Effective Dates</span>
               </div>
-              <p className="text-xs text-blue-200/80">
+              <p className="text-xs text-blue-800 dark:text-blue-100">
                 Use this for seasonal workers, temporary schedules, or time-limited arrangements.
                 Leave empty for permanent schedules.
               </p>
@@ -320,7 +325,7 @@ export default function ScheduleModal({
                   id="effective-from"
                   value={effectiveFrom}
                   onChange={(e) => setEffectiveFrom(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
+                  className="w-full rounded-lg border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm text-foreground focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
                 />
                 <p className="text-xs text-foreground/60 mt-1">
                   Schedule starts on this date (default: today)
@@ -335,7 +340,7 @@ export default function ScheduleModal({
                   value={effectiveUntil}
                   onChange={(e) => setEffectiveUntil(e.target.value)}
                   min={effectiveFrom || undefined}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
+                  className="w-full rounded-lg border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm text-foreground focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
                 />
                 <p className="text-xs text-foreground/60 mt-1">
                   Schedule ends on this date (leave empty for permanent)
@@ -348,7 +353,7 @@ export default function ScheduleModal({
               <summary className="text-xs text-foreground/60 cursor-pointer hover:text-foreground/80 select-none">
                 📚 When to use effective dates? (Click to expand)
               </summary>
-              <div className="mt-2 space-y-1 text-xs text-foreground/70 pl-4 border-l-2 border-blue-500/30 ml-1">
+              <div className="mt-2 space-y-1 text-xs text-foreground/70 pl-4 border-l-2 border-blue-300 dark:border-blue-500/30 ml-1">
                 <div>✅ <strong>Summer intern:</strong> Jun 1 - Aug 31</div>
                 <div>✅ <strong>Holiday staff:</strong> Nov 15 - Jan 15</div>
                 <div>✅ <strong>Maternity cover:</strong> Mar 1 - May 31</div>
@@ -360,12 +365,12 @@ export default function ScheduleModal({
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex-shrink-0">
-              <p className="text-sm text-red-300">{error}</p>
+            <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg p-3 flex-shrink-0">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             </div>
           )}
 
-          <div className="flex gap-3 justify-end pt-2 border-t border-white/10 flex-shrink-0">
+          <div className="flex gap-3 justify-end pt-2 border-t border-foreground/10 flex-shrink-0">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
