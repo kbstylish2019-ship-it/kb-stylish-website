@@ -60,6 +60,9 @@ export default function CheckoutClient() {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  // The real ORD-... number. It is the only identifier /track-order accepts, so it
+  // has to reach the confirmation page -- the payment intent id is meaningless there.
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderTotal, setOrderTotal] = useState<number>(0); // Store the total before clearing cart
 
@@ -233,11 +236,13 @@ export default function CheckoutClient() {
   useEffect(() => {
     if (orderSuccess && paymentIntentId) {
       const timer = setTimeout(() => {
-        router.push(`/order-confirmation?payment_intent_id=${paymentIntentId}`);
+        const params = new URLSearchParams({ payment_intent_id: paymentIntentId });
+        if (orderNumber) params.set('order_number', orderNumber);
+        router.push(`/order-confirmation?${params.toString()}`);
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [orderSuccess, paymentIntentId, router]);
+  }, [orderSuccess, paymentIntentId, orderNumber, router]);
 
   const onPlaceOrder = async () => {
     if (!canPlaceOrder || isProcessingOrder || !payment) return;
@@ -376,7 +381,10 @@ export default function CheckoutClient() {
           );
 
           if (confirmationResult.success) {
-            console.log('[CheckoutClient] COD Order confirmed:', confirmationResult.orderNumber);
+            // Keep it: this is what the customer must be shown and must be able to track.
+            if (confirmationResult.orderNumber) {
+              setOrderNumber(confirmationResult.orderNumber);
+            }
           } else {
             // Order still processing - show success anyway but with note
             console.log('[CheckoutClient] COD Order still processing, showing success');

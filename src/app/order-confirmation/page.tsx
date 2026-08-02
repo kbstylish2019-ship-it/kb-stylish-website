@@ -8,6 +8,15 @@ function OrderConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const paymentIntentId = searchParams.get('payment_intent_id');
+  // The ORD-... number is the only thing /track-order accepts. Older links (and the
+  // rare case where order creation is still being polled) may not carry it, so fall
+  // back to the intent id rather than showing nothing.
+  const orderNumber = searchParams.get('order_number');
+  const trackable = Boolean(orderNumber);
+  const displayNumber = orderNumber || paymentIntentId?.toUpperCase();
+  // COD intents are minted as pi_cod_*. Those customers have paid nothing yet, so the
+  // timeline must not tell them their payment is confirmed.
+  const isCod = Boolean(paymentIntentId?.toLowerCase().startsWith('pi_cod'));
 
   if (!paymentIntentId) {
     return (
@@ -50,9 +59,20 @@ function OrderConfirmationContent() {
             <div>
               <p className="text-sm text-gray-400 mb-1">Order Number</p>
               <p className="text-xl font-mono font-bold text-[var(--kb-primary-brand)]">
-                #{paymentIntentId.toUpperCase()}
+                #{displayNumber}
               </p>
-              <p className="text-xs text-gray-400 mt-1">Save this number for tracking</p>
+              {trackable ? (
+                <Link
+                  href={`/track-order?order_number=${encodeURIComponent(orderNumber!)}`}
+                  className="text-xs text-[var(--kb-primary-brand)] underline mt-1 inline-block"
+                >
+                  Save this number — tap to track your order
+                </Link>
+              ) : (
+                <p className="text-xs text-gray-400 mt-1">
+                  Your order is still being created. Call 9801227448 if you need it right away.
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-400 mb-1">Order Date</p>
@@ -74,12 +94,20 @@ function OrderConfirmationContent() {
               <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-600"></div>
 
               {/* Status items */}
-              {[
-                { label: 'Payment Confirmed', completed: true, time: 'Just now' },
-                { label: 'Order Processing', completed: true, time: 'In progress' },
-                { label: 'Ready for Pickup/Delivery', completed: false, time: 'Pending' },
-                { label: 'Completed', completed: false, time: 'Pending' },
-              ].map((status, index) => (
+              {(isCod
+                ? [
+                    { label: 'Order received', completed: true, time: 'Just now' },
+                    { label: 'We will call you to confirm', completed: false, time: 'Within 1 working day' },
+                    { label: 'Out for delivery', completed: false, time: 'Pending' },
+                    { label: 'Delivered — pay cash to the rider', completed: false, time: 'Pending' },
+                  ]
+                : [
+                    { label: 'Payment Confirmed', completed: true, time: 'Just now' },
+                    { label: 'Order Processing', completed: true, time: 'In progress' },
+                    { label: 'Ready for Pickup/Delivery', completed: false, time: 'Pending' },
+                    { label: 'Completed', completed: false, time: 'Pending' },
+                  ]
+              ).map((status, index) => (
                 <div key={index} className="relative flex items-start gap-4 mb-4 last:mb-0">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
                     status.completed 
