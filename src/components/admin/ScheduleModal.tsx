@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,9 +13,19 @@ import { Loader2, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logError } from '@/lib/logging';
 
+export interface ExistingScheduleRow {
+  id?: string;
+  day_of_week: number;
+  start_time_local?: string | null;
+  end_time_local?: string | null;
+  effective_from?: string | null;
+  effective_until?: string | null;
+}
+
 interface StylistSchedule {
   stylist_user_id: string;
   display_name: string;
+  schedules?: ExistingScheduleRow[];
 }
 
 interface DaySchedule {
@@ -30,6 +40,7 @@ interface Props {
   onClose: () => void;
   stylist: StylistSchedule;
   onSuccess: () => void;
+  mode?: 'create' | 'edit';
 }
 
 const DAYS = [
@@ -52,12 +63,73 @@ const DEFAULT_SCHEDULE: Record<number, DaySchedule> = {
   0: { day_of_week: 0, start_time: '10:00', end_time: '16:00', isOff: true }
 };
 
-export default function CreateScheduleModal({ isOpen, onClose, stylist, onSuccess }: Props) {
+/** Postgres TIME arrives as "09:00:00"; <input type="time"> wants "09:00". */
+function toTimeInput(value: string | null | undefined, fallback: string): string {
+  if (!value) return fallback;
+  const match = /^(\d{2}):(\d{2})/.exec(value);
+  return match ? `${match[1]}:${match[2]}` : fallback;
+}
+
+/** Postgres DATE may arrive as a full timestamp; <input type="date"> wants "YYYY-MM-DD". */
+function toDateInput(value: string | null | undefined): string {
+  if (!value) return '';
+  return value.slice(0, 10);
+}
+
+/**
+ * Builds the editable week from whatever the stylist already has. Days with no
+ * existing row are shown as "off" but keep sensible default times, so ticking a
+ * day on does not leave empty time inputs.
+ */
+function buildInitialSchedule(existing?: ExistingScheduleRow[]): Record<number, DaySchedule> {
+  if (!existing || existing.length === 0) {
+    return DEFAULT_SCHEDULE;
+  }
+
+  const byDay = new Map(existing.map(row => [row.day_of_week, row]));
+
+  return DAYS.reduce((acc, day) => {
+    const row = byDay.get(day.value);
+    const fallback = DEFAULT_SCHEDULE[day.value];
+    acc[day.value] = row
+      ? {
+          day_of_week: day.value,
+          start_time: toTimeInput(row.start_time_local, fallback.start_time),
+          end_time: toTimeInput(row.end_time_local, fallback.end_time),
+          isOff: false
+        }
+      : { ...fallback, isOff: true };
+    return acc;
+  }, {} as Record<number, DaySchedule>);
+}
+
+export default function ScheduleModal({
+  isOpen,
+  onClose,
+  stylist,
+  onSuccess,
+  mode = 'create'
+}: Props) {
+  const isEdit = mode === 'edit';
+
   const [schedule, setSchedule] = useState<Record<number, DaySchedule>>(DEFAULT_SCHEDULE);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [effectiveFrom, setEffectiveFrom] = useState<string>('');
   const [effectiveUntil, setEffectiveUntil] = useState<string>('');
+
+  // Reload form state whenever the modal opens or the target stylist changes, so
+  // reopening on a different row never shows the previous stylist's hours.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setSchedule(buildInitialSchedule(isEdit ? stylist.schedules : undefined));
+    setError(null);
+
+    const firstRow = stylist.schedules?.[0];
+    setEffectiveFrom(isEdit ? toDateInput(firstRow?.effective_from) : '');
+    setEffectiveUntil(isEdit ? toDateInput(firstRow?.effective_until) : '');
+  }, [isOpen, isEdit, stylist.stylist_user_id, stylist.schedules]);
 
   function updateDay(dayOfWeek: number, field: keyof DaySchedule, value: any) {
     setSchedule(prev => ({
@@ -72,7 +144,7 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
 
   function validateSchedule(): string | null {
     const workingDays = Object.values(schedule).filter(day => !day.isOff);
-    
+
     if (workingDays.length === 0) {
       return 'At least one working day is required';
     }
@@ -83,10 +155,11 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
       }
     }
 
-    // Validate effective date range
+    // The DB enforces effective_until > effective_from strictly; equal dates would
+    // otherwise fail deep in the insert with an unreadable constraint error.
     if (effectiveFrom && effectiveUntil) {
-      if (new Date(effectiveFrom) > new Date(effectiveUntil)) {
-        return 'End date must be after start date';
+      if (new Date(effectiveFrom) >= new Date(effectiveUntil)) {
+        return 'End date must be later than the start date';
       }
     }
 
@@ -106,12 +179,15 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
     setError(null);
 
     try {
-      // Filter out days that are off
       const workingDays = Object.values(schedule)
         .filter(day => !day.isOff)
         .map(({ isOff, ...rest }) => rest);
 
-      const response = await fetch('/api/admin/schedules/create', {
+      const endpoint = isEdit
+        ? '/api/admin/schedules/update'
+        : '/api/admin/schedules/create';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,19 +201,23 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create schedule');
+        throw new Error(data.error || `Failed to ${isEdit ? 'update' : 'create'} schedule`);
       }
 
       onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create schedule';
+      const message = err instanceof Error
+        ? err.message
+        : `Failed to ${isEdit ? 'update' : 'create'} schedule`;
       setError(message);
       toast.error(message);
-      logError('CreateScheduleModal', 'Submit failed', { error: message });
+      logError('ScheduleModal', 'Submit failed', { mode, error: message });
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  const workingDayCount = Object.values(schedule).filter(d => !d.isOff).length;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -145,17 +225,30 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Calendar className="w-5 h-5" />
-            Create Schedule for {stylist.display_name}
+            {isEdit ? 'Edit Schedule for' : 'Create Schedule for'} {stylist.display_name}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-            <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm">
-              <p className="font-medium text-blue-300">Default Schedule Applied</p>
-              <p className="text-blue-200/80 text-xs">Mon-Fri: 9am-5pm | Sat-Sun: Off</p>
-              <p className="text-blue-200/60 text-xs mt-1">Customize below as needed</p>
-            </div>
+            {isEdit ? (
+              <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-sm">
+                <p className="font-medium text-amber-300">Editing the current schedule</p>
+                <p className="text-amber-200/80 text-xs">
+                  Saving replaces this stylist&apos;s whole week. Unticking a day removes it;
+                  ticking one adds it.
+                </p>
+                <p className="text-amber-200/60 text-xs mt-1">
+                  Currently {workingDayCount} working {workingDayCount === 1 ? 'day' : 'days'}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm">
+                <p className="font-medium text-blue-300">Default Schedule Applied</p>
+                <p className="text-blue-200/80 text-xs">Mon-Fri: 9am-5pm | Sat-Sun: Off</p>
+                <p className="text-blue-200/60 text-xs mt-1">Customize below as needed</p>
+              </div>
+            )}
 
             <div>
             <table className="w-full">
@@ -174,6 +267,7 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
                     <td className="py-2 px-2">
                       <input
                         type="time"
+                        aria-label={`${day.label} start time`}
                         value={schedule[day.value].start_time}
                         onChange={(e) => updateDay(day.value, 'start_time', e.target.value)}
                         disabled={schedule[day.value].isOff}
@@ -183,6 +277,7 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
                     <td className="py-2 px-2">
                       <input
                         type="time"
+                        aria-label={`${day.label} end time`}
                         value={schedule[day.value].end_time}
                         onChange={(e) => updateDay(day.value, 'end_time', e.target.value)}
                         disabled={schedule[day.value].isOff}
@@ -192,6 +287,7 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
                     <td className="py-2 px-2 text-center">
                       <input
                         type="checkbox"
+                        aria-label={`${day.label} day off`}
                         checked={schedule[day.value].isOff}
                         onChange={(e) => updateDay(day.value, 'isOff', e.target.checked)}
                         className="w-4 h-4"
@@ -277,10 +373,10 @@ export default function CreateScheduleModal({ isOpen, onClose, stylist, onSucces
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Creating...
+                  {isEdit ? 'Saving...' : 'Creating...'}
                 </>
               ) : (
-                'Create Schedule'
+                isEdit ? 'Save Changes' : 'Create Schedule'
               )}
             </Button>
           </div>

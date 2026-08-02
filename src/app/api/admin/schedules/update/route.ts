@@ -9,7 +9,7 @@ interface ScheduleDay {
   end_time: string;
 }
 
-interface CreateScheduleRequest {
+interface UpdateScheduleRequest {
   stylistId: string;
   schedules: ScheduleDay[];
   effectiveFrom?: string;  // Optional YYYY-MM-DD
@@ -17,20 +17,20 @@ interface CreateScheduleRequest {
 }
 
 /**
- * API Route: POST /api/admin/schedules/create
- * 
- * Creates base schedule for a stylist (all 7 days)
- * Admin-only endpoint
+ * API Route: POST /api/admin/schedules/update
+ *
+ * Replaces a stylist's active weekly schedule in one atomic operation.
+ * Admin-only endpoint.
  */
 export async function POST(request: NextRequest) {
   try {
-    const body: CreateScheduleRequest = await request.json();
+    const body: UpdateScheduleRequest = await request.json();
     const { stylistId, schedules, effectiveFrom, effectiveUntil } = body;
 
     // ========================================================================
     // VALIDATION
     // ========================================================================
-    
+
     if (!stylistId || !schedules || !Array.isArray(schedules) || schedules.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Invalid request data', code: 'VALIDATION_ERROR' },
@@ -38,9 +38,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate effective date range if both provided.
     // stylist_schedules_check2 requires effective_until > effective_from strictly,
-    // so equal dates must be rejected here rather than failing as a bare 23514.
+    // so equal dates must be rejected here rather than surfacing a raw 23514.
     if (effectiveFrom && effectiveUntil) {
       if (new Date(effectiveFrom) >= new Date(effectiveUntil)) {
         return NextResponse.json(
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate each schedule day
+    const seenDays = new Set<number>();
     for (const schedule of schedules) {
       if (
         schedule.day_of_week === undefined ||
@@ -63,7 +62,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Validate day range
       if (schedule.day_of_week < 0 || schedule.day_of_week > 6) {
         return NextResponse.json(
           { success: false, error: 'Invalid day_of_week (must be 0-6)', code: 'VALIDATION_ERROR' },
@@ -71,11 +69,25 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Validate time format
+      if (seenDays.has(schedule.day_of_week)) {
+        return NextResponse.json(
+          { success: false, error: 'Duplicate entry for the same day', code: 'VALIDATION_ERROR' },
+          { status: 400 }
+        );
+      }
+      seenDays.add(schedule.day_of_week);
+
       const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
       if (!timeRegex.test(schedule.start_time) || !timeRegex.test(schedule.end_time)) {
         return NextResponse.json(
           { success: false, error: 'Invalid time format (use HH:MM)', code: 'VALIDATION_ERROR' },
+          { status: 400 }
+        );
+      }
+
+      if (schedule.start_time >= schedule.end_time) {
+        return NextResponse.json(
+          { success: false, error: 'End time must be after start time', code: 'VALIDATION_ERROR' },
           { status: 400 }
         );
       }
@@ -84,7 +96,7 @@ export async function POST(request: NextRequest) {
     // ========================================================================
     // AUTHENTICATION & AUTHORIZATION
     // ========================================================================
-    
+
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -129,11 +141,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================================================================
-    // CREATE SCHEDULE VIA RPC
+    // REPLACE SCHEDULE VIA RPC
     // ========================================================================
-    
+
     const { data: result, error: rpcError } = await supabase.rpc(
-      'admin_create_stylist_schedule',
+      'admin_replace_stylist_schedule',
       {
         p_stylist_id: stylistId,
         p_schedules: schedules,
@@ -143,12 +155,12 @@ export async function POST(request: NextRequest) {
     );
 
     if (rpcError) {
-      logError('API:AdminScheduleCreate', 'RPC error', {
+      logError('API:AdminScheduleUpdate', 'RPC error', {
         stylistId,
         error: rpcError.message
       });
       return NextResponse.json(
-        { success: false, error: 'Failed to create schedule', code: 'DATABASE_ERROR' },
+        { success: false, error: 'Failed to update schedule', code: 'DATABASE_ERROR' },
         { status: 500 }
       );
     }
@@ -156,20 +168,23 @@ export async function POST(request: NextRequest) {
     if (!result || !result.success) {
       const statusCode = result?.code === 'NOT_FOUND' ? 404 :
                         result?.code === 'INVALID_TIME' ? 400 :
+                        result?.code === 'INVALID_DATE_RANGE' ? 400 :
+                        result?.code === 'VALIDATION_ERROR' ? 400 :
                         result?.code === 'FORBIDDEN' ? 403 : 500;
 
       return NextResponse.json(result, { status: statusCode });
     }
 
-    logInfo('API:AdminScheduleCreate', 'Schedule created', {
+    logInfo('API:AdminScheduleUpdate', 'Schedule updated', {
       stylistId,
-      createdCount: result.created_count
+      createdCount: result.created_count,
+      removedCount: result.removed_count
     });
 
     return NextResponse.json(result);
 
   } catch (error) {
-    logError('API:AdminScheduleCreate', 'Unexpected error', {
+    logError('API:AdminScheduleUpdate', 'Unexpected error', {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
     return NextResponse.json(

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button, Badge } from '@/components/ui/custom-ui';
 import { Calendar, Loader2, Plus, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
-import CreateScheduleModal from './CreateScheduleModal';
+import ScheduleModal from './ScheduleModal';
 
 interface StylistSchedule {
   stylist_user_id: string;
@@ -20,6 +20,7 @@ interface Props {
 export default function ScheduleManagementClient({ initialSchedules }: Props) {
   const [schedules, setSchedules] = useState<StylistSchedule[]>(initialSchedules);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedStylist, setSelectedStylist] = useState<StylistSchedule | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,14 +41,22 @@ export default function ScheduleManagementClient({ initialSchedules }: Props) {
   }
 
   function handleCreate(stylist: StylistSchedule) {
+    setModalMode('create');
     setSelectedStylist(stylist);
     setIsModalOpen(true);
   }
 
-  function handleScheduleCreated() {
+  function handleEdit(stylist: StylistSchedule) {
+    setModalMode('edit');
+    setSelectedStylist(stylist);
+    setIsModalOpen(true);
+  }
+
+  function handleScheduleSaved() {
+    const wasEdit = modalMode === 'edit';
     setIsModalOpen(false);
     setSelectedStylist(null);
-    toast.success('Schedule created successfully!');
+    toast.success(wasEdit ? 'Schedule updated successfully!' : 'Schedule created successfully!');
     refreshSchedules();
   }
 
@@ -107,9 +116,9 @@ export default function ScheduleManagementClient({ initialSchedules }: Props) {
                   </td>
                   <td className="py-4 px-4">
                     {schedule.has_schedule ? (
-                      <Button size="sm" variant="outline" disabled>
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(schedule)}>
                         <Edit className="w-4 h-4 mr-1" />
-                        Edit (Coming Soon)
+                        Edit Schedule
                       </Button>
                     ) : (
                       <Button size="sm" onClick={() => handleCreate(schedule)}>
@@ -132,16 +141,17 @@ export default function ScheduleManagementClient({ initialSchedules }: Props) {
         </div>
       </div>
 
-      {/* Create Schedule Modal */}
+      {/* Create / Edit Schedule Modal */}
       {selectedStylist && (
-        <CreateScheduleModal
+        <ScheduleModal
           isOpen={isModalOpen}
+          mode={modalMode}
           onClose={() => {
             setIsModalOpen(false);
             setSelectedStylist(null);
           }}
           stylist={selectedStylist}
-          onSuccess={handleScheduleCreated}
+          onSuccess={handleScheduleSaved}
         />
       )}
     </div>
