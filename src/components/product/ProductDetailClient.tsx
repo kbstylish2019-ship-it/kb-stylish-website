@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
+import toast from 'react-hot-toast';
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -82,9 +83,15 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
       if (success) {
         setAddedToCart(true);
         setTimeout(() => setAddedToCart(false), 2000);
+      } else {
+        // addProductItem returns false on a handled failure (stock, network, auth).
+        // Previously nothing happened at all: the button simply reset, so the
+        // customer had no way to tell the item had not been added.
+        toast.error('Could not add this to your cart. Please check your connection and try again.');
       }
     } catch (error) {
       console.error('Failed to add to cart:', error);
+      toast.error('Something went wrong. Please try again, or call us on 9801227448.');
     } finally {
       setIsAddingToCart(false);
     }
@@ -108,9 +115,12 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
       if (success) {
         // Redirect to checkout immediately
         router.push('/checkout');
+      } else {
+        toast.error('Could not start checkout. Please check your connection and try again.');
       }
     } catch (error) {
       console.error('Failed to buy now:', error);
+      toast.error('Something went wrong. Please try again, or call us on 9801227448.');
     } finally {
       setIsBuyingNow(false);
     }

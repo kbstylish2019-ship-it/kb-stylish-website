@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { cookies, headers } from "next/headers";
 import { CartInitializer } from "@/components/CartInitializer";
 import { AuthSessionManager } from "@/components/AuthSessionManager";
+import ToastProvider from "@/components/ui/ToastProvider";
 import { createServerClient } from '@supabase/ssr';
 import type { UserCapability } from "@/lib/types";
 
@@ -164,6 +165,9 @@ export default async function RootLayout({
         {children}
 
         <Footer />
+
+        {/* Without this, every toast.success/toast.error call in the app is a no-op. */}
+        <ToastProvider />
       </body>
     </html>
   );
