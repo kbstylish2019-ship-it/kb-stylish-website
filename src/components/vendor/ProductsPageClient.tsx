@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Search, Package, Edit, Trash2, Power, ImageIcon, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import toast from 'react-hot-toast';
 import type { VendorProductsResponse } from "@/lib/apiClient";
 import { toggleProductActive, deleteVendorProduct } from "@/app/actions/vendor";
 import AddProductModal from "./AddProductModal";
@@ -16,54 +17,76 @@ interface ProductsPageClientProps {
 
 export default function ProductsPageClient({ initialData, userId }: ProductsPageClientProps) {
   const [products, setProducts] = useState(initialData.products);
+
+  // Both product modals finish with router.refresh(), which re-renders the server
+  // component and hands down fresh initialData -- but useState ignores a changed
+  // initial value, so the table kept rendering the pre-edit list. A vendor saw
+  // "Product created successfully!", the modal closed, and nothing appeared; the
+  // natural response is to create it again. Re-sync whenever the server data changes.
+  useEffect(() => {
+    setProducts(initialData.products);
+  }, [initialData.products]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<typeof products[0] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'products' | 'reviews'>('products');
+  const [actionProductId, setActionProductId] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<{ id: string; name: string } | null>(null);
   
   const handleToggleActive = async (productId: string, currentActive: boolean) => {
     setIsLoading(true);
+    setActionProductId(productId);
     const newActive = !currentActive;
-    const result = await toggleProductActive(productId, newActive);
-    
-    if (result?.success) {
-      // Update local state
-      setProducts(prev => prev.map(p => 
-        p.id === productId ? { ...p, is_active: newActive } : p
-      ));
-    } else {
-      alert(result?.message || 'Failed to toggle product status');
+    try {
+      const result = await toggleProductActive(productId, newActive);
+      
+      if (result?.success) {
+        setProducts(prev => prev.map(p => 
+          p.id === productId ? { ...p, is_active: newActive } : p
+        ));
+        toast.success(`Product ${newActive ? 'activated' : 'deactivated'} successfully`);
+      } else {
+        toast.error(result?.message || 'Failed to toggle product status');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to toggle product status');
+    } finally {
+      setIsLoading(false);
+      setActionProductId(null);
     }
-    setIsLoading(false);
   };
   
-  const handleDelete = async (productId: string, productName: string) => {
-    if (!confirm(`Are you sure you want to delete "${productName}"? This will deactivate the product.`)) {
-      return;
-    }
-    
+  const handleDelete = (productId: string, productName: string) => {
+    setDeleteCandidate({ id: productId, name: productName });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteCandidate) return;
+
     setIsLoading(true);
-    const result = await deleteVendorProduct(productId);
-    
-    // ✅ FIX: Distinguish between actual deletion vs forced deactivation
-    if (result?.success) {
-      // TRUE SUCCESS: No active orders, product was deleted
-      // REMOVE from list (actual deletion)
-      setProducts(prev => prev.filter(p => p.id !== productId));
-    } else if (result?.message && result.message.includes('deactivated')) {
-      // PARTIAL SUCCESS: Had active orders, was deactivated instead
-      // KEEP in list but mark as inactive
-      setProducts(prev => prev.map(p => 
-        p.id === productId ? { ...p, is_active: false } : p
-      ));
-      // Show explanation
-      alert(result?.message || 'Product deactivated due to active orders');
-    } else {
-      // TRUE ERROR: Something went wrong
-      alert(result?.message || 'Failed to delete product');
+    setActionProductId(deleteCandidate.id);
+    try {
+      const result = await deleteVendorProduct(deleteCandidate.id);
+      
+      if (result?.success) {
+        setProducts(prev => prev.filter(p => p.id !== deleteCandidate.id));
+        toast.success('Product deleted successfully');
+      } else if (result?.message && result.message.includes('deactivated')) {
+        setProducts(prev => prev.map(p => 
+          p.id === deleteCandidate.id ? { ...p, is_active: false } : p
+        ));
+        toast.success(result?.message || 'Product deactivated due to active orders');
+      } else {
+        toast.error(result?.message || 'Failed to delete product');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete product');
+    } finally {
+      setDeleteCandidate(null);
+      setIsLoading(false);
+      setActionProductId(null);
     }
-    setIsLoading(false);
   };
   
   const filteredProducts = searchQuery
@@ -265,6 +288,7 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => setEditingProduct(product)}
+                              disabled={isLoading}
                               className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
                               title="Edit product"
                             >
@@ -272,17 +296,23 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
                             </button>
                             <button
                               onClick={() => handleToggleActive(product.id, product.is_active)}
-                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                              disabled={isLoading}
+                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                               title={product.is_active ? 'Deactivate' : 'Activate'}
                             >
                               <Power className={cn(
                                 "h-4 w-4",
-                                product.is_active ? "text-emerald-400" : "text-foreground/40"
+                                actionProductId === product.id
+                                  ? "text-amber-300"
+                                  : product.is_active
+                                  ? "text-emerald-400"
+                                  : "text-foreground/40"
                               )} />
                             </button>
                             <button
                               onClick={() => handleDelete(product.id, product.name)}
-                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10"
+                              disabled={isLoading}
+                              className="rounded-lg p-2 hover:bg-white/5 ring-1 ring-transparent hover:ring-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Delete"
                             >
                               <Trash2 className="h-4 w-4 text-red-400" />
@@ -300,6 +330,33 @@ export default function ProductsPageClient({ initialData, userId }: ProductsPage
           </>
         )}
       </div>
+
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteCandidate(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0f172a] p-6 shadow-xl ring-1 ring-white/10">
+            <h3 className="text-lg font-semibold text-white">Delete Product</h3>
+            <p className="mt-2 text-sm text-white/70">
+              Are you sure you want to delete <span className="font-medium text-white">{deleteCandidate.name}</span>? If the product has active orders, it will be deactivated instead.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteCandidate(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-white/70 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isLoading}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {isLoading ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Add Product Modal */}
       <AddProductModal 

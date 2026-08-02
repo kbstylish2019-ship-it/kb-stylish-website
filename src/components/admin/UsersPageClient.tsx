@@ -59,21 +59,51 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
     }
     
     const duration = prompt(
-      `Suspend ${user.display_name}?\n\nEnter duration in days (leave empty for permanent):`,
+      `Suspend ${user.display_name}?\n\nEnter number of days, or type PERMANENT to block them indefinitely.`,
       '7'
     );
-    
+
     if (duration === null) return; // Cancelled
-    
+
+    // Previously this was `duration ? parseInt(duration) : undefined`, which turned
+    // an empty box OR any non-numeric entry ("one week", "7 days", Devanagari
+    // digits) into NaN -> undefined -> a PERMANENT ban, reported to the admin as a
+    // plain "suspended successfully" with no mention of duration. Permanent is now
+    // something you have to ask for by name.
+    const raw = duration.trim();
+    let days: number | undefined;
+
+    if (raw.toUpperCase() === 'PERMANENT') {
+      days = undefined;
+    } else {
+      const parsed = Number(raw);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        showToast(
+          `"${raw || 'empty'}" is not a number of days. Enter a whole number like 7, or type PERMANENT.`,
+          'error'
+        );
+        return;
+      }
+      days = parsed;
+    }
+
+    const untilLabel = days
+      ? new Date(Date.now() + days * 86400000).toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        })
+      : null;
+
+    if (!confirm(
+      untilLabel
+        ? `Suspend ${user.display_name} for ${days} day(s)?\n\nThey will be blocked from signing in until ${untilLabel}, and cannot reach their orders or products until then.`
+        : `PERMANENTLY block ${user.display_name}?\n\nThis has no end date. They stay locked out until an admin reactivates them.`
+    )) return;
+
     const reason = prompt('Reason for suspension (optional):');
-    
+
     setIsLoading(true);
-    const result = await suspendUser(
-      user.id,
-      duration ? parseInt(duration) : undefined,
-      reason || undefined
-    );
-    
+    const result = await suspendUser(user.id, days, reason || undefined);
+
     if (result?.success) {
       // Update local state
       setUsers(prev => prev.map(u => 
@@ -81,7 +111,12 @@ export default function UsersPageClient({ initialData, currentUserId }: UsersPag
           ? { ...u, banned_until: result.banned_until, status: 'banned' as const }
           : u
       ));
-      showToast(`${user.display_name} suspended successfully`, 'success');
+      showToast(
+        untilLabel
+          ? `${user.display_name} suspended until ${untilLabel}`
+          : `${user.display_name} blocked permanently`,
+        'success'
+      );
     } else {
       showToast(result?.message || 'Failed to suspend user', 'error');
     }

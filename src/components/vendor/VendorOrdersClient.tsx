@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Package, Search, Clock, CheckCircle, Truck, Calendar, Edit2, Save, X } from "lucide-react";
 import { updateFulfillmentStatus } from "@/actions/vendor/fulfillment";
 import { useRouter } from "next/navigation";
+import toast from 'react-hot-toast';
 
 interface Order {
   id: string;
@@ -54,6 +55,7 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shippingCarrier, setShippingCarrier] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Normalize orders (handle both single order and array)
@@ -166,11 +168,11 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
     }
   };
 
-  const handleEditItem = (itemId: string, currentStatus: string) => {
-    setEditingItem(itemId);
-    setNewStatus(currentStatus);
-    setTrackingNumber("");
-    setShippingCarrier("");
+  const handleEditItem = (item: OrderItem) => {
+    setEditingItem(item.id);
+    setNewStatus(item.fulfillment_status);
+    setTrackingNumber(item.tracking_number || "");
+    setShippingCarrier(item.shipping_carrier || "");
     setUpdateError(null);
   };
 
@@ -182,35 +184,85 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
     setUpdateError(null);
   };
 
-  const handleSaveStatus = async (itemId: string) => {
-    setIsUpdating(true);
-    setUpdateError(null);
+  const handleSaveStatus = async (item: OrderItem) => {
+    const trimmedTrackingNumber = trackingNumber.trim();
+    const trimmedShippingCarrier = shippingCarrier.trim();
+    const statusChanged = newStatus !== item.fulfillment_status;
+    const trackingChanged = trimmedTrackingNumber !== (item.tracking_number || '').trim();
+    const carrierChanged = trimmedShippingCarrier !== (item.shipping_carrier || '').trim();
 
-    // Frontend validation for shipped status
-    if (newStatus === 'shipped' && (!trackingNumber.trim() || !shippingCarrier.trim())) {
-      setUpdateError('Tracking number and carrier are required for shipped status');
-      setIsUpdating(false);
+    if (!statusChanged && !trackingChanged && !carrierChanged) {
+      handleCancelEdit();
       return;
     }
 
-    const result = await updateFulfillmentStatus({
-      orderItemId: itemId,
-      newStatus: newStatus as any,
-      trackingNumber: trackingNumber || undefined,
-      shippingCarrier: shippingCarrier || undefined,
-    });
-
-    setIsUpdating(false);
-
-    if (result.success) {
-      setEditingItem(null);
-      setNewStatus("");
-      setTrackingNumber("");
-      setShippingCarrier("");
-      router.refresh();
-    } else {
-      setUpdateError(result.message);
+    // Cancelling sits in the same dropdown as Processing and Shipped, behind a
+    // button labelled only "Save". It is terminal -- update_fulfillment_status
+    // refuses any later change -- and it emails the customer a refund promise
+    // ("original payment method, 3-5 business days"). A mis-tap on a phone should
+    // not be able to do that silently.
+    if (newStatus === 'cancelled') {
+      const confirmed = confirm(
+        `Cancel "${item.product_name}"?\n\n` +
+        `This cannot be undone.\n\n` +
+        `The customer will be emailed that KB Stylish will refund NPR ${(item.total_price_cents / 100).toLocaleString('en-NP')} ` +
+        `to their original payment method within 3-5 business days.\n\n` +
+        `Only do this if you genuinely cannot fulfil the item.`
+      );
+      if (!confirmed) {
+        setNewStatus(item.fulfillment_status);
+        return;
+      }
     }
+
+    setIsUpdating(true);
+    setUpdatingItemId(item.id);
+    setUpdateError(null);
+
+    // Frontend validation for shipped status
+    if (newStatus === 'shipped' && (!trimmedTrackingNumber || !trimmedShippingCarrier)) {
+      setUpdateError('Tracking number and carrier are required for shipped status');
+      setIsUpdating(false);
+      setUpdatingItemId(null);
+      return;
+    }
+
+    try {
+      const result = await updateFulfillmentStatus({
+        orderItemId: item.id,
+        newStatus: newStatus as any,
+        trackingNumber: trimmedTrackingNumber || undefined,
+        shippingCarrier: trimmedShippingCarrier || undefined,
+      });
+
+      if (result.success) {
+        handleCancelEdit();
+        toast.success(`Order item marked as ${result.newStatus || newStatus}`);
+        router.refresh();
+      } else {
+        setUpdateError(result.message);
+        toast.error(result.message || 'Failed to update order status');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update order status';
+      setUpdateError(message);
+      toast.error(message);
+    } finally {
+      setIsUpdating(false);
+      setUpdatingItemId(null);
+    }
+  };
+
+  const isSaveDisabled = (item: OrderItem) => {
+    const trimmedTrackingNumber = trackingNumber.trim();
+    const trimmedShippingCarrier = shippingCarrier.trim();
+    const statusChanged = newStatus !== item.fulfillment_status;
+    const trackingChanged = trimmedTrackingNumber !== (item.tracking_number || '').trim();
+    const carrierChanged = trimmedShippingCarrier !== (item.shipping_carrier || '').trim();
+    const requiresShippingDetails = newStatus === 'shipped';
+    const hasRequiredShippingDetails = !requiresShippingDetails || (trimmedTrackingNumber.length > 0 && trimmedShippingCarrier.length > 0);
+
+    return isUpdating || (!statusChanged && !trackingChanged && !carrierChanged) || !hasRequiredShippingDetails;
   };
 
   // Helper function to get allowed next statuses based on current status
@@ -285,6 +337,7 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
@@ -383,7 +436,10 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
                             </label>
                             <select
                               value={newStatus}
-                              onChange={(e) => setNewStatus(e.target.value)}
+                              onChange={(e) => {
+                                setNewStatus(e.target.value);
+                                setUpdateError(null);
+                              }}
                               className="w-full px-3 py-2 bg-background border border-white/10 rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)] [&>option]:bg-[#1a1a1a] [&>option]:text-foreground"
                               disabled={isUpdating}
                             >
@@ -408,12 +464,33 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
                                 <input
                                   type="text"
                                   value={shippingCarrier}
-                                  onChange={(e) => setShippingCarrier(e.target.value)}
-                                  placeholder="e.g., Pathao Express, Nepal Post"
+                                  onChange={(e) => {
+                                    setShippingCarrier(e.target.value);
+                                    setUpdateError(null);
+                                  }}
+                                  placeholder='e.g. Pathao Express, Nepal Post, or "Self delivery"'
+                                  list="kb-carrier-options"
                                   className="w-full px-3 py-2 bg-background border border-white/10 rounded-lg text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
                                   disabled={isUpdating}
                                   required
                                 />
+                                {/* Delivered is only reachable from Shipped, and Shipped
+                                    demands a carrier + tracking number on both the client
+                                    and in update_fulfillment_status. A shop delivering on
+                                    its own scooter has neither, so its orders could never
+                                    reach Delivered -- and vendor payouts are calculated off
+                                    delivered GMV, so it would never get paid. Make the
+                                    self-delivery route explicit rather than changing the
+                                    server contract. */}
+                                <datalist id="kb-carrier-options">
+                                  <option value="Self delivery" />
+                                  <option value="Pathao Express" />
+                                  <option value="Nepal Post" />
+                                  <option value="Aramex" />
+                                </datalist>
+                                <p className="mt-1 text-xs text-foreground/60">
+                                  Delivering it yourself? Type <strong>Self delivery</strong> and use your own bill number below.
+                                </p>
                               </div>
                               <div className="sm:col-span-2">
                                 <label className="block text-xs font-medium text-foreground/70 mb-1">
@@ -422,7 +499,10 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
                                 <input
                                   type="text"
                                   value={trackingNumber}
-                                  onChange={(e) => setTrackingNumber(e.target.value)}
+                                  onChange={(e) => {
+                                    setTrackingNumber(e.target.value);
+                                    setUpdateError(null);
+                                  }}
                                   placeholder="e.g., PTH-KTM-12345, RR123456789NP"
                                   className="w-full px-3 py-2 bg-background border border-white/10 rounded-lg text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-[var(--kb-primary-brand)]"
                                   disabled={isUpdating}
@@ -442,12 +522,12 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
                         )}
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleSaveStatus(item.id)}
-                            disabled={isUpdating}
+                            onClick={() => handleSaveStatus(item)}
+                            disabled={isSaveDisabled(item)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg text-xs font-medium text-emerald-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Save className="h-3 w-3" />
-                            {isUpdating ? 'Saving...' : 'Save'}
+                            {updatingItemId === item.id ? 'Saving...' : 'Save'}
                           </button>
                           <button
                             onClick={handleCancelEdit}
@@ -462,7 +542,7 @@ export default function VendorOrdersClient({ orderItems }: VendorOrdersClientPro
                     ) : (
                       <div className="pt-2 flex items-center justify-between gap-3">
                         <button
-                          onClick={() => handleEditItem(item.id, item.fulfillment_status)}
+                          onClick={() => handleEditItem(item)}
                           disabled={item.fulfillment_status === 'delivered' || item.fulfillment_status === 'cancelled'}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium text-foreground/70 hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >

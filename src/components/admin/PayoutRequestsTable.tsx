@@ -129,7 +129,17 @@ export default function PayoutRequestsTable({ requests }: PayoutRequestsTablePro
                 </div>
 
                 <button
-                  onClick={() => setExpandedId(isExpanded ? null : request.request_id)}
+                  onClick={() => {
+                    // These three fields are shared across every row. Without clearing
+                    // them, a payment reference or rejection reason typed for one vendor
+                    // stays in the box when a different vendor's row is opened -- and is
+                    // then submitted against that vendor's payout.
+                    setPaymentReference('');
+                    setAdminNotes('');
+                    setRejectionReason('');
+                    setError('');
+                    setExpandedId(isExpanded ? null : request.request_id);
+                  }}
                   className="rounded-lg bg-white/5 px-4 py-2 text-sm font-medium hover:bg-white/10 transition-colors"
                 >
                   {isExpanded ? 'Collapse' : 'Review'}

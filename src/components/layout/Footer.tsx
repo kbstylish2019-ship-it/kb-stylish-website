@@ -142,8 +142,13 @@ export default function Footer() {
             {/* Payment Methods */}
             <div className="mt-6">
               <p className="text-xs text-gray-500 mb-2">We Accept</p>
-              <div className="flex gap-2">
+              {/* Khalti and card payments run live through checkout but were missing
+                  here, so the footer under-sold what the site actually accepts.
+                  Cards are processed via the NPX gateway. */}
+              <div className="flex flex-wrap gap-2">
+                <div className="px-3 py-1 bg-white/10 rounded text-xs">Khalti</div>
                 <div className="px-3 py-1 bg-white/10 rounded text-xs">NPX</div>
+                <div className="px-3 py-1 bg-white/10 rounded text-xs">Debit / Credit Card</div>
                 <div className="px-3 py-1 bg-white/10 rounded text-xs">COD</div>
               </div>
             </div>
