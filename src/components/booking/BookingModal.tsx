@@ -208,8 +208,8 @@ export default function BookingModal({
             }
           }}
         />
-        <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-background shadow-2xl ring-1 ring-white/10 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+        <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-foreground/10 bg-background shadow-2xl ring-1 ring-foreground/10 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between border-b border-foreground/10 px-5 py-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--kb-primary-brand)]/15 ring-1 ring-[var(--kb-primary-brand)]/30">
               <Scissors className="h-4 w-4 text-[var(--kb-primary-brand)]" />
@@ -219,7 +219,7 @@ export default function BookingModal({
               <div id="booking-modal-title" className="text-base font-semibold">{stylist.displayName}</div>
             </div>
           </div>
-          <button ref={closeButtonRef} aria-label="Close" onClick={onClose} className="rounded-md p-1 hover:bg-white/5">
+          <button ref={closeButtonRef} aria-label="Close" onClick={onClose} className="rounded-md p-1 hover:bg-foreground/5">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -237,7 +237,7 @@ export default function BookingModal({
                     className={`flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-sm ring-1 ${
                       active
                         ? "border-[var(--kb-primary-brand)]/50 bg-[var(--kb-primary-brand)]/10 ring-[var(--kb-primary-brand)]/50"
-                        : "border-white/10 bg-white/5 ring-white/10 hover:bg-white/10"
+                        : "border-foreground/10 bg-foreground/5 ring-foreground/10 hover:bg-foreground/10"
                     }`}
                   >
                     <input
@@ -281,7 +281,7 @@ export default function BookingModal({
                       className={`rounded-md px-2 py-1 text-sm ring-1 ${
                         active
                           ? "bg-[var(--kb-primary-brand)]/20 ring-[var(--kb-primary-brand)]/50"
-                          : "bg-white/5 ring-white/10 hover:bg-white/10"
+                          : "bg-foreground/5 ring-foreground/10 hover:bg-foreground/10"
                       }`}
                       aria-label={`Date ${d.toDateString()}`}
                     >
@@ -306,7 +306,7 @@ export default function BookingModal({
                   {bookingError}
                 </div>
               ) : availableSlots.length === 0 && selectedDate && selectedService ? (
-                <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center text-sm text-foreground/60">
+                <div className="rounded-lg border border-foreground/10 bg-foreground/5 p-3 text-center text-sm text-foreground/60">
                   No available time slots for this date
                 </div>
               ) : (
@@ -321,26 +321,31 @@ export default function BookingModal({
                     let slotContent = slot.slotDisplay;
                     let statusIcon = null;
                     
+                    // Colours are keyed to --foreground, not to white. The app renders
+                    // light by default, so the previous white text on a translucent
+                    // white chip produced white-on-white: every free slot was in the
+                    // DOM but invisible, and only the selected one (blue fill) could be
+                    // seen. Anything hardcoded here must stay legible in both themes.
                     switch(status) {
                       case 'available':
                         slotClassName += active
                           ? "bg-[var(--kb-primary-brand)] text-white shadow-lg ring-2 ring-[var(--kb-primary-brand)]/50"
-                          : "bg-white/5 text-white hover:bg-white/10 ring-1 ring-white/10";
+                          : "bg-foreground/[0.04] text-foreground hover:bg-foreground/10 ring-1 ring-foreground/15";
                         break;
                       case 'booked':
-                        slotClassName += "bg-red-500/10 text-red-400/50 cursor-not-allowed ring-1 ring-red-500/20";
+                        slotClassName += "bg-red-500/10 text-red-700 dark:text-red-300/70 cursor-not-allowed ring-1 ring-red-500/20";
                         statusIcon = <span className="absolute top-0 right-0 -mt-1 -mr-1 text-xs">🔒</span>;
                         break;
                       case 'reserved':
-                        slotClassName += "bg-orange-500/10 text-orange-400/50 cursor-not-allowed ring-1 ring-orange-500/20";
+                        slotClassName += "bg-orange-500/10 text-orange-700 dark:text-orange-300/70 cursor-not-allowed ring-1 ring-orange-500/20";
                         statusIcon = <span className="absolute top-0 right-0 -mt-1 -mr-1 text-xs">⏳</span>;
                         break;
                       case 'in_break':
-                        slotClassName += "bg-yellow-500/10 text-yellow-400/50 cursor-not-allowed ring-1 ring-yellow-500/20";
+                        slotClassName += "bg-yellow-500/10 text-yellow-800 dark:text-yellow-300/70 cursor-not-allowed ring-1 ring-yellow-500/20";
                         statusIcon = <span className="absolute top-0 right-0 -mt-1 -mr-1 text-xs">☕</span>;
                         break;
                       case 'unavailable':
-                        slotClassName += "bg-gray-500/5 text-gray-400/30 cursor-not-allowed ring-1 ring-gray-500/10";
+                        slotClassName += "bg-foreground/[0.03] text-foreground/40 cursor-not-allowed ring-1 ring-foreground/10";
                         break;
                     }
                     
@@ -375,7 +380,7 @@ export default function BookingModal({
         {/* Appointments reserved so far. Each one is a separate reservation; they
             all travel to checkout together. */}
         {bookingItems.length > 0 && (
-          <div className="flex-shrink-0 border-t border-white/10 bg-white/[0.02] px-5 py-3" data-testid="booking-cart-summary">
+          <div className="flex-shrink-0 border-t border-foreground/10 bg-foreground/[0.02] px-5 py-3" data-testid="booking-cart-summary">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-sm font-medium">
                 {bookingItems.length} appointment{bookingItems.length === 1 ? "" : "s"} ready
@@ -405,7 +410,7 @@ export default function BookingModal({
                   <button
                     type="button"
                     onClick={() => removeBookingItem(b.reservation_id)}
-                    className="rounded p-1 text-foreground/50 hover:bg-white/10 hover:text-red-400"
+                    className="rounded p-1 text-foreground/50 hover:bg-foreground/10 hover:text-red-400"
                     aria-label={`Remove ${b.service_name}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -416,7 +421,7 @@ export default function BookingModal({
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3 border-t border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-t border-foreground/10 px-5 py-4">
           <div className="text-sm text-foreground/70">
             {justAdded ? (
               <span className="inline-flex items-center gap-1.5 text-emerald-400">
