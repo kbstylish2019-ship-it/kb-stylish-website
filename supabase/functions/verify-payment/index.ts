@@ -14,6 +14,9 @@ function getEsewaConfig() {
 function getKhaltiSecretKey() {
   return Deno.env.get('KHALTI_SECRET_KEY') || 'test_secret_key_xxxxx';
 }
+function getKhaltiTestMode() {
+  return Deno.env.get('KHALTI_TEST_MODE') !== 'false';
+}
 function getNPXConfig(): NPXConfig {
   return {
     merchantId: Deno.env.get('NPX_MERCHANT_ID') || '8574',
@@ -224,7 +227,7 @@ Deno.serve(async (req)=>{
       }
     } else if (provider === 'khalti') {
       const khaltiSecretKey = getKhaltiSecretKey();
-      const result = await verifyKhaltiTransaction(khaltiSecretKey, externalTxnId);
+      const result = await verifyKhaltiTransaction(khaltiSecretKey, externalTxnId, getKhaltiTestMode());
       gatewayVerificationResult = result;
       if (result.success && result.data) {
         amountVerified = result.data.total_amount; // Already in paisa

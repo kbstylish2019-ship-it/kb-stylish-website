@@ -87,8 +87,12 @@ const MAX_SUPPORTED_AMOUNT_NPR = 90_000_000_000_000; // 90 trillion NPR
  */
 export async function initiateKhaltiPayment(
   secretKey: string,
-  request: KhaltiPaymentRequest
+  request: KhaltiPaymentRequest,
+  testMode: boolean = true
 ): Promise<KhaltiInitiateResponse> {
+  // Sandbox (test) vs production (live) base URL. Live keys are rejected by sandbox
+  // and vice-versa, so this MUST match the secret key's environment.
+  const khaltiBaseUrl = testMode ? 'https://dev.khalti.com' : 'https://khalti.com';
   // Amount overflow protection
   if (request.amount > MAX_SUPPORTED_AMOUNT_NPR) {
     return {
@@ -114,7 +118,7 @@ export async function initiateKhaltiPayment(
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
 
   try {
-    const response = await fetch('https://dev.khalti.com/api/v2/epayment/initiate/', {
+    const response = await fetch(`${khaltiBaseUrl}/api/v2/epayment/initiate/`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${secretKey}`,
@@ -230,8 +234,10 @@ export async function initiateKhaltiPayment(
  */
 export async function verifyKhaltiTransaction(
   secretKey: string,
-  pidx: string
+  pidx: string,
+  testMode: boolean = true
 ): Promise<KhaltiVerificationResponse> {
+  const khaltiBaseUrl = testMode ? 'https://dev.khalti.com' : 'https://khalti.com';
   // pidx validation
   if (!pidx || pidx.trim().length === 0) {
     return {
@@ -245,7 +251,7 @@ export async function verifyKhaltiTransaction(
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
 
   try {
-    const response = await fetch('https://dev.khalti.com/api/v2/epayment/lookup/', {
+    const response = await fetch(`${khaltiBaseUrl}/api/v2/epayment/lookup/`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${secretKey}`,
