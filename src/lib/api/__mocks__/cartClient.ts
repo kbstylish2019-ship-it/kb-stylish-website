@@ -52,6 +52,12 @@ export interface ShippingAddress {
   country: string;
 }
 
+export interface CreateOrderIntentRequest {
+  payment_method: 'esewa' | 'khalti' | 'npx' | 'cod';
+  shipping_address: ShippingAddress;
+  bookingReservationIds?: string[];
+}
+
 export class CartAPIClient {
   async getCart(): Promise<CartResponse> {
     return { success: true, cart: undefined };
@@ -73,7 +79,7 @@ export class CartAPIClient {
     return { success: true, cart: undefined };
   }
   
-  async createOrderIntent(shippingAddress: ShippingAddress): Promise<PaymentIntentResponse> {
+  async createOrderIntent(request: CreateOrderIntentRequest): Promise<PaymentIntentResponse> {
     return { success: true };
   }
   

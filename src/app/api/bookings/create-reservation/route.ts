@@ -52,31 +52,38 @@ export async function POST(request: NextRequest) {
       }
     );
     
-    // Get authenticated user (optional for guest bookings)
+    // Get authenticated user
     const { data: { user } } = await supabase.auth.getUser();
     
-    // Generate a guest ID if not authenticated
-    let customerId = user?.id;
-    if (!customerId) {
-      // For guest users, generate a valid UUID
-      // We use all zeros for the first part to identify guest bookings
-      const guestId = `00000000-0000-0000-0000-${Date.now().toString().slice(-12).padStart(12, '0')}`;
-      customerId = guestId;
-      
-      console.log('[create-reservation] Guest booking with ID:', guestId);
-    } else {
-      console.log('[create-reservation] Authenticated booking for user:', user?.email);
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'You must be logged in to reserve an appointment',
+          code: 'AUTH_REQUIRED'
+        },
+        { status: 401 }
+      );
     }
+
+    const customerId = user.id;
+    const metadataName = typeof user.user_metadata?.full_name === 'string'
+      ? user.user_metadata.full_name.trim()
+      : '';
+    const resolvedCustomerName = customerName && customerName.trim() && customerName.trim() !== 'Customer'
+      ? customerName.trim()
+      : metadataName || user.email?.split('@')[0] || 'Customer';
+    
+    console.log('[create-reservation] Authenticated booking for user:', user.email);
     
     // Call the PostgreSQL RPC to create reservation
-    // Note: For guest users, we pass a generated guest ID
     const { data, error } = await supabase
       .rpc('create_booking_reservation', {
         p_customer_id: customerId,
         p_stylist_id: stylistId,
         p_service_id: serviceId,
         p_start_time: startTime,
-        p_customer_name: customerName,
+        p_customer_name: resolvedCustomerName,
         p_customer_phone: customerPhone || null,
         p_customer_email: customerEmail || user?.email || null,
         p_customer_notes: customerNotes || null,

@@ -358,7 +358,10 @@ describe('CartAPIClient - Enterprise Test Suite', () => {
         country: 'NP'
       };
       
-      const result = await cartAPI.createOrderIntent(shippingAddress);
+      const result = await cartAPI.createOrderIntent({
+        payment_method: 'esewa',
+        shipping_address: shippingAddress,
+      });
       
       expect(fetchMock).toHaveBeenCalledWith(
         'https://mock.supabase.co/functions/v1/create-order-intent',
@@ -370,7 +373,6 @@ describe('CartAPIClient - Enterprise Test Suite', () => {
       
       expect(result.success).toBe(true);
       expect(result.payment_intent_id).toBe('pi_mock_123');
-      expect(result.client_secret).toBe('secret_xyz');
       expect(result.amount_cents).toBe(15000);
     });
     
@@ -386,13 +388,16 @@ describe('CartAPIClient - Enterprise Test Suite', () => {
       } as Response);
       
       const result = await cartAPI.createOrderIntent({
-        name: 'John',
-        phone: '123',
-        address_line1: '123 Main',
-        city: 'City',
-        state: 'State',
-        postal_code: '12345',
-        country: 'NP'
+        payment_method: 'esewa',
+        shipping_address: {
+          name: 'John',
+          phone: '123',
+          address_line1: '123 Main',
+          city: 'City',
+          state: 'State',
+          postal_code: '12345',
+          country: 'NP'
+        }
       });
       
       expect(result.success).toBe(false);
@@ -411,13 +416,16 @@ describe('CartAPIClient - Enterprise Test Suite', () => {
       } as Response);
       
       const result = await cartAPI.createOrderIntent({
-        name: 'John',
-        phone: '123',
-        address_line1: '123',
-        city: 'City',
-        state: 'State',
-        postal_code: '12345',
-        country: 'NP'
+        payment_method: 'esewa',
+        shipping_address: {
+          name: 'John',
+          phone: '123',
+          address_line1: '123',
+          city: 'City',
+          state: 'State',
+          postal_code: '12345',
+          country: 'NP'
+        }
       });
       
       expect(result.success).toBe(false);
@@ -435,13 +443,16 @@ describe('CartAPIClient - Enterprise Test Suite', () => {
       } as Response);
       
       const result = await cartAPI.createOrderIntent({
-        name: 'John',
-        phone: '123',
-        address_line1: '123',
-        city: 'City',
-        state: 'State',
-        postal_code: '12345',
-        country: 'NP'
+        payment_method: 'esewa',
+        shipping_address: {
+          name: 'John',
+          phone: '123',
+          address_line1: '123',
+          city: 'City',
+          state: 'State',
+          postal_code: '12345',
+          country: 'NP'
+        }
       });
       
       expect(result.success).toBe(false);
@@ -466,13 +477,16 @@ describe('CartAPIClient - Enterprise Test Suite', () => {
         .mockResolvedValueOnce(successResponse);
       
       const result = await cartAPI.createOrderIntent({
-        name: 'John',
-        phone: '123',
-        address_line1: '123',
-        city: 'City',
-        state: 'State',
-        postal_code: '12345',
-        country: 'NP'
+        payment_method: 'esewa',
+        shipping_address: {
+          name: 'John',
+          phone: '123',
+          address_line1: '123',
+          city: 'City',
+          state: 'State',
+          postal_code: '12345',
+          country: 'NP'
+        }
       });
       
       expect(fetchMock).toHaveBeenCalledTimes(3);

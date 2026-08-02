@@ -96,11 +96,16 @@ export async function createBookingReservation(params: BookingReservationParams)
       body: JSON.stringify(params),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Failed to create reservation: ${response.status}`);
+      return {
+        success: false,
+        error: data.error || `Failed to create reservation: ${response.status}`,
+        code: data.code || 'NETWORK_ERROR'
+      };
     }
 
-    const data = await response.json();
     return data;
   } catch (error) {
     console.error('Failed to create booking reservation:', error);

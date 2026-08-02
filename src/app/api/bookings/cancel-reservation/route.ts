@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create Supabase client with SERVICE_ROLE_KEY to bypass RLS
+    // Create authenticated Supabase client
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role to bypass RLS
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
@@ -40,17 +40,25 @@ export async function POST(request: NextRequest) {
         },
       }
     );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'You must be logged in to cancel a reservation' },
+        { status: 401 }
+      );
+    }
     
-    // CRITICAL FIX: With SERVICE_ROLE_KEY, we bypass RLS and can cancel any reservation
-    // The reservation ID itself is the authentication (secret/unique)
-    // No need to check user ownership - reservation ID is sufficient
     const query = supabase
       .from('booking_reservations')
       .update({
         status: 'cancelled',
         updated_at: new Date().toISOString()
       })
-      .eq('id', reservationId);
+      .eq('id', reservationId)
+      .eq('customer_user_id', user.id)
+      .eq('status', 'reserved');
     
     // Use select() without single() to avoid error on 0 rows
     const { data, error } = await query.select();

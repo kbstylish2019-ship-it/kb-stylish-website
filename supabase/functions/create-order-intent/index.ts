@@ -22,6 +22,9 @@ function getEsewaConfig() {
 function getKhaltiSecretKey() {
   return Deno.env.get('KHALTI_SECRET_KEY') || 'test_secret_key_xxxxx';
 }
+function getKhaltiTestMode() {
+  return Deno.env.get('KHALTI_TEST_MODE') !== 'false';
+}
 function getNPXConfig(): NPXConfig {
   return {
     merchantId: Deno.env.get('NPX_MERCHANT_ID') || '8574',
@@ -31,7 +34,7 @@ function getNPXConfig(): NPXConfig {
     testMode: Deno.env.get('NPX_TEST_MODE') !== 'false'
   };
 }
-Deno.serve(async (req)=>{
+Deno.serve(async (req: Request)=>{
   // Build dynamic CORS headers per request
   const origin = req.headers.get('Origin');
   const baseCors = getCorsHeaders(origin);
@@ -142,9 +145,70 @@ Deno.serve(async (req)=>{
       });
     }
     const cart = cartData;
+    const requestedBookingReservationIds = Array.isArray(requestData.booking_reservation_ids) ? [
+      ...new Set(requestData.booking_reservation_ids.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))
+    ] : [];
+    let checkoutReservations: Array<{
+      id: string;
+      price_cents: number;
+    }> = [];
+    if (requestedBookingReservationIds.length > 0) {
+      const nowIso = new Date().toISOString();
+      const { data: reservationRows, error: reservationError } = await serviceClient.from('booking_reservations').select('id, price_cents').eq('customer_user_id', authenticatedUser.id).eq('status', 'reserved').gt('expires_at', nowIso).in('id', requestedBookingReservationIds);
+      if (reservationError) {
+        console.error('Failed to load booking reservations for checkout:', reservationError);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Failed to validate booking reservations'
+        }), {
+          status: 400,
+          headers: {
+            ...dynCors,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      checkoutReservations = reservationRows || [];
+      if (checkoutReservations.length !== requestedBookingReservationIds.length) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'One or more booking reservations are invalid or expired'
+        }), {
+          status: 400,
+          headers: {
+            ...dynCors,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      const { error: reservationHydrateError } = await serviceClient.from('booking_reservations').update({
+        customer_name: requestData.shipping_address?.name || 'Customer',
+        customer_phone: requestData.shipping_address?.phone || null,
+        customer_email: authenticatedUser.email || null,
+        customer_address_line1: requestData.shipping_address?.address_line1 || null,
+        customer_city: requestData.shipping_address?.city || null,
+        customer_state: requestData.shipping_address?.state || 'Bagmati Province',
+        customer_postal_code: requestData.shipping_address?.postal_code || null,
+        customer_country: requestData.shipping_address?.country || 'Nepal',
+        updated_at: new Date().toISOString()
+      }).eq('customer_user_id', authenticatedUser.id).eq('status', 'reserved').in('id', requestedBookingReservationIds);
+      if (reservationHydrateError) {
+        console.error('Failed to hydrate booking reservations with checkout customer data:', reservationHydrateError);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Failed to prepare booking reservations for checkout'
+        }), {
+          status: 500,
+          headers: {
+            ...dynCors,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    }
     // Validate cart - must have at least products OR bookings
     const hasProducts = cart?.items && cart.items.length > 0;
-    const hasBookings = cart?.bookings && cart.bookings.length > 0;
+    const hasBookings = checkoutReservations.length > 0 || Boolean(cart?.bookings && cart.bookings.length > 0);
     if (!hasProducts && !hasBookings) {
       return new Response(JSON.stringify({
         success: false,
@@ -159,9 +223,9 @@ Deno.serve(async (req)=>{
     }
     // Calculate total (all values in paisa/cents for precision)
     // CRITICAL: price_snapshot is stored in NPR, must convert to paisa (multiply by 100)
-    const product_total = (cart.items || []).reduce((sum, item)=>sum + Math.round(item.price_snapshot * 100) * item.quantity, 0);
+    const product_total = (cart.items || []).reduce((sum: number, item: any)=>sum + Math.round(item.price_snapshot * 100) * item.quantity, 0);
     // Bookings already stored in paisa/cents
-    const booking_total = (cart.bookings || []).reduce((sum, booking)=>sum + booking.price_cents, 0);
+    const booking_total = (checkoutReservations.length > 0 ? checkoutReservations : cart.bookings || []).reduce((sum: number, booking: any)=>sum + booking.price_cents, 0);
     const subtotal_cents = product_total + booking_total;
     
     // ========================================================================
@@ -208,6 +272,12 @@ Deno.serve(async (req)=>{
     // PAYMENT GATEWAY INTEGRATION
     // ========================================================================
     const baseUrl = getBaseUrl();
+    // Mobile app (Expo) cannot receive the gateway's https redirect directly.
+    // When the request originates from the mobile client (metadata.source === 'mobile_app'),
+    // point the gateway return at an https BRIDGE page that immediately deep-links back
+    // into the app (kbstylish://payment/callback). Web requests are unaffected.
+    const isMobile = requestData?.metadata?.source === 'mobile_app';
+    const callbackPath = isMobile ? 'payment/mobile-callback' : 'payment/callback';
     const paymentMethod = requestData.payment_method;
     let paymentIntentId;
     let externalTransactionId;
@@ -221,8 +291,8 @@ Deno.serve(async (req)=>{
       const formData = prepareEsewaPaymentForm(esewaConfig, {
         amount: amountNPR,
         transactionUuid,
-        successUrl: `${baseUrl}/payment/callback?provider=esewa`,
-        failureUrl: `${baseUrl}/checkout`
+        successUrl: `${baseUrl}/${callbackPath}?provider=esewa`,
+        failureUrl: isMobile ? `${baseUrl}/${callbackPath}?provider=esewa&status=failure` : `${baseUrl}/checkout`
       });
       paymentIntentId = `pi_esewa_${Date.now()}_${transactionUuid.substring(0, 8)}`;
       externalTransactionId = transactionUuid;
@@ -236,14 +306,14 @@ Deno.serve(async (req)=>{
         amount: amountNPR,
         purchase_order_id: `ORDER-${Date.now()}`,
         purchase_order_name: `KB Stylish Order`,
-        return_url: `${baseUrl}/payment/callback?provider=khalti`,
+        return_url: `${baseUrl}/${callbackPath}?provider=khalti`,
         website_url: baseUrl,
         customer_info: requestData.shipping_address ? {
           name: requestData.shipping_address.name,
           email: authenticatedUser.email || '',
           phone: requestData.shipping_address.phone
         } : undefined
-      });
+      }, getKhaltiTestMode());
       if (!result.success || !result.pidx) {
         return new Response(JSON.stringify({
           success: false,
@@ -288,7 +358,7 @@ Deno.serve(async (req)=>{
         amount: amountNPR,
         merchantTxnId,
         processId: processIdResult.processId,
-        responseUrl: `${baseUrl}/payment/callback?provider=esewa`
+        responseUrl: `${baseUrl}/${callbackPath}?provider=esewa`
       });
       
       paymentIntentId = merchantTxnId; // Use same ID for consistency
@@ -334,7 +404,8 @@ Deno.serve(async (req)=>{
         shipping_cents,
         shipping_address: requestData.shipping_address,
         items_count: (cart.items || []).length,
-        bookings_count: (cart.bookings || []).length,
+        bookings_count: checkoutReservations.length > 0 ? checkoutReservations.length : (cart.bookings || []).length,
+        booking_reservation_ids: checkoutReservations.map((reservation)=>reservation.id),
         ...(requestData.npx_process_id ? { npx_process_id: requestData.npx_process_id } : {})
       },
       expires_at: expires_at.toISOString()

@@ -161,6 +161,10 @@ export default function BookingModal({
         } else {
           setBookingError('Failed to add booking to cart. Please try again.');
         }
+      } else if (reservationResponse.code === 'AUTH_REQUIRED') {
+        onClose();
+        const redirectPath = typeof window !== 'undefined' ? window.location.pathname : '/book-a-stylist';
+        router.push(`/auth/login?redirect=${encodeURIComponent(redirectPath)}`);
       } else {
         setBookingError(reservationResponse.error || 'Failed to create booking reservation. Please try again.');
       }

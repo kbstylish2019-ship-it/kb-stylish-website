@@ -94,6 +94,7 @@ export interface ShippingAddress {
 export interface CreateOrderIntentRequest {
   payment_method: 'esewa' | 'khalti' | 'npx' | 'cod';
   shipping_address: ShippingAddress;
+  bookingReservationIds?: string[];
   metadata?: Record<string, any>;
 }
 
@@ -568,6 +569,7 @@ export class CartAPIClient {
           body: JSON.stringify({
             payment_method: request.payment_method,
             shipping_address: request.shipping_address,
+            booking_reservation_ids: request.bookingReservationIds,
             metadata: {
               source: 'web_checkout',
               timestamp: new Date().toISOString(),
