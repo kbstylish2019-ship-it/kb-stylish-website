@@ -19,6 +19,7 @@ import {
   validateAddress,
   calculateCosts,
 } from "@/lib/mock/checkout";
+import { describeMissing } from "@/lib/checkout/address";
 
 export default function CheckoutClient() {
   const router = useRouter();
@@ -65,6 +66,9 @@ export default function CheckoutClient() {
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderTotal, setOrderTotal] = useState<number>(0); // Store the total before clearing cart
+  // Set when the customer presses a disabled Place Order, so every outstanding
+  // field error is revealed at once rather than only on blur.
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   // Change appointment modal state
   const [changeModalOpen, setChangeModalOpen] = useState(false);
@@ -227,7 +231,19 @@ export default function CheckoutClient() {
     }
   };
 
-  const canPlaceOrder = validateAddress(address) && Boolean(payment);
+  // items.length guard added: the "Your cart is empty" panel used to render above a
+  // fully live form, so the button read "Place Order • NPR 0.00" and was clickable.
+  const canPlaceOrder = validateAddress(address) && Boolean(payment) && items.length > 0;
+
+  // Why the button is disabled, in words. Previously it just greyed out, with the
+  // fields a long scroll away on mobile and nothing marked required.
+  const blockedReason = React.useMemo(() => {
+    if (items.length === 0) return 'Your cart is empty.';
+    const missing = describeMissing(address);
+    if (missing) return missing;
+    if (!payment) return 'Choose how you want to pay.';
+    return null;
+  }, [items.length, address, payment]);
 
   /**
    * Production-ready order placement with real payment gateway integration
@@ -264,11 +280,16 @@ export default function CheckoutClient() {
         shipping_address: {
           name: address.fullName,
           phone: address.phone,
+          // Tole/street first, then the landmark -- the two lines a rider actually reads.
           address_line1: address.area,
-          address_line2: address.line2 || undefined,
-          city: address.city,
+          address_line2: [address.landmark, address.line2].filter(Boolean).join(' — ') || undefined,
+          city: [address.city, address.district].filter(Boolean).join(', '),
           state: address.region,
-          postal_code: '44600', // Default postal code for Nepal
+          // Deliberately empty. This used to hardcode '44600' on every order in the
+          // country, so a Pokhara delivery was stamped with a Kathmandu postcode and
+          // that value flowed through to the courier label. Nepal's postcodes are not
+          // used in practice; a blank is honest, a wrong one is not.
+          postal_code: '',
           country: 'Nepal',
           notes: address.notes || undefined  // Delivery instructions
         },
@@ -570,7 +591,7 @@ export default function CheckoutClient() {
               </Link>
             </div>
           )}
-          <ShippingForm address={address} onChange={setAddress} />
+          <ShippingForm address={address} onChange={setAddress} showAllErrors={attemptedSubmit} />
         </div>
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-24">
@@ -582,6 +603,8 @@ export default function CheckoutClient() {
               onPaymentSelect={setPayment}
               onPlaceOrder={onPlaceOrder}
               placeOrderEnabled={canPlaceOrder}
+              blockedReason={blockedReason}
+              onBlockedAttempt={() => setAttemptedSubmit(true)}
               isProcessing={isProcessingOrder}
               error={orderError}
               onClearError={clearOrderError}

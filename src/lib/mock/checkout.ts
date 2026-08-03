@@ -43,16 +43,22 @@ export function getEmptyAddress(): Address {
     fullName: "",
     phone: "",
     region: "Bagmati Province",
+    district: "Kathmandu",
     city: "",
     area: "",
+    landmark: "",
     line2: "",
     notes: "",
   };
 }
 
-export function validateAddress(a: Address): boolean {
-  return Boolean(a.fullName && a.phone && a.city && a.area);
-}
+/**
+ * Delegates to the real validator. This used to be
+ * `Boolean(a.fullName && a.phone && a.city && a.area)` -- a single character in
+ * each field passed, which is how "sdfsdf" / phone "48464546132" became a live
+ * COD order nobody could deliver or call.
+ */
+export { validateAddress } from "@/lib/checkout/address";
 
 export function calculateCosts(products: CartProductItem[], bookingPrice: number, discount: number): OrderCosts {
   const productSubtotal = products.reduce((s, p) => s + p.price * p.quantity, 0);

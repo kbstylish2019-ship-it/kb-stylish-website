@@ -125,19 +125,23 @@ export default function Header({ isAuthed = false }: HeaderProps) {
   const getNavItems = () => {
     const items: { label: string; href: string; icon: any }[] = [];
     
-    // Add role-specific items (prioritize higher roles)
+    // Add role-specific items
     if (userRoles.includes('admin')) {
       items.push(...roleNavItems.admin);
-    } else if (userRoles.includes('vendor')) {
+    }
+    if (userRoles.includes('vendor')) {
       items.push(...roleNavItems.vendor);
-    } else if (userRoles.includes('stylist')) {
+    }
+    if (userRoles.includes('stylist')) {
       items.push(...roleNavItems.stylist);
     }
     
     // Always add customer items for all authenticated users
     items.push(...roleNavItems.customer);
     
-    return items;
+    return items.filter((item, index, allItems) =>
+      allItems.findIndex((candidate) => candidate.href === item.href) === index
+    );
   };
 
   // Get primary role for display
@@ -315,7 +319,7 @@ export default function Header({ isAuthed = false }: HeaderProps) {
 
               {/* Cart - Compact on mobile */}
               <Link
-                href="/checkout"
+                href="/cart"
                 className="relative flex items-center gap-1 bg-[#FFD400] text-gray-900 px-1.5 sm:px-3 py-1.5 rounded-lg hover:bg-[#FFC107] transition-colors flex-shrink-0"
                 data-testid="cart-button"
               >

@@ -1,4 +1,4 @@
-export type UserRole = "guest" | "customer" | "vendor" | "admin";
+export type UserRole = "guest" | "customer" | "vendor" | "stylist" | "support" | "admin";
 
 // Core capabilities that drive visibility. Compose roles from these.
 export type UserCapability =
@@ -152,9 +152,11 @@ export type CartItem = CartProductItem | CartBookingItem;
 export interface Address {
   fullName: string;
   phone: string;
-  region: string; // Province
-  city: string;
-  area: string; // Area/Street
+  region: string;     // Province
+  district: string;   // Nepali addresses are Province > District > Municipality > Tole
+  city: string;       // Municipality / area, e.g. "Kathmandu-10, Baneshwor"
+  area: string;       // Tole / street
+  landmark: string;   // What actually gets a rider to the door
   line2?: string;
   notes?: string;
 }

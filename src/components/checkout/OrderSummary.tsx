@@ -15,6 +15,10 @@ interface OrderSummaryProps {
   isProcessing?: boolean;
   error?: string | null;
   onClearError?: () => void;
+  /** Plain-language reason the button is disabled, shown above it. */
+  blockedReason?: string | null;
+  /** Called when a blocked button is pressed, so the form can reveal all errors. */
+  onBlockedAttempt?: () => void;
 }
 
 export default function OrderSummary({
@@ -28,11 +32,13 @@ export default function OrderSummary({
   isProcessing = false,
   error = null,
   onClearError,
+  blockedReason = null,
+  onBlockedAttempt,
 }: OrderSummaryProps) {
   const paymentBtns: { id: PaymentMethod; label: string }[] = [
-    { id: "npx", label: "Nepal Payment (NPX)" },
-    { id: "khalti", label: "Khalti" },
     { id: "cod", label: "Cash on Delivery" },
+    { id: "khalti", label: "Khalti" },
+    { id: "npx", label: "Nepal Payment (NPX) — cards & bank" },
   ];
 
   return (
@@ -92,10 +98,26 @@ export default function OrderSummary({
         </div>
       </div>
 
+      {blockedReason && (
+        <p role="status" className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+          {blockedReason}
+        </p>
+      )}
+
+      {selectedPayment === "cod" && (
+        <p className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900">
+          <strong>Cash on Delivery — nothing to pay now.</strong> Pay {formatNPR(costs.total)} in cash
+          to the rider when your parcel arrives. No extra COD charge. We will call you to confirm before dispatch.
+        </p>
+      )}
+
       <button
         type="button"
-        onClick={onPlaceOrder}
-        disabled={!placeOrderEnabled || !selectedPayment || isProcessing}
+        onClick={() => {
+          if (!placeOrderEnabled || !selectedPayment) { onBlockedAttempt?.(); return; }
+          onPlaceOrder();
+        }}
+        disabled={isProcessing}
         className={cn(
           "mt-5 w-full rounded-lg px-5 py-3 text-sm font-semibold shadow-sm transition-all duration-200",
           !selectedPayment || !placeOrderEnabled || isProcessing
@@ -103,6 +125,7 @@ export default function OrderSummary({
             : "bg-[#1976D2] text-white hover:bg-[#1565C0] hover:shadow-lg"
         )}
         aria-disabled={!placeOrderEnabled || !selectedPayment || isProcessing}
+        title={blockedReason ?? undefined}
       >
         {isProcessing ? (
           <span className="flex items-center justify-center gap-2">
