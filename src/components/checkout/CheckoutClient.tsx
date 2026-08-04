@@ -57,6 +57,24 @@ export default function CheckoutClient() {
   const [discountCode, setDiscountCode] = React.useState<string>("");
   const [payment, setPayment] = React.useState<PaymentMethod | undefined>(undefined);
 
+  // Persist the address across reloads. Sessions expire after ~1 hour, and placing
+  // an order while logged out bounces to /auth/login?redirect=/checkout; on return
+  // the form was blank (getEmptyAddress on remount), so everything typed was lost.
+  const ADDRESS_KEY = "kb_checkout_address";
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ADDRESS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Merge over the default so a stored older shape (pre-district/landmark) still loads.
+        setAddress((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch { /* ignore corrupt storage */ }
+  }, []);
+  React.useEffect(() => {
+    try { localStorage.setItem(ADDRESS_KEY, JSON.stringify(address)); } catch { /* quota / private mode */ }
+  }, [address]);
+
   // Enhanced state management for order processing
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);

@@ -46,6 +46,13 @@ export default function TimeOffRequestModal({
   const [loadingBudget, setLoadingBudget] = useState(false);
   const [bookedDates, setBookedDates] = useState<string[]>([]);
 
+  function handleDialogChange(open: boolean) {
+    if (!open) {
+      if (isSubmitting) return;
+      handleCancel();
+    }
+  }
+
   // Load budget and booked dates when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -169,7 +176,55 @@ export default function TimeOffRequestModal({
     }
   }
 
+  async function handleEmergencyConfirm() {
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      setShowEmergencyConfirm(false);
+      return;
+    }
+
+    setShowEmergencyConfirm(false);
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/stylist/override/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetDate,
+          reason: reason.trim() || undefined,
+          isEmergency,
+          isClosed: true
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Request failed');
+      }
+
+      toast.success(data.cached ? 'Request already submitted' : 'Time off request submitted!');
+
+      if (data.budget) {
+        setBudget(data.budget);
+      }
+
+      onSuccess();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to submit request';
+      setError(message);
+      toast.error(message);
+      logError('TimeOffModal', 'Submit failed', { error: message, targetDate });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   function handleCancel() {
+    if (isSubmitting) return;
     if (showEmergencyConfirm) {
       setShowEmergencyConfirm(false);
       return;
@@ -181,7 +236,7 @@ export default function TimeOffRequestModal({
   const dateIsBooked = bookedDates.includes(targetDate);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[var(--kb-surface-dark)] border-white/10 px-4 sm:px-6 py-4 sm:py-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
@@ -203,10 +258,10 @@ export default function TimeOffRequestModal({
               Use only for urgent, unforeseeable situations.
             </p>
             <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => setShowEmergencyConfirm(false)}>
+              <Button variant="outline" onClick={() => setShowEmergencyConfirm(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button onClick={(e) => { setShowEmergencyConfirm(false); handleSubmit(e as any); }}>
+              <Button onClick={handleEmergencyConfirm} disabled={isSubmitting}>
                 Confirm Emergency Request
               </Button>
             </div>
@@ -221,15 +276,15 @@ export default function TimeOffRequestModal({
                 <span className="text-sm text-foreground/70">Loading budget...</span>
               </div>
             ) : budget && (
-              <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg text-sm space-y-1">
-                <p className="font-medium text-blue-300">Budget Status:</p>
-                <p className="text-blue-200/80">
+              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-3 rounded-lg text-sm space-y-1">
+                <p className="font-semibold text-blue-900 dark:text-blue-200">Budget Status:</p>
+                <p className="text-blue-800 dark:text-blue-100">
                   Regular: {budget.monthlyRemaining}/{budget.monthlyLimit} remaining
                 </p>
-                <p className="text-blue-200/80">
+                <p className="text-blue-800 dark:text-blue-100">
                   Emergency: {budget.emergencyRemaining} remaining
                 </p>
-                <p className="text-xs text-blue-200/60">
+                <p className="text-xs text-blue-700 dark:text-blue-200/70">
                   Resets: {format(new Date(budget.resetsAt), 'MMM d, yyyy')}
                 </p>
               </div>
@@ -271,7 +326,10 @@ export default function TimeOffRequestModal({
               <Textarea
                 id="reason"
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  setError(null);
+                }}
                 maxLength={200}
                 placeholder="e.g., Personal appointment, family event"
                 className="w-full bg-white/5 border-white/10 text-foreground placeholder:text-foreground/40 focus:border-[var(--kb-accent-gold)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--kb-accent-gold)]/20"
@@ -288,7 +346,10 @@ export default function TimeOffRequestModal({
                 type="checkbox"
                 id="emergency"
                 checked={isEmergency}
-                onChange={(e) => setIsEmergency(e.target.checked)}
+                onChange={(e) => {
+                  setIsEmergency(e.target.checked);
+                  setError(null);
+                }}
                 className="mt-1"
               />
               <div>
@@ -310,10 +371,10 @@ export default function TimeOffRequestModal({
 
             {/* Actions */}
             <div className="flex gap-3 justify-end pt-2">
-              <Button type="button" variant="outline" onClick={handleCancel}>
+              <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting || dateIsBooked}>
+              <Button type="submit" disabled={isSubmitting || dateIsBooked || loadingBudget}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />

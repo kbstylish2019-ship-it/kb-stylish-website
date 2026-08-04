@@ -198,19 +198,29 @@ export async function cancelPayoutRequest(requestId: string): Promise<RequestPay
       };
     }
 
-    // Update request status
-    const { error } = await supabase
+    // Update request status. .select() is required: without it a 0-row update
+    // returns no error, so cancelling a request the admin already approved would
+    // report "cancelled successfully" while the payout proceeds.
+    const { data: cancelled, error } = await supabase
       .from('payout_requests')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', requestId)
       .eq('vendor_id', user.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .select('id');
 
     if (error) {
       console.error('[cancelPayoutRequest] Database error:', error);
       return {
         success: false,
         message: 'Failed to cancel request',
+      };
+    }
+
+    if (!cancelled || cancelled.length === 0) {
+      return {
+        success: false,
+        message: 'This request has already been processed by the admin and can no longer be cancelled.',
       };
     }
 

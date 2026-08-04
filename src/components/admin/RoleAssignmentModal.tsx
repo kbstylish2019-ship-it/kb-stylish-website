@@ -18,9 +18,19 @@ interface RoleAssignmentModalProps {
 const AVAILABLE_ROLES = [
   { id: 'admin', name: 'Admin', description: 'Full platform access', color: 'purple' },
   { id: 'vendor', name: 'Vendor', description: 'Sell products & services', color: 'blue' },
+  { id: 'stylist', name: 'Stylist', description: 'Take appointments & manage schedule', color: 'teal' },
   { id: 'customer', name: 'Customer', description: 'Shopping & booking', color: 'green' },
   { id: 'support', name: 'Support', description: 'Customer support access', color: 'amber' },
 ];
+
+/** What losing each role actually costs the user, for the confirm dialog. */
+const REVOKE_CONSEQUENCE: Record<string, string> = {
+  admin: 'lose all admin access',
+  vendor: 'lose access to their products, orders and payouts (existing products stay in the database)',
+  stylist: 'stop appearing as a bookable stylist and lose their dashboard',
+  support: 'lose the support console',
+  customer: 'be unable to shop or book',
+};
 
 export default function RoleAssignmentModal({ 
   open, 
@@ -94,39 +104,67 @@ export default function RoleAssignmentModal({
       const currentRoles = new Set(
         user.roles.filter(r => r.is_active).map(r => r.role_name)
       );
-      
-      // Determine roles to add and remove
+
       const rolesToAdd = Array.from(selectedRoles).filter(r => !currentRoles.has(r));
       const rolesToRemove = Array.from(currentRoles).filter(r => !selectedRoles.has(r));
-      
-      // Execute role changes
+
+      // Revoking access is destructive and, for a vendor, business-ending. Confirm it
+      // by name and consequence before doing anything. (This block previously ran with
+      // no confirmation at all.)
+      if (rolesToRemove.length > 0) {
+        const lines = rolesToRemove
+          .map(r => {
+            const label = AVAILABLE_ROLES.find(a => a.id === r)?.name ?? r;
+            return `• ${label} — they will ${REVOKE_CONSEQUENCE[r] ?? 'lose that access'}`;
+          })
+          .join('\n');
+        const ok = window.confirm(
+          `Remove the following from ${user.display_name}?\n\n${lines}\n\nThis takes effect immediately.`
+        );
+        if (!ok) { setIsSubmitting(false); return; }
+      }
+
+      // Apply changes, tracking what actually succeeded so the table reflects reality
+      // even on a partial failure. The old code reconstructed roles from AVAILABLE_ROLES,
+      // which (a) dropped any role not in that list -- e.g. stylist -- so editing a
+      // stylist made the table show their stylist role gone, and (b) showed the fully
+      // intended set even when a mid-loop call had failed.
+      const done = new Set(currentRoles);
+      let failure: string | null = null;
+
       for (const role of rolesToAdd) {
         const result = await assignUserRole(user.id, role);
-        if (!result?.success) {
-          throw new Error(result?.message || `Failed to assign ${role} role`);
+        if (result?.success) done.add(role);
+        else { failure = result?.message || `Failed to assign ${role} role`; break; }
+      }
+      if (!failure) {
+        for (const role of rolesToRemove) {
+          const result = await revokeUserRole(user.id, role);
+          if (result?.success) done.delete(role);
+          else { failure = result?.message || `Failed to revoke ${role} role`; break; }
         }
       }
-      
-      for (const role of rolesToRemove) {
-        const result = await revokeUserRole(user.id, role);
-        if (!result?.success) {
-          throw new Error(result?.message || `Failed to revoke ${role} role`);
-        }
+
+      // Rebuild from the user's REAL role objects (preserving role_id, assigned_at, and
+      // any role type not in AVAILABLE_ROLES), toggling is_active by what actually landed.
+      const byName = new Map(user.roles.map(r => [r.role_name, r]));
+      const roles = Array.from(done).map(name => {
+        const existing = byName.get(name);
+        return existing
+          ? { ...existing, is_active: true }
+          : { role_name: name, role_id: name, assigned_at: new Date().toISOString(), is_active: true };
+      });
+
+      const updatedUser: AdminUser = { ...user, roles };
+
+      if (failure) {
+        // Some changes landed, some did not. Show the true state and the error.
+        onSuccess(updatedUser);
+        setError(`${failure}. Other changes were saved.`);
+        setIsSubmitting(false);
+        return;
       }
-      
-      // Update user object with new roles
-      const updatedUser: AdminUser = {
-        ...user,
-        roles: AVAILABLE_ROLES
-          .filter(r => selectedRoles.has(r.id))
-          .map(r => ({
-            role_name: r.id,
-            role_id: r.id, // This will be updated from actual DB
-            assigned_at: new Date().toISOString(),
-            is_active: true,
-          })),
-      };
-      
+
       onSuccess(updatedUser);
     } catch (err: any) {
       setError(err.message || 'Failed to update roles');
@@ -213,10 +251,13 @@ export default function RoleAssignmentModal({
                 blue: isSelected 
                   ? "border-blue-500/50 bg-blue-500/10 ring-blue-500/30" 
                   : "border-white/10 bg-white/5 ring-white/10",
-                green: isSelected 
-                  ? "border-emerald-500/50 bg-emerald-500/10 ring-emerald-500/30" 
+                green: isSelected
+                  ? "border-emerald-500/50 bg-emerald-500/10 ring-emerald-500/30"
                   : "border-white/10 bg-white/5 ring-white/10",
-                amber: isSelected 
+                teal: isSelected
+                  ? "border-teal-500/50 bg-teal-500/10 ring-teal-500/30"
+                  : "border-white/10 bg-white/5 ring-white/10",
+                amber: isSelected
                   ? "border-amber-500/50 bg-amber-500/10 ring-amber-500/30" 
                   : "border-white/10 bg-white/5 ring-white/10",
               };

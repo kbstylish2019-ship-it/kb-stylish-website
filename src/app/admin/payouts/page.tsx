@@ -104,7 +104,7 @@ export default async function AdminPayoutsPage() {
                 <Clock className="h-6 w-6 text-amber-400" />
               </div>
               <div>
-                <div className="text-sm text-amber-300/80">Pending</div>
+                <div className="text-sm text-amber-800 dark:text-amber-300/80">Pending</div>
                 <div className="text-2xl font-bold text-amber-300">{pendingCount}</div>
               </div>
             </div>
@@ -116,7 +116,7 @@ export default async function AdminPayoutsPage() {
                 <CheckCircle className="h-6 w-6 text-emerald-400" />
               </div>
               <div>
-                <div className="text-sm text-emerald-300/80">Approved</div>
+                <div className="text-sm text-emerald-800 dark:text-emerald-300/80">Approved</div>
                 <div className="text-2xl font-bold text-emerald-300">{approvedCount}</div>
               </div>
             </div>
@@ -128,7 +128,7 @@ export default async function AdminPayoutsPage() {
                 <XCircle className="h-6 w-6 text-red-400" />
               </div>
               <div>
-                <div className="text-sm text-red-300/80">Rejected</div>
+                <div className="text-sm text-red-800 dark:text-red-300/80">Rejected</div>
                 <div className="text-2xl font-bold text-red-300">{rejectedCount}</div>
               </div>
             </div>
