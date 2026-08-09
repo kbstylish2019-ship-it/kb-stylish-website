@@ -70,6 +70,7 @@ export default function AdminSidebar() {
         { id: "onboard", label: "Onboard Stylist", href: "/admin/stylists/onboard" },
         { id: "schedules", label: "Manage Schedules", href: "/admin/schedules/manage" },
         { id: "overrides", label: "Schedule Overrides", href: "/admin/schedules/overrides" },
+        { id: "stylist-revenue", label: "Service Revenue", href: "/admin/stylist-revenue" },
       ]
     },
     {
