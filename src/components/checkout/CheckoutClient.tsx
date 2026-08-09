@@ -87,6 +87,9 @@ export default function CheckoutClient() {
   // Set when the customer presses a disabled Place Order, so every outstanding
   // field error is revealed at once rather than only on blur.
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  // Captured at placement time (the cart is cleared by the worker after success,
+  // so it can't be read from the delayed redirect).
+  const [orderKind, setOrderKind] = useState<'product' | 'booking' | 'mixed'>('product');
 
   // Change appointment modal state
   const [changeModalOpen, setChangeModalOpen] = useState(false);
@@ -272,11 +275,14 @@ export default function CheckoutClient() {
       const timer = setTimeout(() => {
         const params = new URLSearchParams({ payment_intent_id: paymentIntentId });
         if (orderNumber) params.set('order_number', orderNumber);
+        // Tell the confirmation page what this order is, so it shows appointment
+        // language for bookings instead of "out for delivery / pay cash to the rider".
+        params.set('kind', orderKind);
         router.push(`/order-confirmation?${params.toString()}`);
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [orderSuccess, paymentIntentId, orderNumber, router]);
+  }, [orderSuccess, paymentIntentId, orderNumber, orderKind, router]);
 
   const onPlaceOrder = async () => {
     if (!canPlaceOrder || isProcessingOrder || !payment) return;
@@ -290,6 +296,13 @@ export default function CheckoutClient() {
       const bookingReservationIds = bookingItems
         .map((item) => item.reservation_id || item.id)
         .filter(Boolean);
+
+      // Snapshot what this order is before the cart is cleared on success.
+      setOrderKind(
+        bookingItems.length > 0
+          ? (productItems.length > 0 ? 'mixed' : 'booking')
+          : 'product'
+      );
 
       // Step 1: Create order intent with backend (includes payment gateway integration)
       console.log('[CheckoutClient] Creating order intent with payment method:', payment);

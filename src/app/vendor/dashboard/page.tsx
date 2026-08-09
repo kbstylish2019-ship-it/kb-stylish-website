@@ -104,8 +104,13 @@ export default async function VendorDashboardPage() {
   }
   
   // 2. Verify vendor role
-  const userRoles = user.user_metadata?.user_roles || user.app_metadata?.user_roles || [];
-  if (!userRoles.includes('vendor')) {
+  const { data: isVendor, error: roleError } = await supabase
+    .rpc('user_has_role', {
+      user_uuid: user.id,
+      role_name: 'vendor'
+    });
+
+  if (roleError || !isVendor) {
     redirect('/'); // Non-vendors redirected to home
   }
   
@@ -204,18 +209,18 @@ export default async function VendorDashboardPage() {
             trend={{ label: "Live data", direction: "up" }} 
             icon={<BarChart3 className="h-5 w-5 text-[var(--kb-primary-brand)]" />} 
           />
-          <StatCard 
-            title="Monthly Earnings" 
-            value={`NPR ${monthlyEarnings}`} 
-            subtitle="Last 30 days"
-            trend={{ label: "Real-time", direction: "up" }} 
-            icon={<Wallet className="h-5 w-5 text-[var(--kb-primary-brand)]" />} 
+          <StatCard
+            title="Monthly Earnings"
+            value={`NPR ${monthlyEarnings}`}
+            subtitle="All orders, last 30 days"
+            trend={{ label: "Real-time", direction: "up" }}
+            icon={<Wallet className="h-5 w-5 text-[var(--kb-primary-brand)]" />}
           />
-          <StatCard 
-            title="Available Balance" 
-            value={`NPR ${availableBalance}`} 
-            subtitle="Ready to withdraw"
-            icon={<Package className="h-5 w-5 text-[var(--kb-primary-brand)]" />} 
+          <StatCard
+            title="Available Balance"
+            value={`NPR ${availableBalance}`}
+            subtitle="Delivered orders only, after fees"
+            icon={<Package className="h-5 w-5 text-[var(--kb-primary-brand)]" />}
           />
           <StatCard 
             title="Platform Fees" 

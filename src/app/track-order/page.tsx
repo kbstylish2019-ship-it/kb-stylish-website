@@ -126,15 +126,15 @@ function TrackOrderContent() {
                       )}
                     </div>
                     <div>
-                      <p className={`font-semibold ${step.completed ? 'text-white' : 'text-gray-500'}`}>
+                      <p className={`font-semibold ${step.completed ? 'text-white' : 'text-gray-300'}`}>
                         {step.label}
                       </p>
                       {step.date ? (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-300">
                           {new Date(step.date).toLocaleString()}
                         </p>
                       ) : (
-                        <p className="text-xs text-gray-600">Pending</p>
+                        <p className="text-xs text-gray-400">Pending</p>
                       )}
                     </div>
                   </div>

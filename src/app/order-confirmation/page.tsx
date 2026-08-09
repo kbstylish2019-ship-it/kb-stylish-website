@@ -17,6 +17,10 @@ function OrderConfirmationContent() {
   // COD intents are minted as pi_cod_*. Those customers have paid nothing yet, so the
   // timeline must not tell them their payment is confirmed.
   const isCod = Boolean(paymentIntentId?.toLowerCase().startsWith('pi_cod'));
+  // 'booking' | 'mixed' | 'product' — set by checkout. A booking is an appointment, not
+  // a parcel, so "out for delivery / pay cash to the rider" is wrong for it.
+  const kind = searchParams.get('kind') || 'product';
+  const isBookingOnly = kind === 'booking';
 
   if (!paymentIntentId) {
     return (
@@ -46,10 +50,10 @@ function OrderConfirmationContent() {
             </svg>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-3">
-            Order Confirmed!
+            {isBookingOnly ? 'Appointment Booked!' : 'Order Confirmed!'}
           </h1>
           <p className="text-gray-400 text-lg">
-            Thank you for your purchase
+            {isBookingOnly ? 'Your appointment is reserved' : 'Thank you for your purchase'}
           </p>
         </div>
 
@@ -93,8 +97,16 @@ function OrderConfirmationContent() {
               {/* Timeline line */}
               <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gray-600"></div>
 
-              {/* Status items */}
-              {(isCod
+              {/* Status items. A booking is an appointment (nothing is delivered); a
+                  COD product is a parcel paid at the door; a prepaid product is paid. */}
+              {(isBookingOnly
+                ? [
+                    { label: 'Appointment booked', completed: true, time: 'Just now' },
+                    { label: 'We will call you to confirm', completed: false, time: 'Within 1 working day' },
+                    { label: 'See you at your appointment', completed: false, time: 'On the day' },
+                    { label: isCod ? 'Pay at the salon after your service' : 'Service completed', completed: false, time: 'Pending' },
+                  ]
+                : isCod
                 ? [
                     { label: 'Order received', completed: true, time: 'Just now' },
                     { label: 'We will call you to confirm', completed: false, time: 'Within 1 working day' },
