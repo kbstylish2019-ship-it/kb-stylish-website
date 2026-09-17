@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
       <div className="max-w-4xl mx-auto">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 ring-1 ring-white/10">
           <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
-          <p className="text-sm text-foreground/60 mb-8">Created on Jan 24, 2026</p>
+          <p className="text-sm text-foreground/60 mb-8">Created on Jan 24, 2026 · Last updated Aug 10, 2026 (mobile app permissions, account deletion)</p>
           
           <div className="prose prose-invert max-w-none space-y-6 text-foreground/80">
             <section>
@@ -44,7 +44,7 @@ export default function PrivacyPolicyPage() {
 
               <h3 className="text-lg font-medium text-foreground/90 mb-2 mt-4">1.4 Location Data</h3>
               <p>
-                We may also collect location-based data, such as your IP address or precise location using GPS, when you provide consent. This information helps us offer location-specific features, personalized content, and local promotions. You can choose whether or not to allow us to collect this data by adjusting your device settings. However, please note that disabling location services may affect your experience when using certain features of our platform.
+                <strong>We do not collect GPS or precise location data.</strong> The KB Stylish mobile app does not request location permission at all. The only location-related information we hold is the delivery address you type in yourself when placing an order, and the coarse, city-level region implied by your IP address in standard web server logs.
               </p>
             </section>
 
@@ -74,9 +74,9 @@ export default function PrivacyPolicyPage() {
                 We rely on third-party service providers for a variety of tasks, such as payment processing, data analytics, marketing, and customer support. We share information with these vendors as necessary to perform their services on our behalf. For example, we may provide your payment details to a trusted payment processor to complete a purchase, or your email address to a marketing partner to deliver promotional content. Rest assured that all service providers we engage are required to follow strict data protection policies and use your information only for the specific purpose for which it was shared.
               </p>
 
-              <h3 className="text-lg font-medium text-foreground/90 mb-2 mt-4">3.3 Third-Party Sharing</h3>
+              <h3 className="text-lg font-medium text-foreground/90 mb-2 mt-4">3.3 What We Do Not Do</h3>
               <p>
-                We may also share your data with selected third-party partners, such as advertisers or business partners, for the purposes of improving our services, analyzing trends, or delivering relevant advertisements. These third parties are not authorized to use your information beyond their contractual obligations with us, and any personal information shared with them is limited to what is necessary to fulfill the specific task or service.
+                <strong>We do not sell your personal information, and we do not share it with advertisers or data brokers for advertising or profiling.</strong> The only third parties who receive your data are the service providers described in 3.2 — our payment gateways (Khalti, NPX), our hosting and database provider, our email and push-notification delivery services, and delivery partners — and each receives only the minimum needed to perform that specific task.
               </p>
             </section>
 
@@ -107,6 +107,23 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
+              <h2 className="text-xl font-semibold text-foreground mb-3">5A. Deleting Your Account</h2>
+              <p>
+                You can delete your KB Stylish account at any time, directly in the mobile app: open the <strong>Profile</strong> tab, scroll to the bottom, and tap <strong>Delete my account</strong>. Deletion takes effect immediately.
+              </p>
+              <p>
+                When you do, we permanently remove your name, profile photo, bio, saved delivery addresses, phone number, date of birth, shopping cart and notification device registrations, and your login is disabled for good.
+              </p>
+              <p>
+                We are legally required to retain records of completed orders and payments under Nepali accounting and tax law. We keep those for <strong>7 years</strong> with your name and contact details stripped out so they can no longer be linked to you, then destroy them. Reviews you posted remain visible to other shoppers but are re-attributed to &ldquo;Deleted User&rdquo;.
+              </p>
+              <p>
+                Vendor and stylist accounts are closed by our team instead, so that any outstanding payouts and confirmed bookings can be settled first. Full details, including how to delete your account without the app installed, are on our{" "}
+                <Link href="/legal/account-deletion" className="text-[#1976D2] hover:underline">Account Deletion page</Link>.
+              </p>
+            </section>
+
+            <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">6. Financial and Payment Information</h2>
               <p>
                 We take your financial security seriously. When you provide us with payment details—whether credit card information or bank account numbers—these transactions are encrypted and processed through secure payment gateways. We use your financial information strictly for completing the transactions you initiate and ensuring compliance with applicable laws and anti-fraud regulations. We do not store your payment information for longer than necessary to complete the transaction, unless otherwise required by law.
@@ -114,15 +131,15 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-foreground mb-3">7. Permissions and Device Access</h2>
-              <p>To provide you with the best possible experience, we may request access to certain features of your device. This may include:</p>
+              <h2 className="text-xl font-semibold text-foreground mb-3">7. Permissions and Device Access (Mobile App)</h2>
+              <p>The KB Stylish mobile app requests only the permissions listed below. It does <strong>not</strong> access your contacts, read your SMS messages, or track your location.</p>
               <ul className="list-disc pl-6 space-y-1">
-                <li><strong>Contacts:</strong> Accessing your contact list to allow for features like order sharing or social interactions.</li>
-                <li><strong>SMS:</strong> Reading SMS messages to automatically fill OTPs and simplify the transaction process.</li>
-                <li><strong>Phone:</strong> Directly calling our customer service from within the app.</li>
-                <li><strong>Camera and Media:</strong> Accessing your camera and media gallery for purposes such as uploading photos for customer support or verifying the condition of a received product.</li>
+                <li><strong>Camera:</strong> Only so sellers can photograph products they are listing. We never access the camera in the background.</li>
+                <li><strong>Photo library:</strong> Only to let you pick an image for a product listing or your profile. We read only the images you explicitly choose.</li>
+                <li><strong>Face ID / fingerprint:</strong> Used solely to unlock the app on your own device. <strong>Your biometric data never leaves your phone and is never transmitted to or stored by us</strong> — the device only tells the app whether the check passed.</li>
+                <li><strong>Notifications:</strong> To send you order updates and booking reminders. We store an anonymous device token so we can deliver these; it is deleted when you disable notifications or delete your account.</li>
               </ul>
-              <p>You have the option to grant or deny these permissions at any time through your device settings.</p>
+              <p>You may grant or revoke any of these at any time in your device settings. Declining a permission only disables the specific feature that needs it.</p>
             </section>
 
             <section>
