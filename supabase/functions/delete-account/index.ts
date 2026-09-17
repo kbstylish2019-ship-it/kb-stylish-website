@@ -51,7 +51,12 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
 
-  const { data: { user }, error: userErr } = await userClient.auth.getUser();
+  // getUser() MUST be passed the token explicitly. With no argument, gotrue-js looks for a
+  // stored session, finds none (persistSession: false) and returns AuthSessionMissingError —
+  // the global Authorization header is used for PostgREST/RPC but not for this call. Every
+  // other function in this project already does it this way; see _shared/auth.ts.
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: userErr } = await userClient.auth.getUser(token);
   if (userErr || !user) {
     return json({ success: false, error: 'Sign in required', error_code: 'AUTH_REQUIRED' }, 401);
   }
